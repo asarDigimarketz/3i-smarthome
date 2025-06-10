@@ -1,0 +1,47 @@
+:root{
+       /* --hotel-primary: #00109b; */
+       --hotel-primary-text: #0D0E00;
+       --hotel-primary-darkgreen: #18B754;
+       --hotel-primary-green: #25D366;
+       --hotel-primary-red: #FF0000;
+       --hotel-primary-darkred: #9E3737;
+       --hotel-primary-yellow: #FFDF00;
+       --hotel-primary-bg: #F8F8F8;
+   
+       --hotel-secondary: #E3F2FD;
+       --hotel-secondary-accent: #FFFFFF;
+       --hotel-secondary-light-grey: #D9D9D9;
+       --hotel-secondary-grey: #6E6E6E;
+}
+
+
+
+.adminLayout {
+  display: flex;
+  height: 100vh;
+  min-height: 100vh;
+}
+
+.adminLayout .mainContent {
+  flex: 1;
+  padding: 1rem;
+  background-color: #f8f8f8;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.adminLayout .mainContent > *:not(footer) {
+  flex: 1 0 auto;
+}
+
+.adminLayout a.a-style {
+  color: #fff !important;
+}
+
+
+.mainContentWrapper {
+  flex: 1;
+  overflow-y: auto;
+}
