@@ -1,48 +1,64 @@
+"use client";
 // import TopHeader from './components/TopHeader'
+import { useState } from "react";
+
+import Link from "next/link.js";
 import ProposalFilters from "./ProposalFilters.jsx";
 import ProposalTable from "./ProposalTable.jsx";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Pagination } from "@heroui/pagination";
+import { StatusDropdown } from "./status-dropdown";
+import { Plus, Search } from "lucide-react";
+import { DateRangePicker } from "@heroui/date-picker";
 
 function App() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [dateRange, setDateRange] = useState(null);
+
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <div className="flex-1">
         <div className="p-6 space-y-6">
           {/* Page Header */}
           <div>
-            <h1 className="text-2xl font-bold text-red-600 mb-1">Proposal</h1>
+            <h1 className="text-3xl font-bold text-red-600">Proposal</h1>
             <p className="text-gray-500">Manage all your proposal</p>
           </div>
 
           {/* Search and Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search customers/Proposal ID ..."
-                  className="w-full px-4 py-2 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                />
-              </div>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div className="w-full md:w-80">
+              <Input
+                placeholder="Search customers/Proposal ID ..."
+                startContent={<Search className="text-gray-400" />}
+                radius="sm"
+                variant="bordered"
+                className="w-full"
+              />
             </div>
 
-            <div className="flex items-center space-x-4">
-              <button className="px-4 py-2 border border-gray-300 rounded-lg flex items-center space-x-2 hover:bg-gray-50">
-                <span>📅</span>
-              </button>
-
-              <select className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
-                <option>Status</option>
-                <option>Hot</option>
-                <option>Cold</option>
-                <option>Warm</option>
-                <option>Frozen</option>
-                <option>Completed</option>
-              </select>
-
-              <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2">
-                <span>+</span>
-                <span>Add New</span>
-              </button>
+            <div className="flex items-center gap-4">
+              <DateRangePicker
+                label="Filter by Date"
+                value={dateRange}
+                onChange={setDateRange}
+                radius="sm"
+                variant="bordered"
+                className="w-60"
+                classNames={{
+                  base: "bg-white",
+                  inputWrapper: "border-gray-300 hover:border-gray-400",
+                  input: "text-gray-700",
+                  label: "text-gray-600",
+                }}
+              />
+              <StatusDropdown />{" "}
+              <Link href="/dashboard/proposal/add-proposal">
+                <Button color="danger" radius="sm" startContent={<Plus />}>
+                  Add New
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -53,6 +69,15 @@ function App() {
             </div>
             <div className="p-6">
               <ProposalTable />
+            </div>
+            <div className="flex justify-end mt-6">
+              <Pagination
+                total={8}
+                initialPage={1}
+                page={currentPage}
+                onChange={setCurrentPage}
+                showControls
+              />
             </div>
           </div>
         </div>

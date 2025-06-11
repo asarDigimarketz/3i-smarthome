@@ -1,7 +1,5 @@
+import Dashboard from "../../Components/Dashboard/Dashboard";
+
 export default function Page() {
-  return (
-    <div className="hotelDashboardPage">
-      <p>regergreg</p>
-    </div>
-  );
+  return <Dashboard />;
 }

@@ -1,11 +1,5 @@
 "use client";
-import {
-  List,
-  Video,
-  Home as HomeIcon,
-  Wrench,
-  Calculator,
-} from "lucide-react";
+import { List, Speaker, Tv2, Cctv, HouseWifi } from "lucide-react";
 import { useState } from "react";
 
 const ProposalFilters = () => {
@@ -19,26 +13,27 @@ const ProposalFilters = () => {
       iconColor: "text-red-500",
     },
     {
-      icon: Video,
+      icon: Tv2,
       label: "Home Cinema",
       activeColor: "bg-blue-50",
       iconColor: "text-blue-500",
     },
+
     {
-      icon: HomeIcon,
-      label: "Home",
+      icon: HouseWifi,
+      label: "Home Automation",
       activeColor: "bg-blue-50",
       iconColor: "text-blue-500",
     },
     {
-      icon: Wrench,
-      label: "Service",
+      icon: Cctv,
+      label: "Security System",
       activeColor: "bg-blue-50",
       iconColor: "text-blue-500",
     },
     {
-      icon: Calculator,
-      label: "Calculate",
+      icon: Speaker,
+      label: "Outdoor Audio",
       activeColor: "bg-pink-50",
       iconColor: "text-pink-500",
     },

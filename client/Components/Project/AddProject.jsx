@@ -1,19 +1,22 @@
 "use client";
-import { Divider } from "@heroui/divider";
-import { Card } from "@heroui/card";
-import { Textarea } from "@heroui/input";
+import { useState } from "react";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import Link from "next/link";
-import { StatusSelect } from "./StatusSelect.jsx";
-import { ServicesSelect } from "./ServiceSelect.jsx";
-import { Calendar, Upload } from "lucide-react";
+import { Card } from "@heroui/card";
+import { ChevronDown, Calendar, Upload } from "lucide-react";
+import { Textarea } from "@heroui/input";
+import { Divider } from "@heroui/divider";
+import Link from "next/link.js";
+import { ProjectStatusSelect } from "./ProjectStatusSelect.jsx";
+import { ServicesSelect } from "../Proposal/ServiceSelect.jsx";
 
-export function AddProposalPage() {
+export function AddProjectPage() {
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-red-600">Add Proposal</h1>
+        <h1 className="text-3xl font-bold text-red-600">Add Project</h1>
       </div>
 
       <Card className="p-6" shadow="sm">
@@ -25,6 +28,7 @@ export function AddProposalPage() {
               radius="sm"
               variant="bordered"
               className="w-full"
+              endContent={<ChevronDown className="text-gray-400" />}
             />
           </div>
 
@@ -118,6 +122,16 @@ export function AddProposalPage() {
           </div>
 
           <div>
+            <label className="block text-gray-700 mb-2">comment</label>
+            <Textarea
+              placeholder="Comment"
+              radius="sm"
+              variant="bordered"
+              className="w-full"
+            />
+          </div>
+
+          <div>
             <label className="block text-gray-700 mb-2">Services</label>
             <ServicesSelect />
           </div>
@@ -128,16 +142,6 @@ export function AddProposalPage() {
             </label>
             <Textarea
               placeholder="Project Description"
-              radius="sm"
-              variant="bordered"
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-2">Project Amount</label>
-            <Input
-              placeholder="Project Amount"
               radius="sm"
               variant="bordered"
               className="w-full"
@@ -160,18 +164,18 @@ export function AddProposalPage() {
           </div>
 
           <div>
-            <label className="block text-gray-700 mb-2">Status</label>
-            <StatusSelect />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-2">Comment</label>
-            <Textarea
-              placeholder="Comment"
+            <label className="block text-gray-700 mb-2">Project Amount</label>
+            <Input
+              placeholder="Amount"
               radius="sm"
               variant="bordered"
               className="w-full"
             />
+          </div>
+
+          <div className="relative">
+            <label className="block text-gray-700 mb-2">Status</label>
+            <ProjectStatusSelect />
           </div>
 
           <div className="col-span-1 md:col-span-2">
@@ -192,7 +196,7 @@ export function AddProposalPage() {
         <Divider className="my-6" />
 
         <div className="flex justify-end gap-4">
-          <Link href="/">
+          <Link href="/dashboard/projects">
             <Button variant="bordered" radius="full" className="px-8">
               Cancel
             </Button>

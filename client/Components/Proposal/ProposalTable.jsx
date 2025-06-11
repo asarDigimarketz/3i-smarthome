@@ -8,6 +8,7 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
+import { Button } from "@heroui/button";
 import { useState } from "react";
 
 const ProposalTable = () => {
@@ -20,7 +21,7 @@ const ProposalTable = () => {
       location: "123/ss colont, Thirunagar, Madurai-625018",
       size: "1200 X 3450 sqt",
       comment: "Quotation sent & confirmed",
-      amount: "₹30,000",
+      amount: "₹30,0000",
       status: "Hot",
     },
     {
@@ -29,7 +30,7 @@ const ProposalTable = () => {
       location: "23/98,selva 1st, Iyerbunglow, Madurai-625015",
       size: "1400 X 1950 sqt",
       comment: "Quotation sent & confirmed",
-      amount: "₹22,000",
+      amount: "₹22,0000",
       status: "Cold",
     },
     {
@@ -73,13 +74,13 @@ const ProposalTable = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case "Hot":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-50 text-red-600 border border-red-200";
       case "Cold":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-50 text-blue-600 border border-blue-200";
       case "Warm":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-50 text-yellow-600 border border-yellow-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-50 text-gray-600 border border-gray-200";
     }
   };
 
@@ -97,33 +98,55 @@ const ProposalTable = () => {
     switch (columnKey) {
       case "customerName":
         return (
-          <div className="font-medium text-gray-900">{item[columnKey]}</div>
+          <div className="font-semibold text-gray-900 py-2">
+            {item[columnKey]}
+          </div>
         );
+      case "contact":
+        return <div className="text-gray-700 py-2">{item[columnKey]}</div>;
+      case "location":
+        return (
+          <div className="text-gray-700 py-2 max-w-[200px]">
+            {item[columnKey]}
+          </div>
+        );
+      case "size":
+        return <div className="text-gray-700 py-2">{item[columnKey]}</div>;
       case "comment":
         return (
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-600">{item[columnKey]}</span>
-            <button className="text-gray-400 hover:text-gray-600">
-              <Edit3 className="w-4 h-4" />
-            </button>
+          <div className="flex items-center space-x-2 py-2">
+            <span className="text-gray-700">{item[columnKey]}</span>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
+            >
+              <Edit3 className="w-3 h-3" />
+            </Button>
           </div>
         );
       case "amount":
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 py-2">
             <span className="font-semibold text-gray-900">
               {item[columnKey]}
             </span>
-            <button className="text-gray-400 hover:text-gray-600">
-              <Eye className="w-4 h-4" />
-            </button>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
+            >
+              <Eye className="w-3 h-3" />
+            </Button>
           </div>
         );
       case "status":
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 py-2">
             <span
-              className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+              className={`px-3 py-1 rounded-md text-xs font-medium ${getStatusColor(
                 item[columnKey]
               )}`}
             >
@@ -133,51 +156,69 @@ const ProposalTable = () => {
           </div>
         );
       default:
-        return <div className="text-gray-600">{item[columnKey]}</div>;
+        return <div className="text-gray-700 py-2">{item[columnKey]}</div>;
     }
   };
 
   return (
-    <Table
-      aria-label="Proposals table"
-      sortDescriptor={sortDescriptor}
-      onSortChange={setSortDescriptor}
-      className="bg-white rounded-lg shadow-sm border border-gray-200"
-      classNames={{
-        base: "min-h-[400px] p-0", // Added p-0 to remove padding
-        table: "min-w-full",
-        thead: "bg-red-50",
-        th: "text-red-600 font-semibold p-2",
-        tr: "hover:bg-gray-50 transition-colors",
-        td: "p-2",
-        wrapper: "p-0", // Added wrapper with no padding
-      }}
-    >
-      <TableHeader columns={columns}>
-        {(column) => (
-          <TableColumn
-            key={column.key}
-            allowsSorting={column.allowsSorting}
-            aria-sort={
-              sortDescriptor?.column === column.key
-                ? sortDescriptor.direction
-                : undefined
-            }
-          >
-            {column.label}
-          </TableColumn>
-        )}
-      </TableHeader>
-      <TableBody items={proposals}>
-        {(item) => (
-          <TableRow key={item.customerName}>
-            {(columnKey) => (
-              <TableCell>{renderCell(item, columnKey)}</TableCell>
-            )}
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+    <div className="w-full">
+      <Table
+        aria-label="Proposals table"
+        sortDescriptor={sortDescriptor}
+        onSortChange={setSortDescriptor}
+        removeWrapper
+        classNames={{
+          base: "w-full bg-white shadow-sm rounded-lg overflow-hidden",
+          wrapper: "overflow-x-auto",
+          table: "w-full",
+          thead: "[&>tr]:first:shadow-none",
+          th: [
+            "bg-transparent",
+            "text-red-500",
+            "font-semibold",
+            "text-sm",
+            "py-3",
+            "px-4",
+            "border-b",
+            "border-gray-200",
+            "first:pl-6",
+            "last:pr-6",
+          ],
+          tr: [
+            "hover:bg-gray-50",
+            "border-b",
+            "border-gray-100",
+            "transition-colors",
+          ],
+          td: ["py-0", "px-4", "first:pl-6", "last:pr-6", "border-b-0"],
+        }}
+      >
+        <TableHeader columns={columns}>
+          {(column) => (
+            <TableColumn
+              key={column.key}
+              allowsSorting={column.allowsSorting}
+              aria-sort={
+                sortDescriptor?.column === column.key
+                  ? sortDescriptor.direction
+                  : undefined
+              }
+            >
+              {column.label}
+            </TableColumn>
+          )}
+        </TableHeader>
+        <TableBody items={proposals}>
+          {(item) => (
+            <TableRow key={item.customerName} className="h-16">
+              {(columnKey) => (
+                <TableCell>{renderCell(item, columnKey)}</TableCell>
+              )}
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 
