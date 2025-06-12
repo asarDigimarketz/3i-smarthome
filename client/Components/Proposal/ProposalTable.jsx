@@ -1,5 +1,5 @@
 "use client";
-import { ChevronDown, Edit3, Eye } from "lucide-react";
+import { ChevronDown, Edit3, Eye, Check, X } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -9,10 +9,43 @@ import {
   TableCell,
 } from "@heroui/table";
 import { Button } from "@heroui/button";
+import { Input, Textarea } from "@heroui/input";
 import { useState } from "react";
+import ProposalDetailsModal from "./ProposalDetailsModal";
 
 const ProposalTable = () => {
   const [sortDescriptor, setSortDescriptor] = useState();
+  const [selectedProposal, setSelectedProposal] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCell, setEditingCell] = useState({ row: null, column: null });
+  const [editValue, setEditValue] = useState("");
+
+  const handleRowClick = (proposal) => {
+    // Only open modal if we're not currently editing
+    if (!editingCell.row && !editingCell.column) {
+      setSelectedProposal(proposal);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleStartEdit = (e, item, columnKey) => {
+    e.stopPropagation(); // Prevent row click
+    setEditingCell({ row: item.customerName, column: columnKey });
+    setEditValue(item[columnKey]);
+  };
+
+  const handleSaveEdit = (item) => {
+    // Here you would typically update your data source
+    console.log("Saving edit for", item.customerName, "new value:", editValue);
+    setEditingCell({ row: null, column: null });
+    setEditValue("");
+  };
+
+  const handleCancelEdit = (e) => {
+    e?.stopPropagation(); // Optional event param
+    setEditingCell({ row: null, column: null });
+    setEditValue("");
+  };
 
   const proposals = [
     {
@@ -95,6 +128,9 @@ const ProposalTable = () => {
   ];
 
   const renderCell = (item, columnKey) => {
+    const isEditing =
+      editingCell.row === item.customerName && editingCell.column === columnKey;
+
     switch (columnKey) {
       case "customerName":
         return (
@@ -115,31 +151,110 @@ const ProposalTable = () => {
       case "comment":
         return (
           <div className="flex items-center space-x-2 py-2">
-            <span className="text-gray-700">{item[columnKey]}</span>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
-            >
-              <Edit3 className="w-3 h-3" />
-            </Button>
+            {isEditing ? (
+              <div className="flex items-center gap-2 min-w-[200px]">
+                <Textarea
+                  size="sm"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="flex-1"
+                  onClick={(e) => e.stopPropagation()}
+                  autoFocus
+                />
+                <div className="flex flex-col gap-1">
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    color="primary"
+                    className="min-w-unit-6 w-6 h-6"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSaveEdit(item);
+                    }}
+                  >
+                    <Check className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="bordered"
+                    className="min-w-unit-6 w-6 h-6"
+                    onClick={(e) => handleCancelEdit(e)}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span className="text-gray-700">{item[columnKey]}</span>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
+                  onClick={(e) => handleStartEdit(e, item, columnKey)}
+                >
+                  <Edit3 className="w-3 h-3" />
+                </Button>
+              </>
+            )}
           </div>
         );
       case "amount":
         return (
           <div className="flex items-center space-x-2 py-2">
-            <span className="font-semibold text-gray-900">
-              {item[columnKey]}
-            </span>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
-            >
-              <Eye className="w-3 h-3" />
-            </Button>
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  size="sm"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="w-32"
+                  startContent="₹"
+                  onClick={(e) => e.stopPropagation()}
+                  autoFocus
+                />
+                <div className="flex gap-1">
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    color="primary"
+                    className="min-w-unit-6 w-6 h-6"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSaveEdit(item);
+                    }}
+                  >
+                    <Check className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="bordered"
+                    className="min-w-unit-6 w-6 h-6"
+                    onClick={(e) => handleCancelEdit(e)}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span className="font-semibold text-gray-900">
+                  {item[columnKey]}
+                </span>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
+                  onClick={(e) => handleStartEdit(e, item, columnKey)}
+                >
+                  <Edit3 className="w-3 h-3" />
+                </Button>
+              </>
+            )}
           </div>
         );
       case "status":
@@ -210,7 +325,11 @@ const ProposalTable = () => {
         </TableHeader>
         <TableBody items={proposals}>
           {(item) => (
-            <TableRow key={item.customerName} className="h-16">
+            <TableRow
+              key={item.customerName}
+              className="h-16 cursor-pointer"
+              onClick={() => handleRowClick(item)}
+            >
               {(columnKey) => (
                 <TableCell>{renderCell(item, columnKey)}</TableCell>
               )}
@@ -218,6 +337,29 @@ const ProposalTable = () => {
           )}
         </TableBody>
       </Table>
+
+      {selectedProposal && (
+        <ProposalDetailsModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          proposalData={{
+            customer: selectedProposal.customerName,
+            date: new Date().toLocaleDateString(),
+            contact: selectedProposal.contact,
+            email: `${selectedProposal.customerName
+              .toLowerCase()
+              .replace(/\s/g, "")}@gmail.com`,
+            address: selectedProposal.location,
+            service: "Home Cinema",
+            description: "Full home automation system including lights",
+            size: selectedProposal.size,
+            amount: selectedProposal.amount,
+            comment: selectedProposal.comment,
+            status: selectedProposal.status,
+            attachment: "proposal.pdf",
+          }}
+        />
+      )}
     </div>
   );
 };

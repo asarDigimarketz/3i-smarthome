@@ -17,6 +17,8 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
+import { DateRangePicker } from "@heroui/date-picker";
+
 import Link from "next/link";
 import { ChevronDown, Home, Plus, Search, Shield, Tv } from "lucide-react";
 
@@ -74,6 +76,7 @@ const customers = [
 const Customers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [serviceFilter, setServiceFilter] = useState("all");
+  const [dateRange, setDateRange] = useState(null);
 
   const filteredCustomers = customers.filter((customer) => {
     const matchesSearch =
@@ -123,6 +126,20 @@ const Customers = () => {
         />
 
         <div className="flex gap-2 ml-auto">
+          <DateRangePicker
+            label="Filter by Date"
+            value={dateRange}
+            onChange={setDateRange}
+            radius="sm"
+            variant="bordered"
+            className="w-60"
+            classNames={{
+              base: "bg-white",
+              inputWrapper: "border-gray-300 hover:border-gray-400",
+              input: "text-gray-700",
+              label: "text-gray-600",
+            }}
+          />
           <Dropdown>
             <DropdownTrigger>
               <Button variant="flat" endContent={<ChevronDown width={16} />}>

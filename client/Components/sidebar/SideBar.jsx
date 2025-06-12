@@ -83,7 +83,7 @@ export function SidebarDemo() {
     },
     {
       label: "Employee",
-      href: "/dashboard/employee",
+      href: "/dashboard/employees",
       icon: (
         <IconUser className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
