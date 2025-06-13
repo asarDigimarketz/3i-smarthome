@@ -57,7 +57,7 @@ const ProjectDetails = () => {
 const DetailItem = ({ label, value }) => (
   <div>
     <span className="text-sm text-gray-500">{label}</span>
-    <p className="text-sm font-medium">{value}</p>
+    <span className="text-sm font-medium block">{value}</span>
   </div>
 );
 
