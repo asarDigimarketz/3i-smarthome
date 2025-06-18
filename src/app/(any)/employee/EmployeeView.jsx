@@ -1,7 +1,6 @@
-import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter, useLocalSearchParams } from 'expo-router'
-import { ArrowLeft, Phone, Mail, FileText } from 'lucide-react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { ArrowLeft, FileText, Mail, Phone } from 'lucide-react-native'
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native'
 
 export default function EmployeeDetail() {
   const router = useRouter()
@@ -41,8 +40,11 @@ export default function EmployeeDetail() {
           <Text className="text-2xl font-bold">Profile</Text>
         </View>
         <TouchableOpacity 
-          className="bg-red-600 px-6 py-2 rounded-full"
-          onPress={() => router.push(`/employee/edit/${id}`)}
+          className="bg-red-600 px-6 py-2 rounded-lg"
+          onPress={() => router.push({
+            pathname: '/employee/EditEmployee',
+            params: { employeeData: JSON.stringify(employeeData) }
+          })}
         >
           <Text className="text-white font-medium">Edit</Text>
         </TouchableOpacity>

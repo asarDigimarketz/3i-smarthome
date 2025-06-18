@@ -1,20 +1,19 @@
-import React from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-} from 'react-native';
-import { 
   ChevronLeft,
-  Plus,
-  Phone,
+  Edit,
   Mail,
   MapPin,
-  Edit,
+  Phone,
+  Plus,
 } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import ProjectCard from '../../../components/Common/ProjectCard';
 import { projectData } from '../../../data/mockData';
 
@@ -41,7 +40,7 @@ const CustomerView = () => {
           </TouchableOpacity>
           
           <TouchableOpacity 
-            className="flex-row items-center bg-red-600 px-4 py-2 rounded-full"
+            className="flex-row items-center bg-red-600 px-4 py-2 rounded-lg"
             onPress={() => router.push("/(tabs)/proposal/AddProposal")}
           >
             <Text className="text-white font-semibold mr-1">Add</Text>

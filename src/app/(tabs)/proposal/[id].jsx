@@ -1,9 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ChevronDown } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { TextInput as PaperTextInput } from 'react-native-paper';
 import { proposalData } from '../../../data/mockData';
 
 const ProposalDetail = () => {
@@ -34,54 +33,33 @@ const ProposalDetail = () => {
 
   const statusOptions = ['Hot', 'Cold', 'Warm', 'Scrap', 'Confirm'];
 
-  const DetailRow = ({ label, value, isEditable = false }) => (
+  const DetailRow = ({ label, value }) => (
     <View className="flex-row py-3 border-b border-gray-100">
       <Text className="text-gray-500 w-24 text-sm">{label}:</Text>
       <View className="flex-1">
-        {isEditable ? (
-          <TextInput
-            className="text-gray-800 font-medium"
-            value={value}
-            multiline={label === 'Comment'}
-          />
-        ) : (
-          <Text className={`font-medium ${
-            label === 'Service' ? serviceColors[value]?.text : 'text-gray-800'
-          }`}>
-            {value}
-          </Text>
-        )}
+        <Text className={`font-medium ${
+          label === 'Service' ? serviceColors[value]?.text : 'text-gray-800'
+        }`}>
+          {value}
+        </Text>
       </View>
     </View>
   );
 
-const AmountSelector = () => {
-    // Add local state to handle amount input
-    const [localAmount, setLocalAmount] = useState(amount?.replace('₹', '') || '');
-
-    const handleAmountChange = (text) => {
-      setLocalAmount(text);
-      setAmount(text); // Update parent state
-    };
-
+  const AmountSelector = () => {
     return (
       <View className="flex-row py-3 border-b border-gray-100">
         <Text className="text-gray-500 w-[60px] text-sm">Amount:</Text>
         <View className="flex-1">
           <View className="flex-row items-center gap-2">
-            <PaperTextInput
-              mode="outlined"
-              value={localAmount}
-              onChangeText={handleAmountChange}
-              keyboardType="numeric"
-              outlineColor="#E5E7EB"
-              activeOutlineColor="#DC2626"
-              left={<PaperTextInput.Affix text="₹" />}
-              style={{ height: 40, width: 145 }}
-              contentStyle={{ marginTop: -4 }}
-              dense
-              returnKeyType="done"
-            />
+            <View className="flex-row items-center border border-gray-300 rounded-lg overflow-hidden w-[145]">
+              <View className="bg-gray-100 px-2 py-2 border-r border-gray-300">
+                <Text className="text-gray-600">₹</Text>
+              </View>
+              <View className="flex-1 px-2 py-2 justify-center">
+                <Text className="text-gray-800">{amount?.replace('₹', '') || '0.00'}</Text>
+              </View>
+            </View>
             <View className="flex-row gap-2">
               <TouchableOpacity 
                 className="bg-red-600 rounded-lg px-4 py-2"
@@ -224,10 +202,7 @@ const AmountSelector = () => {
 
               <TouchableOpacity 
                 className="bg-gray-600 rounded-lg px-6 py-3 w-[100]"
-                onPress={() => router.push({
-                  pathname: '/(tabs)/proposal/EditProposal',
-                  params: { proposalId: proposalId }
-                })}
+                onPress={() => router.push(`/proposal/edit/${id}`)}
               >
                 <Text className="text-white font-semibold text-center">Edit</Text>
               </TouchableOpacity>

@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
+import { ChartColumn, FolderKanban, Home, ListChecks, User } from "lucide-react-native";
 import React, { useState } from "react";
-import { StatusBar } from "expo-status-bar";
-import { Home, FolderKanban, User, ChartColumn, ListChecks } from "lucide-react-native";
+import { StatusBar } from "react-native";
 import "../../../global.css";
 import Header from "../../components/Header/Header";
 import Sidebar from "../../components/Sidebar/Sidebar";
@@ -11,7 +11,7 @@ export default function TabsLayout() {
 
   return (
     <React.Fragment>
-      <StatusBar style="light" />
+      <StatusBar backgroundColor="#030303" barStyle="light-content" />
       <Header onMenuPress={() => setIsSidebarVisible(true)} />
       <Sidebar 
         isVisible={isSidebarVisible}
@@ -19,7 +19,7 @@ export default function TabsLayout() {
       />
       <Tabs screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#c92125', // Add this line for active tab color
+        tabBarActiveTintColor: '#c92125',
         }}>
         <Tabs.Screen name="index"
           options={{
@@ -37,6 +37,7 @@ export default function TabsLayout() {
               <ChartColumn color={color} />
             ),
             tabBarLabel: "Proposal",
+            popToTopOnBlur: true,
           }}
         />
         <Tabs.Screen name="projects"  
@@ -46,6 +47,7 @@ export default function TabsLayout() {
               <FolderKanban color={color} />
             ),
             tabBarLabel: "Projects",
+            popToTopOnBlur: true,
           }}
         />
         <Tabs.Screen name="tasks"     
@@ -55,6 +57,7 @@ export default function TabsLayout() {
               <ListChecks color={color} />
             ),
             tabBarLabel: "Tasks",
+            popToTopOnBlur: true,
           }}
         />
         <Tabs.Screen name="customer"
@@ -64,6 +67,7 @@ export default function TabsLayout() {
               <User color={color} />
             ),
             tabBarLabel: "Customer",
+            popToTopOnBlur: true,
           }}
         />
       </Tabs>

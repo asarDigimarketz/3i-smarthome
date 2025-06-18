@@ -1,7 +1,8 @@
-import { SafeAreaView, Text, View, ScrollView } from "react-native";
-import { DashboardSection } from "../../components/Home/DashboardCard";
-import { ActivitiesSection } from "../../components/Home/ActivityItem";
+import React from "react";
+import { SafeAreaView, ScrollView, Text, View } from "react-native";
 import ProjectCard from "../../components/Common/ProjectCard";
+import { ActivitiesSection } from "../../components/Home/ActivityItem";
+import { DashboardSection } from "../../components/Home/DashboardCard";
 import { projectData } from "../../data/mockData";
 
 export default function Index() {

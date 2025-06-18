@@ -11,17 +11,16 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { TextInput } from 'react-native-paper';
-import { proposalData } from '../../../data/mockData';
+import { proposalData } from '../../../../data/mockData';
 
 const EditProposal = () => {
   const { width } = useWindowDimensions();
-  const isTablet = width >= 768; // Standard tablet breakpoint
-
+  const isTablet = width >= 768;
   const router = useRouter();
-  const { proposalId } = useLocalSearchParams();
+  const { id } = useLocalSearchParams();
 
   // Get the proposal data from mockData
-  const proposal = proposalData.find(p => p.id === Number(proposalId)) || {};
+  const proposal = proposalData.find(p => p.id === Number(id)) || {};
 
   // Initialize form data with existing proposal data
   const [formData, setFormData] = useState({
@@ -37,29 +36,29 @@ const EditProposal = () => {
     pinCode: proposal.pinCode || '',
     service: proposal.service || '',
     projectDescription: proposal.description || '',
-    projectAmount: proposal.amount || '',
-    size: proposal.size || '',
+    projectAmount: proposal.amount?.replace('₹', '') || '',
+    size: proposal.size?.replace(' Sqt', '') || '',
     status: proposal.status || '',
-    comment: proposal.comment || '',
+    comment: proposal.comment || ''
   });
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(proposal.attachment || null);
 
   const statusOptions = [
-    { value: 'Hot', color: 'text-red-600', bg: 'bg-red-100' },
-    { value: 'Cold', color: 'text-blue-600', bg: 'bg-blue-100' },
-    { value: 'Warm', color: 'text-orange-600', bg: 'bg-orange-100' },
-    { value: 'Scrap', color: 'text-yellow-600', bg: 'bg-yellow-100' },
-    { value: 'Confirm', color: 'text-green-600', bg: 'bg-green-100' }
+    { value: 'Hot', color: 'text-red-600' },
+    { value: 'Cold', color: 'text-blue-600' },
+    { value: 'Warm', color: 'text-orange-600' },
+    { value: 'Scrap', color: 'text-yellow-600' },
+    { value: 'Confirm', color: 'text-green-600' }
   ];
 
   const serviceOptions = [
-    { value: 'Home Cinema', color: 'text-purple-600', bg: 'bg-purple-50' },
-    { value: 'Security System', color: 'text-cyan-600', bg: 'bg-cyan-50' },
-    { value: 'Home Automation', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { value: 'Outdoor Audio', color: 'text-pink-600', bg: 'bg-pink-50' }
+    { value: 'Home Cinema', color: 'text-purple-600' },
+    { value: 'Security System', color: 'text-cyan-600' },
+    { value: 'Home Automation', color: 'text-blue-600' },
+    { value: 'Outdoor Audio', color: 'text-pink-600' }
   ];
 
   const showDatePicker = () => {
@@ -71,7 +70,7 @@ const EditProposal = () => {
           setFormData({ ...formData, date: formattedDate });
         }
       },
-      mode: 'date',
+      mode: 'date'
     });
   };
 
@@ -88,16 +87,23 @@ const EditProposal = () => {
       });
 
       if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        setSelectedFile(file);
-        setFormData({
-          ...formData,
-          attachment: file
-        });
+        setSelectedFile(result.assets[0]);
       }
     } catch (err) {
       console.log('Document picker error:', err);
     }
+  };
+
+  const handleUpdate = () => {
+    // Here you would typically update your backend
+    console.log('Updated proposal:', {
+      id: Number(id),
+      ...formData,
+      amount: `₹${formData.projectAmount}`,
+      size: `${formData.size} Sqt`,
+      attachment: selectedFile
+    });
+    router.back();
   };
 
   return (
@@ -118,19 +124,19 @@ const EditProposal = () => {
       {/* Form Content */}
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1}}
+        contentContainerStyle={{ flexGrow: 1 }}
         enableOnAndroid={true}
         enableAutomaticScroll={true}
         keyboardShouldPersistTaps="handled"
         extraScrollHeight={100}
-        keyboardOpeningTime={0}
       >
         <View className="p-6">
-        
-        {/* Customer Details */}
-        <Text className="text-base font-medium text-gray-700 mb-4">Customer Details</Text>
-
-        <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
+          {/* Customer Details Section */}
+          <Text className="text-base font-medium text-gray-700 mb-4">
+            Customer Details
+          </Text>
+          
+                  <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
           <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
             <TextInput
               mode="outlined"
@@ -437,29 +443,26 @@ const EditProposal = () => {
           </Text>
         )}
 
-        {/* Action Buttons */}
-        <View className="flex-row justify-center space-x-4 mt-8 gap-2">
-          <TouchableOpacity 
-            className="bg-gray-100 px-8 py-3 rounded-lg"
-            onPress={() => router.back()}
-          >
-            <Text className="text-gray-600 font-medium">Cancel</Text>
-          </TouchableOpacity>
           
-          <TouchableOpacity 
-            className="bg-red-600 px-8 py-3 rounded-lg"
-            onPress={() => {
-              // Add your update logic here
-              console.log('Updated Form Data:', formData);
-              router.back();
-            }}
-          >
-            <Text className="text-white font-medium">Update</Text>
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          <View className="flex-row justify-center space-x-4 mt-8">
+            <TouchableOpacity 
+              className="bg-gray-100 px-8 py-3 rounded-lg"
+              onPress={() => router.back()}
+            >
+              <Text className="text-gray-600 font-medium">Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              className="bg-red-600 px-8 py-3 rounded-lg"
+              onPress={handleUpdate}
+            >
+              <Text className="text-white font-medium">Update</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </KeyboardAwareScrollView>
-  </View>
+      </KeyboardAwareScrollView>
+    </View>
   );
 };
 

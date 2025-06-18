@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, Image } from 'react-native';
-import { Phone } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { Image, Text, View } from 'react-native';
 
 const ProjectCard = ({ project, customer }) => {
   const getServiceGradient = (service) => {
@@ -9,9 +8,9 @@ const ProjectCard = ({ project, customer }) => {
       case 'Home Cinema':
         return ['#613eff', '#9cbbff'];
       case 'Home Automation':
-        return ['#014c95', '#36b9f6'];
-      case 'Security System':
         return ['#026b87', '#5deaff'];
+      case 'Security System':
+        return ['#014c95', '#36b9f6'];
       case 'Outdoor Audio':
         return ['#df2795', '#eb7ab7'];
       default:

@@ -1,37 +1,40 @@
-"use client"
-
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker"
 import * as DocumentPicker from "expo-document-picker"
-import { useRouter } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import { ArrowLeft, Calendar, ChevronDown, Upload } from "lucide-react-native"
 import { useState } from "react"
 import { Image, Text, TouchableOpacity, useWindowDimensions, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view"
 import { TextInput } from 'react-native-paper'
 
-const AddEmployee = () => {
+const EditEmployee = () => {
+  const router = useRouter()
+  const { employeeData: employeeDataString } = useLocalSearchParams()
   const { width } = useWindowDimensions()
   const isTablet = width >= 768
-  const router = useRouter()
 
+  // Parse the received data
+  const parsedEmployeeData = employeeDataString ? JSON.parse(employeeDataString) : {}
+
+  // Initialize form data with received employee data
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    phoneNumber: "",
-    emailId: "",
-    alternativePhoneNumber: "",
-    dateOfBirth: "",
-    dateOfJoining: "",
-    department: "",
-    role: "",
-    status: "",
-    addressLine1: "",
-    cityTownVillage: "",
-    district: "",
-    state: "",
-    country: "",
-    pinCode: "",
-    note: "",
+    firstName: parsedEmployeeData.firstName || "",
+    lastName: parsedEmployeeData.lastName || "",
+    phoneNumber: parsedEmployeeData.phoneNumber || "",
+    emailId: parsedEmployeeData.emailId || "",
+    alternativePhoneNumber: parsedEmployeeData.alternativePhoneNumber || "",
+    dateOfBirth: parsedEmployeeData.dateOfBirth || "",
+    dateOfJoining: parsedEmployeeData.dateOfJoining || "",
+    department: parsedEmployeeData.department || "",
+    role: parsedEmployeeData.role || "",
+    status: parsedEmployeeData.status || "",
+    addressLine1: parsedEmployeeData.addressLine1 || "",
+    cityTownVillage: parsedEmployeeData.cityTownVillage || "",
+    district: parsedEmployeeData.district || "",
+    state: parsedEmployeeData.state || "",
+    country: parsedEmployeeData.country || "",
+    pinCode: parsedEmployeeData.pinCode || "",
+    note: parsedEmployeeData.note || "",
   })
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
@@ -86,7 +89,7 @@ const AddEmployee = () => {
           <TouchableOpacity className="mr-3" onPress={() => router.back()}>
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
-          <Text className="text-xl font-bold text-gray-800">Add Employee</Text>
+          <Text className="text-xl font-bold text-gray-800">Edit Employee</Text>
         </View>
       </View>
 
@@ -417,4 +420,4 @@ const AddEmployee = () => {
   )
 }
 
-export default AddEmployee
+export default EditEmployee

@@ -1,31 +1,25 @@
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  SafeAreaView,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  ChevronDown, 
-  Plus, 
-  Phone,
-  List,
-  Speaker,
-  Cctv,
-  HouseWifi,
-  Tv2
+  ChevronDown,
+  Plus,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import ProjectCard from '../../../components/Common/ProjectCard';
+import { useEffect, useState } from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import FilterTabs from '../../../components/Common/FilterTabs';
+import ProjectCard from '../../../components/Common/ProjectCard';
 import { projectData } from '../../../data/mockData';
 
 const Projects = () => {
+  const { selectedService } = useLocalSearchParams();
   const router = useRouter();
-  const [selectedFilter, setSelectedFilter] = useState('All');
+  // Initialize selectedFilter with the passed service if available
+  const [selectedFilter, setSelectedFilter] = useState(selectedService || 'All');
   const [selectedStatus, setSelectedStatus] = useState('Status');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
@@ -61,6 +55,13 @@ const Projects = () => {
       return serviceFilter && statusFilter;
     });
   };
+
+  // Update useEffect to set the filter when selectedService changes
+  useEffect(() => {
+    if (selectedService) {
+      setSelectedFilter(selectedService);
+    }
+  }, [selectedService]);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">

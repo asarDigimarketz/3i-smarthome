@@ -1,31 +1,45 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  SafeAreaView,
-} from 'react-native';
-import { Search, Phone, Tv2, HouseWifi, Cctv, Speaker, HelpCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { Cctv, HelpCircle, HouseWifi, Phone, Search, Speaker, Tv2 } from 'lucide-react-native';
+import {
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { customers } from '../../../data/mockData';
 
 const Customer = () => {
   const router = useRouter();
 
-  const getServiceIcon = (service, size = 24, color = '#DC2626') => {
+  const getServiceIcon = (service) => {
     switch (service) {
       case 'Home Cinema':
-        return <Tv2 size={size} color={color} />;
+        return {
+          icon: <Tv2 size={24} color="#7c3aed" />,
+          bgColor: 'bg-services-cinema-light'
+        };
       case 'Home Automation':
-        return <HouseWifi size={size} color={color} />;
+        return {
+          icon: <HouseWifi size={24} color="#2563eb" />,
+          bgColor: 'bg-services-automation-light'
+        };
       case 'Security System':
-        return <Cctv size={size} color={color} />;
+        return {
+          icon: <Cctv size={24} color="#0891b2" />,
+          bgColor: 'bg-services-security-light'
+        };
       case 'Outdoor Audio':
-        return <Speaker size={size} color={color} />;
+        return {
+          icon: <Speaker size={24} color="#db2777" />,
+          bgColor: 'bg-services-audio-light'
+        };
       default:
-        return <HelpCircle size={size} color={color} />;
+        return {
+          icon: <HelpCircle size={24} color="#6B7280" />,
+          bgColor: 'bg-gray-100'
+        };
     }
   };
 
@@ -75,11 +89,14 @@ const Customer = () => {
                 <View className="flex-1">
                   <Text className="text-base text-gray-600 mb-2">Services</Text>
                   <View className="flex-row">
-                    {customer.services.map((service, index) => (
-                      <View key={index} className="mr-4 bg-red-50 p-2 rounded-lg">
-                        {getServiceIcon(service)}
-                      </View>
-                    ))}
+                    {customer.services.map((service, index) => {
+                      const { icon, bgColor } = getServiceIcon(service);
+                      return (
+                        <View key={index} className={`mr-4 ${bgColor} p-2 rounded-lg`}>
+                          {icon}
+                        </View>
+                      );
+                    })}
                   </View>
                 </View>
                 

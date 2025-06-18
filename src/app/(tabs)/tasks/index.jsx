@@ -1,16 +1,18 @@
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Modal, TextInput, Image, Alert } from 'react-native';
-import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Check, FileText, X, Plus, Calendar } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { proposalData, employees } from '../../../data/mockData';
+import * as ImagePicker from 'expo-image-picker';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
+import { useState } from 'react';
+import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import FilterTabs from '../../../components/Common/FilterTabs';
+import AddTaskForm from '../../../components/Tasks/AddTaskForm';
+import EditTaskForm from '../../../components/Tasks/EditTaskForm';
+import TaskCard from '../../../components/Tasks/TaskCard';
+import { employees, proposalData } from '../../../data/mockData';
 
 export default function Task() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showProposelDropDown, setShowProposelDropDown] = useState(false);
   const [expandedCards, setExpandedCards] = useState({});
-  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showAddTaskForm, setShowAddTaskForm] = useState(false);
   const [newTask, setNewTask] = useState({
     title: '',
@@ -18,14 +20,17 @@ export default function Task() {
     startDate: new Date(),
     endDate: new Date(),
     status: '',
-    beforeImages: [],
-    afterImages: [],
+    beforeImages: [], // Change from beforeImage to beforeImages array
+    afterImages: [],  // Change from afterImage to afterImages array
     attachment: null
   });
   const [showStartDate, setShowStartDate] = useState(false);
   const [showEndDate, setShowEndDate] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeDateField, setActiveDateField] = useState(null);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   // Define all available services
   const allServices = ['All', 'Home Cinema', 'Home Automation', 'Security System', 'Outdoor Audio'];
@@ -35,6 +40,12 @@ export default function Task() {
     color: 'text-blue-600',
     bg: 'bg-blue-50'
   }));
+
+  const statusOptions = [
+    { value: "New", color: "text-blue-600", bg: "bg-blue-50" },
+    { value: "In Progress", color: "text-yellow-600", bg: "bg-yellow-50" },
+    { value: "Done", color: "text-green-600", bg: "bg-green-50" }
+  ];
 
   // Toggle function for expandable cards
   const toggleCardExpand = (proposalId) => {
@@ -68,8 +79,9 @@ export default function Task() {
       <View className='px-4 py-2 rounded-lg mb-4 bg-white shadow-sm'>
         {/* Main Card Content */}
         <View className={`mb-4 rounded-xl shadow-xl p-4 ${getBgColor(proposal.service)}`}>
-          {/* Chevron Button - Top right corner */}
-          <View className="flex-row justify-end mb-2">
+          {/* Header with Details text and Chevron button */}
+          <View className="flex-row justify-between items-center mb-2 px-4">
+            <Text className="text-gray-600 text-base font-medium">Details</Text>
             <TouchableOpacity
               className="p-2"
               onPress={() => toggleCardExpand(proposal.id)}
@@ -158,10 +170,122 @@ export default function Task() {
       setSelectedFilter(selectedProject.service); // Switch to project's service
       setSelectedStatus(projectName);
     }
-    setShowStatusDropdown(false);
+    setShowProposelDropDown(false);
   };
 
-  
+  // Update the pickImages function
+  const pickImages = async (type) => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: [ImagePicker.MediaType.IMAGE], // Updated API usage
+        allowsMultipleSelection: true,
+        quality: 1,
+        aspect: [4, 3]
+      });
+
+      if (!result.canceled) {
+        const selectedImages = result.assets.map(asset => asset.uri);
+        setNewTask(prev => ({
+          ...prev,
+          [type]: [...prev[type], ...selectedImages]
+        }));
+      }
+    } catch (error) {
+      console.error('Error picking images:', error);
+    }
+  };
+
+  const removeImage = (type, index) => {
+    setNewTask(prev => ({
+      ...prev,
+      [type]: prev[type].filter((_, i) => i !== index)
+    }));
+  };
+
+  // Add this with other functions
+  const handleEditTask = (task) => {
+    setEditingTask({
+      ...task,
+      startDate: new Date(task.startDate),
+      endDate: new Date(task.endDate),
+      beforeImages: task.beforeImages || [],
+      afterImages: task.afterImages || []
+    });
+    setShowEditForm(true);
+  };
+
+  // Add this with other functions
+  const handleUpdateTask = (updatedTask) => {
+    // Here you would typically make an API call to update the task
+    console.log('Updating task:', updatedTask);
+    
+    // Close the edit form
+    setShowEditForm(false);
+    setEditingTask(null);
+    
+    // Optionally refresh the task list or update local state
+  };
+
+  const dummyTasks = [
+    {
+      title: 'Site Visit',
+      assignee: "Anbarasan V",
+      startDate: '10/04/2025',
+      endDate: '11/04/2025',
+      status: 'Done',
+      note: 'Complete check and verify the site',
+      beforeImages: [
+        'https://picsum.photos/200/200?1',
+        'https://picsum.photos/200/200?2',
+        'https://picsum.photos/200/200?3'
+      ],
+      afterImages: [
+        'https://picsum.photos/200/200?4',
+        'https://picsum.photos/200/200?5',
+        'https://picsum.photos/200/200?6'
+      ],
+      attachment: 'pro-987465.pdf'
+    },
+    {
+      title: 'Installation Setup',
+      assignee: "John Doe",
+      startDate: '15/04/2025',
+      endDate: '18/04/2025',
+      status: 'In Progress',
+      note: 'Install and configure home automation system',
+      beforeImages: [
+        'https://picsum.photos/200/200?7',
+        'https://picsum.photos/200/200?8',
+        'https://picsum.photos/200/200?9'
+      ],
+      afterImages: [
+        'https://picsum.photos/200/200?10',
+        'https://picsum.photos/200/200?11',
+        'https://picsum.photos/200/200?12'
+      ],
+      attachment: 'install-guide.pdf'
+    },
+    {
+      title: 'Final Testing',
+      assignee: "Jane Smith",
+      startDate: '20/04/2025',
+      endDate: '21/04/2025',
+      status: 'New',
+      note: 'Perform final system testing and quality checks',
+      beforeImages: [
+        'https://picsum.photos/200/200?13',
+        'https://picsum.photos/200/200?14',
+        'https://picsum.photos/200/200?15'
+      ],
+      afterImages: [
+        'https://picsum.photos/200/200?16',
+        'https://picsum.photos/200/200?17',
+        'https://picsum.photos/200/200?18'
+      ],
+      attachment: 'test-report.pdf'
+    }
+  ];
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -183,7 +307,7 @@ export default function Task() {
           <View className="px-4 py-3">
             <View className="relative">
               <TouchableOpacity
-                onPress={() => setShowStatusDropdown(!showStatusDropdown)}
+                onPress={() => setShowProposelDropDown(!showProposelDropDown)}
                 className="flex-row items-center justify-between bg-gray-100 rounded-lg h-12 px-4"
               >
                 <Text className={`${
@@ -194,7 +318,7 @@ export default function Task() {
                 <ChevronDown size={16} color="#6B7280" />
               </TouchableOpacity>
               
-              {showStatusDropdown && (
+              {showProposelDropDown && (
                 <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
                   {proposalData
                     .filter(proposal => selectedFilter === 'All' || proposal.service === selectedFilter)
@@ -225,7 +349,6 @@ export default function Task() {
             <View key={proposal.id} className="mt-4">
               {renderProjectDetails(proposal)}
               
-              {/* Task Board Section */}
               <View className="mx-4 mt-4 bg-white rounded-lg p-4">
                 {/* Task Board Header */}
                 <View className="flex-row justify-between items-center mb-4">
@@ -240,247 +363,54 @@ export default function Task() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Add Task Form */}
                 {showAddTaskForm && (
-                  <View className="border border-gray-100 rounded-lg p-4 mb-4">
-                    <View className="flex-row items-center mb-2">
-                      <View className="w-6 h-6 rounded-full bg-gray-200 items-center justify-center">
-                        <Check size={16} color="white" />
-                      </View>
-                      <TextInput
-                        className="flex-1 text-lg font-medium text-gray-900 ml-2"
-                        placeholder="Enter task title"
-                        value={newTask.title}
-                        onChangeText={(text) => setNewTask({...newTask, title: text})}
-                      />
-                    </View>
-
-                    {/* Assignee */}
-                    <View className="mb-3">
-                      <Text className="text-gray-600 text-sm">Assignee:</Text>
-                      <TouchableOpacity 
-                        className="mt-1 p-2 border border-gray-200 rounded-lg"
-                        onPress={() => {/* Show assignee picker */}}
-                      >
-                        <Text className="text-gray-900">
-                          {newTask.assignee || 'Select assignee'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Dates Row */}
-                    <View className="flex-row mb-4">
-                      {/* Start Date */}
-                      <View className="flex-1 mr-2">
-                        <Text className="text-gray-500 mb-1">Start Date</Text>
-                        <View className="relative">
-                          <TouchableOpacity 
-                            className="h-12 px-4 bg-gray-50 rounded-lg flex-row items-center justify-between"
-                            onPress={() => {
-                              setActiveDateField('start');
-                              setShowDatePicker(true);
-                            }}
-                          >
-                            <Text className="text-gray-700">
-                              {newTask.startDate.toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
-                            </Text>
-                            <Calendar size={20} color="#6B7280" />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-
-                      {/* End Date */}
-                      <View className="flex-1 ml-2">
-                        <Text className="text-gray-500 mb-1">End Date</Text>
-                        <View className="relative">
-                          <TouchableOpacity 
-                            className="h-12 px-4 bg-gray-50 rounded-lg flex-row items-center justify-between"
-                            onPress={() => {
-                              setActiveDateField('end');
-                              setShowDatePicker(true);
-                            }}
-                          >
-                            <Text className="text-gray-700">
-                              {newTask.endDate.toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
-                            </Text>
-                            <Calendar size={20} color="#6B7280" />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Date Picker */}
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={activeDateField === 'start' ? newTask.startDate : newTask.endDate}
-                        mode="date"
-                        display="default"
-                        minimumDate={activeDateField === 'end' ? newTask.startDate : undefined}
-                        onChange={(event, selectedDate) => {
-                          setShowDatePicker(false);
-                          if (selectedDate) {
-                            setNewTask(prev => ({
-                              ...prev,
-                              [activeDateField === 'start' ? 'startDate' : 'endDate']: selectedDate
-                            }));
-                          }
-                          setActiveDateField(null);
-                        }}
-                      />
-                    )}
-
-                    {/* Note */}
-                    <View className="mb-4">
-                      <Text className="text-gray-600 text-sm">Note:</Text>
-                      <TextInput
-                        className="mt-1 p-2 border border-gray-200 rounded-lg"
-                        placeholder="Add task note"
-                        multiline
-                        numberOfLines={3}
-                        value={newTask.note}
-                        onChangeText={(text) => setNewTask({...newTask, note: text})}
-                      />
-                    </View>
-
-                    {/* Images */}
-                    <View className="flex-row justify-between mb-4">
-                      <View className="flex-1 mr-2">
-                        <Text className="text-gray-600 text-sm mb-2">Before</Text>
-                        {newTask.beforeImage ? (
-                          <Image 
-                            source={{ uri: newTask.beforeImage }}
-                            className="w-full h-24 rounded-lg"
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <TouchableOpacity 
-                            className="h-24 border border-gray-200 rounded-lg items-center justify-center"
-                            onPress={() => {/* Handle image pick */}}
-                          >
-                            <Text className="text-blue-600">Upload Image</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                      <View className="flex-1 ml-2">
-                        <Text className="text-gray-600 text-sm mb-2">After</Text>
-                        {newTask.afterImage ? (
-                          <Image 
-                            source={{ uri: newTask.afterImage }}
-                            className="w-full h-24 rounded-lg"
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <TouchableOpacity 
-                            className="h-24 border border-gray-200 rounded-lg items-center justify-center"
-                            onPress={() => {/* Handle image pick */}}
-                          >
-                            <Text className="text-blue-600">Upload Image</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-
-                    {/* Attachment */}
-                    <TouchableOpacity 
-                      className="flex-row items-center bg-gray-50 p-3 rounded-lg mb-4"
-                      onPress={() => {/* Handle file pick */}}
-                    >
-                      <FileText size={20} color="#6B7280" />
-                      <Text className="text-gray-600 text-sm ml-2">
-                        {newTask.attachment?.name || 'Add attachment'}
-                      </Text>
-                    </TouchableOpacity>
-
-                    {/* Submit Button */}
-                    <TouchableOpacity 
-                      className="bg-red-600 p-4 rounded-full"
-                      onPress={() => {
-                        // Handle task creation
-                        setShowAddTaskForm(false);
-                      }}
-                    >
-                      <Text className="text-white text-center font-medium">Create Task</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <AddTaskForm 
+                    newTask={newTask}
+                    setNewTask={setNewTask}
+                    showDatePicker={showDatePicker}
+                    setShowDatePicker={setShowDatePicker}
+                    activeDateField={activeDateField}
+                    setActiveDateField={setActiveDateField}
+                    showStatusDropdown={showStatusDropdown}
+                    setShowStatusDropdown={setShowStatusDropdown}
+                    statusOptions={statusOptions}
+                    pickImages={pickImages}
+                    removeImage={removeImage}
+                    setShowAddTaskForm={setShowAddTaskForm}
+                  />
+                )}
+                
+                {/* Edit Task Form - New Section */}
+                {showEditForm && (
+                  <EditTaskForm 
+                    editingTask={editingTask}
+                    setEditingTask={setEditingTask}
+                    showDatePicker={showDatePicker}
+                    setShowDatePicker={setShowDatePicker}
+                    activeDateField={activeDateField}
+                    setActiveDateField={setActiveDateField}
+                    showStatusDropdown={showStatusDropdown}
+                    setShowStatusDropdown={setShowStatusDropdown}
+                    statusOptions={statusOptions}
+                    pickImages={pickImages}
+                    removeImage={removeImage}
+                    setShowEditForm={setShowEditForm}
+                  />
                 )}
 
-                {/* Existing Task Cards */}
-                {/* Site Visit Task Card */}
-                <View className="border border-gray-100 rounded-lg p-2">
-                  <View className="flex-row items-center mb-2">
-                    <View className="w-6 h-6 rounded-full bg-green-500 items-center justify-center">
-                      <Check size={16} color="white" />
-                    </View>
-                    <Text className="text-lg font-medium text-gray-900 ml-2">
-                      Site Visit
-                    </Text>
-                    <View className="ml-auto">
-                      <View className="bg-green-100 px-3 py-1 rounded-full">
-                        <Text className="text-green-600 text-xs font-medium">Done</Text>
-                      </View>
-                    </View>
+                {dummyTasks.map((task, index) => (
+                  <View key={index} className="mb-4">
+                    <TaskCard 
+                      task={task}
+                      employees={employees}
+                      handleEditTask={handleEditTask}
+                    />
                   </View>
-
-                  {/* Assignee */}
-                  <View className="mb-3">
-                    <Text className="text-gray-600 text-sm">Assignee: {
-                      employees.find(emp => emp.name === "Anbarasan V")?.name
-                    }</Text>
-                  </View>
-
-                  {/* Dates */}
-                  <View className="flex-row mb-3">
-                    <Text className="text-gray-600 text-sm">Start Date: 10/04/2025</Text>
-                    <Text className="text-gray-600 text-sm ml-4">End Date: 11/04/2025</Text>
-                  </View>
-
-                  {/* Note */}
-                  <View className="mb-4">
-                    <Text className="text-gray-600 text-sm">
-                      Note: Complete check and verify the site
-                    </Text>
-                  </View>
-
-                  {/* Images */}
-                  <View className="flex-row justify-between mb-4">
-                    <View className="flex-1 mr-2">
-                      <Text className="text-gray-600 text-sm mb-2">Before</Text>
-                      {/* <Image 
-                        source={require('../../../assets/before-image.jpg')} // Update path as needed
-                        className="w-full h-24 rounded-lg"
-                        resizeMode="cover"
-                      /> */}
-                    </View>
-                    <View className="flex-1 ml-2">
-                      <Text className="text-gray-600 text-sm mb-2">After</Text>
-                      {/* <Image 
-                        source={require('../../../assets/after-image.jpg')} // Update path as needed
-                        className="w-full h-24 rounded-lg"
-                        resizeMode="cover"
-                      /> */}
-                    </View>
-                  </View>
-
-                  {/* Attachment */}
-                  <TouchableOpacity className="flex-row items-center bg-gray-50 p-3 rounded-lg">
-                    <FileText size={20} color="#6B7280" />
-                    <Text className="text-gray-600 text-sm ml-2">pro-987465.pdf</Text>
-                  </TouchableOpacity>
-                </View>
+                ))}
               </View>
             </View>
           ))
         }
-        
-
       </ScrollView>
     </SafeAreaView>
   );

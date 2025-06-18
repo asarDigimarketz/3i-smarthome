@@ -115,87 +115,123 @@ export const projectData = [
 export const proposalData = [
   {
     id: 1,
-    name: 'Vinoth R',
-    phone: '+91 94536 345357',
-    address: '123/ss colony, Thirunager, Madurai-625018',
-    size: '1200 X 3450',
-    amount: '₹30,00000',
-    status: 'Hot',
-    email: 'vinoth@gmail.com',
-    service: 'Home Cinema',
-    date: '21/05/2025',
-    description: 'Full home automation system including lights',
-    comment: 'Quotation sent & confirmed'
+    name: "John Smith",
+    date: "2024-01-15",
+    phone: "+91 98765 43210",
+    email: "john.smith@example.com",
+    address: "123 Main Street, Chennai, Tamil Nadu 600001",
+    service: "Home Cinema",
+    description: "Complete home theater setup with 4K projector and surround sound",
+    size: "400 Sqft",
+    amount: "₹3,00,000",
+    status: "Hot",
+    comment: "Client interested in premium audio setup with Dolby Atmos",
+    history: [
+      {
+        date: "2024-01-15",
+        amount: "₹2,80,000",
+        type: "Initial Quote"
+      },
+      {
+        date: "2024-01-16",
+        amount: "₹3,00,000",
+        type: "Revised Quote"
+      }
+    ]
   },
   {
     id: 2,
-    name: 'Raghul T',
-    phone: '+91 98765 43210',
-    address: '45/B, Anna Nagar, Madurai-625020',
-    size: '2200 X 1800',
-    amount: '₹45,00000',
-    status: 'Cold',
-    email: 'raghul@gmail.com',
-    service: 'Security System',
-    date: '15/06/2025',
-    description: 'Complete CCTV and security system installation',
-    comment: 'Initial discussion completed'
+    name: "Priya Patel",
+    date: "2024-01-16",
+    phone: "+91 87654 32109",
+    email: "priya.patel@example.com",
+    address: "456 Park Avenue, Bangalore, Karnataka 560001",
+    service: "Home Automation",
+    description: "Smart home setup with lighting, climate, and security control",
+    size: "1200 Sqft",
+    amount: "₹5,50,000",
+    status: "Warm",
+    comment: "Interested in voice control and mobile app integration",
+    history: [
+      {
+        date: "2024-01-16",
+        amount: "₹5,00,000",
+        type: "Initial Quote"
+      },
+      {
+        date: "2024-01-17",
+        amount: "₹5,50,000",
+        type: "Updated Quote"
+      }
+    ]
   },
   {
     id: 3,
-    name: 'Aravind U',
-    phone: '+91 85646 97234',
-    address: '78/2 KK Nagar, Madurai-625012',
-    size: '1800 X 2400',
-    amount: '₹22,00000',
-    status: 'Warm',
-    email: 'aravind@gmail.com',
-    service: 'Home Automation',
-    date: '28/05/2025',
-    description: 'Smart lighting and climate control system',
-    comment: 'Follow up scheduled'
+    name: "Rajesh Kumar",
+    date: "2024-01-17",
+    phone: "+91 76543 21098",
+    email: "rajesh.kumar@example.com",
+    address: "789 Tech Park, Hyderabad, Telangana 500001",
+    service: "Security System",
+    description: "CCTV installation with smart doorbell and access control",
+    size: "800 Sqft",
+    amount: "₹2,50,000",
+    status: "Cold",
+    comment: "Needs detailed security camera placement plan",
+    history: [
+      {
+        date: "2024-01-17",
+        amount: "₹2,50,000",
+        type: "Initial Quote"
+      }
+    ]
   },
   {
     id: 4,
-    name: 'Dinesh A',
-    phone: '+91 84353 75643',
-    address: '12/A Bypass Road, Madurai-625016',
-    size: '3000 X 2000',
-    amount: '₹18,00000',
-    status: 'Confirm',
-    email: 'dinesh@gmail.com',
-    service: 'Outdoor Audio',
-    date: '10/06/2025',
-    description: 'Garden and pool area audio system setup',
-    comment: 'Project confirmed, installation pending'
+    name: "Sarah Johnson",
+    date: "2024-01-18",
+    phone: "+91 65432 10987",
+    email: "sarah.j@example.com",
+    address: "321 Beach Road, Mumbai, Maharashtra 400001",
+    service: "Outdoor Audio",
+    description: "Weatherproof speaker system for garden and pool area",
+    size: "600 Sqft",
+    amount: "₹1,80,000",
+    status: "Confirm",
+    comment: "Requires waterproof equipment for coastal environment",
+    history: [
+      {
+        date: "2024-01-18",
+        amount: "₹1,50,000",
+        type: "Initial Quote"
+      },
+      {
+        date: "2024-01-19",
+        amount: "₹1,80,000",
+        type: "Final Quote"
+      }
+    ]
   },
   {
     id: 5,
-    name: 'Magesh J',
-    phone: '+91 75644 57345',
-    address: '34/C SS Colony, Madurai-625010',
-    size: '2500 X 1450',
-    amount: '₹35,00000',
-    status: 'Scrap',
-    email: 'magesh@gmail.com',
-    service: 'Home Cinema',
-    date: '05/06/2025',
-    description: 'Premium home theater installation',
-    comment: 'Client cancelled due to budget constraints'
-  },
-  {
-    id: 6,
-    name: 'Varadharajan M',
-    phone: '+91 94353 75643',
-    address: '23/5B Anna Nagar, Madurai-625020',
-    size: '1400 X 1950',
-    amount: '₹28,00000',
-    status: 'Hot',
-    email: 'varadhu@gmail.com',
-    service: 'Home Automation',
-    date: '12/06/2025',
-    description: 'Complete smart home automation with voice control',
-    comment: 'Technical discussion completed, awaiting confirmation'
+    name: "Amit Shah",
+    date: "2024-01-19",
+    phone: "+91 54321 09876",
+    email: "amit.shah@example.com",
+    address: "987 Hill View, Pune, Maharashtra 411001",
+    service: "Home Cinema",
+    description: "Multi-room audio visual system with central control",
+    size: "1500 Sqft",
+    amount: "₹7,20,000",
+    status: "Scrap",
+    comment: "Budget constraints, may revisit in next quarter",
+    history: [
+      {
+        date: "2024-01-19",
+        amount: "₹7,20,000",
+        type: "Initial Quote"
+      }
+    ]
   }
 ];
 

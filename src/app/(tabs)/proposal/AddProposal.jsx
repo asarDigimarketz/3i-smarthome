@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Modal, 
-  useWindowDimensions 
-} from 'react-native';
-import { ChevronDown, Calendar, Upload , ArrowLeft } from 'lucide-react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
+import { ArrowLeft, Calendar, ChevronDown, Upload } from 'lucide-react-native';
+import { useState } from 'react';
+import {
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
+} from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { TextInput } from 'react-native-paper';
 
 const AddProposal = () => {
   const { width } = useWindowDimensions();
@@ -70,23 +69,6 @@ const AddProposal = () => {
     });
   };
 
-  const InputField = ({ placeholder, value, onChangeText, hasDropdown = false }) => (
-    <View className="relative">
-      <TextInput
-        className="h-12 border border-gray-200 rounded-full px-4 bg-white text-gray-700"
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        placeholderTextColor="#9CA3AF"
-      />
-      {hasDropdown && (
-        <View className="absolute right-4 top-3.5">
-          <ChevronDown size={20} color="#9CA3AF" />
-        </View>
-      )}
-    </View>
-  );
-
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -141,121 +123,142 @@ const AddProposal = () => {
         <View className="p-6">
         
           {/* Customer Details */}
-          <Text className="text-base font-medium text-gray-700 mb-4">Customer Details</Text>
+          <Text className="text-lg font-medium text-gray-700 mb-4">Customer Details</Text>
 
           <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="Customer Name"
+              <TextInput
+                mode="outlined"
+                label="Customer Name"
                 value={formData.customerName}
                 onChangeText={(text) => setFormData({...formData, customerName: text})}
-                hasDropdown={true}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
 
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="Contact Number"
+              <TextInput
+                mode="outlined"
+                label="Contact Number"
                 value={formData.contactNumber}
                 onChangeText={(text) => setFormData({...formData, contactNumber: text})}
-                hasDropdown={true}
+                keyboardType="phone-pad"
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
           <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="Email Id"
+              <TextInput
+                mode="outlined"
+                label="Email Id"
                 value={formData.emailId}
                 onChangeText={(text) => setFormData({...formData, emailId: text})}
+                keyboardType="email-address"
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
 
-            <View className={`${isTablet ? 'flex-1' : 'mb-6'}`}>
-              <View className="relative">
-                <TextInput
-                  className="h-12 border border-gray-200 rounded-full px-4 bg-white text-gray-700 text-base"
-                  placeholder="Date"
-                  value={formData.date}
-                  editable={false}
-                  placeholderTextColor="#9CA3AF"
-                />
-                <TouchableOpacity 
-                  className="absolute right-4 top-3.5"
-                  onPress={showDatePicker}
-                >
-                  <Calendar size={20} color="#9CA3AF" />
-                </TouchableOpacity>
-              </View>
+            <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
+              <TextInput
+                mode="outlined"
+                label="Date"
+                value={formData.date}
+                editable={false}
+                right={<TextInput.Icon icon={() => <Calendar size={20} color="#9CA3AF" />} onPress={showDatePicker} />}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
+              />
             </View>
           </View>
 
           {/* Address */}
-          <Text className="text-base font-medium text-gray-700 mb-4">Address</Text>
+          <Text className="text-lg font-medium text-gray-700 mb-4">Address</Text>
 
           <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="Address Line 1"
+              <TextInput
+                mode="outlined"
+                label="Address Line 1"
                 value={formData.addressLine1}
                 onChangeText={(text) => setFormData({...formData, addressLine1: text})}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="City / Town / Village"
+              <TextInput
+                mode="outlined"
+                label="City / Town / Village"
                 value={formData.cityTownVillage}
                 onChangeText={(text) => setFormData({...formData, cityTownVillage: text})}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
           <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="District"
+              <TextInput
+                mode="outlined"
+                label="District"
                 value={formData.district}
                 onChangeText={(text) => setFormData({...formData, district: text})}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="State"
+              <TextInput
+                mode="outlined"
+                label="State"
                 value={formData.state}
                 onChangeText={(text) => setFormData({...formData, state: text})}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
           <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="Country"
+              <TextInput
+                mode="outlined"
+                label="Country"
                 value={formData.country}
                 onChangeText={(text) => setFormData({...formData, country: text})}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
-            <View className={`${isTablet ? 'flex-1' : 'mb-6'}`}>
-              <InputField
-                placeholder="Pin Code"
+            <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
+              <TextInput
+                mode="outlined"
+                label="Pin Code"
                 value={formData.pinCode}
                 onChangeText={(text) => setFormData({...formData, pinCode: text})}
+                keyboardType="number-pad"
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
           {/* Project Details */}
-          <Text className="text-base font-medium text-gray-700 mb-4">Project Details</Text>
+          <Text className="text-lg font-medium text-gray-700 mb-4">Project Details</Text>
 
-          {/* Service and Description */}
           <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
               {/* Service Dropdown */}
               <View className="relative">
                 <TouchableOpacity
                   onPress={() => setShowServiceDropdown(!showServiceDropdown)}
-                  className="flex-row items-center justify-between bg-gray-100 rounded-lg h-12 px-4 min-w-[60]"
+                  className="flex-row items-center justify-between bg-gray-100 rounded-lg h-14 px-4 w-full"
                 >
                   <Text className={`${
                     formData.service ? 
@@ -265,14 +268,14 @@ const AddProposal = () => {
                       formData.service === 'Outdoor Audio' ? 'text-pink-600' :
                       'text-gray-500'
                     : 'text-gray-500'
-                  } text-sm font-medium`}>
+                  } text-base font-medium`}>
                     {formData.service || 'Service'}
                   </Text>
                   <ChevronDown size={16} color="#6B7280" />
                 </TouchableOpacity>
                 
                 {showServiceDropdown && (
-                  <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-48">
+                  <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
                     {serviceOptions.map((service) => (
                       <TouchableOpacity
                         key={service.value}
@@ -282,7 +285,7 @@ const AddProposal = () => {
                           setShowServiceDropdown(false);
                         }}
                       >
-                        <Text className={`${service.color} text-sm font-medium`}>
+                        <Text className={`${service.color} text-lg font-medium`}>
                           {service.value}
                         </Text>
                       </TouchableOpacity>
@@ -293,36 +296,40 @@ const AddProposal = () => {
             </View>
 
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField 
-                placeholder="Description"
+              <TextInput
+                mode="outlined"
+                label="Description"
                 value={formData.projectDescription}
                 onChangeText={(text) => setFormData({...formData, projectDescription: text})}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
-          {/* Amount and Size */}
           <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <InputField
-                placeholder="Project Amount"
+              <TextInput
+                mode="outlined"
+                label="Project Amount"
                 value={formData.projectAmount}
                 onChangeText={(text) => setFormData({...formData, projectAmount: text})}
+                keyboardType="numeric"
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <View className="flex-row">
-                <TextInput
-                  className="flex-1 h-12 border border-gray-200 rounded-l-full px-4 bg-white text-gray-700"
-                  placeholder="Size"
-                  value={formData.size}
-                  onChangeText={(text) => setFormData({...formData, size: text})}
-                  placeholderTextColor="#9CA3AF"
-                />
-                <View className="h-12 bg-gray-50 border-t border-r border-b border-gray-200 rounded-r-full px-4 justify-center">
-                  <Text className="text-gray-500">Sqt</Text>
-                </View>
-              </View>
+              <TextInput
+                mode="outlined"
+                label="Size"
+                value={formData.size}
+                onChangeText={(text) => setFormData({...formData, size: text})}
+                right={<TextInput.Affix text="Sqt" />}
+                keyboardType="numeric"
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
+              />
             </View>
           </View>
 
@@ -330,7 +337,7 @@ const AddProposal = () => {
           <View className="relative mb-4">
             <TouchableOpacity
               onPress={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="flex-row items-center justify-between bg-gray-100 rounded-lg h-12 px-4 min-w-[60]"
+              className="flex-row items-center justify-between bg-gray-100 rounded-lg h-14 px-4 w-full"
             >
               <Text className={`${
                 formData.status ? 
@@ -341,14 +348,14 @@ const AddProposal = () => {
                   formData.status === 'Confirm' ? 'text-green-600' :
                   'text-gray-500'
                 : 'text-gray-500'
-              } text-sm font-medium`}>
+              } text-base font-medium`}>
                 {formData.status || 'Status'}
               </Text>
               <ChevronDown size={16} color="#6B7280" />
             </TouchableOpacity>
 
             {showStatusDropdown && (
-              <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-48">
+              <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
                 {statusOptions.map((status) => (
                   <TouchableOpacity
                     key={status.value}
@@ -358,7 +365,7 @@ const AddProposal = () => {
                       setShowStatusDropdown(false);
                     }}
                   >
-                    <Text className={`${status.color} text-sm font-medium`}>
+                    <Text className={`${status.color} text-lg font-medium`}>
                       {status.value}
                     </Text>
                   </TouchableOpacity>
@@ -367,21 +374,26 @@ const AddProposal = () => {
             )}
           </View>
 
-          {/* Comment */}
+          {/* Comment TextArea */}
           <TextInput
-            className="h-32 border border-gray-200 rounded-2xl px-4 py-3 mb-6 bg-white text-gray-700"
-            placeholder="Comment"
+            mode="outlined"
+            label="Comment"
             value={formData.comment}
             onChangeText={(text) => setFormData({...formData, comment: text})}
             multiline={true}
-            textAlignVertical="top"
-            placeholderTextColor="#9CA3AF"
+            numberOfLines={4}
+            style={{
+              minHeight: 120,
+              textAlignVertical: 'top',
+            }}
+            outlineColor="#E5E7EB"
+            activeOutlineColor="#DC2626"
           />
 
           {/* Project Attachment */}
           <Text className="text-base font-medium text-gray-700 mb-4">Project Attachment</Text>
           <TouchableOpacity 
-            className="bg-red-600 h-12 rounded-full flex-row items-center justify-center mb-2"
+            className="bg-red-600 h-12 rounded-lg flex-row items-center justify-center mb-2"
             onPress={pickDocument}
           >
             <Upload size={20} color="white" className="mr-2" />
@@ -422,14 +434,14 @@ const AddProposal = () => {
           {/* Action Buttons */}
           <View className="flex-row justify-center space-x-4 mt-8 gap-2">
             <TouchableOpacity 
-              className="bg-gray-100 px-8 py-3 rounded-full"
+              className="bg-gray-100 px-8 py-3 rounded-lg"
               onPress={() => router.back()}
             >
               <Text className="text-gray-600 font-medium">Cancel</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              className="bg-red-600 px-8 py-3 rounded-full"
+              className="bg-red-600 px-8 py-3 rounded-lg"
               onPress={() => {
                 // Add your save logic here
                 console.log('Form Data:', formData);

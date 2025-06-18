@@ -1,8 +1,7 @@
-import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { ArrowLeft, Check, ChevronDown, Eye, PenSquare, Plus, Trash2 } from 'lucide-react-native'
 import { useState } from 'react'
-import { ArrowLeft, ChevronDown, Check } from 'lucide-react-native'
+import { Text, TouchableOpacity, useWindowDimensions, View } from 'react-native'
 
 const roles = [
   { id: 1, name: 'Admin' },
@@ -10,14 +9,22 @@ const roles = [
   { id: 3, name: 'Employee' }
 ]
 
-const permissions = [
+// Replace PERMISSION_ACTIONS array with icon mapping
+const PERMISSION_ACTIONS = [
+  { name: 'view', icon: Eye },
+  { name: 'create', icon: Plus },
+  { name: 'edit', icon: PenSquare },
+  { name: 'delete', icon: Trash2 }
+];
+
+const PERMISSIONS = [
   { id: 1, name: 'Home' },
   { id: 2, name: 'Proposal' },
   { id: 3, name: 'Project' },
   { id: 4, name: 'Employee' },
   { id: 5, name: 'Customer' },
   { id: 6, name: 'Settings' }
-]
+];
 
 export default function Employee() {
   const { width } = useWindowDimensions()
@@ -25,20 +32,9 @@ export default function Employee() {
   const router = useRouter()
   const [showRoleDropdown, setShowRoleDropdown] = useState(false)
   const [selectedRole, setSelectedRole] = useState('')
-  const [permissionMatrix, setPermissionMatrix] = useState({})
-
-  const handlePermissionToggle = (permission, action) => {
-    setPermissionMatrix(prev => ({
-      ...prev,
-      [permission]: {
-        ...prev[permission],
-        [action]: !prev[permission]?.[action]
-      }
-    }))
-  }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View className="flex-1 bg-white">
       {/* Header */}
       <View className="flex-row items-center p-4 border-b border-gray-100">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
@@ -78,50 +74,55 @@ export default function Employee() {
           )}
         </View>
 
-        {/* Permissions Table */}
+        {/* Permission Title */}
         <Text className="text-xl font-bold text-gray-900 mb-4">Permission</Text>
-        
+
         {/* Table Header */}
-        <View className={`${isTablet ? "flex-row" : ""} mb-4 bg-red-600 rounded-t-xl p-4`}>
-          <View className={`${isTablet ? "flex-1" : "mb-2"}`}>
-            <Text className="text-white text-base font-medium">Descriptions</Text>
-          </View>
-          <View className={`${isTablet ? "flex-row flex-1 justify-between" : "flex-row justify-between"}`}>
-            <Text className="text-white text-base font-medium">View</Text>
-            <Text className="text-white text-base font-medium">Create</Text>
-            <Text className="text-white text-base font-medium">Edit</Text>
-            <Text className="text-white text-base font-medium">Delete</Text>
+        <View className="mb-4 bg-red-600 rounded-t-xl p-2">
+          <View className="flex-row items-center">
+            <View className="flex-1 min-w-[32%]">
+              <Text className="text-white text-base font-medium">Descriptions</Text>
+            </View>
+            <View className="flex-row justify-between flex-1 min-w-[68%]">
+              {PERMISSION_ACTIONS.map(action => (
+                <View key={action.name} className="w-12 items-center">
+                  <action.icon size={20} color="white" />
+                </View>
+              ))}
+            </View>
           </View>
         </View>
 
         {/* Table Body */}
-        {permissions.map((permission) => (
-          <View 
-            key={permission.id}
-            className={`${isTablet ? "flex-row" : ""} py-4 border-b border-gray-100`}
-          >
-            <View className={`${isTablet ? "flex-1" : "mb-2"}`}>
-              <Text className="text-gray-900 text-base">{permission.name}</Text>
+        <View className="bg-white rounded-b-xl">
+          {PERMISSIONS.map((permission) => (
+            <View 
+              key={permission.id}
+              className="flex-row items-center py-4 border-b border-gray-200"
+            >
+              <View className="flex-1 min-w-[32%]">
+                <Text className="text-gray-800 text-base ml-2">{permission.name}</Text>
+              </View>
+              <View className="flex-row justify-between flex-1 min-w-[68%]">
+                {PERMISSION_ACTIONS.map((action) => (
+                  <View key={action.name} className="w-12 items-center">
+                    <TouchableOpacity
+                      className={`w-6 h-6 rounded border ${
+                        false
+                          ? 'bg-green-500 border-green-500' 
+                          : 'border-gray-300'
+                      } items-center justify-center`}
+                    >
+                      {false && (
+                        <Check size={16} color="white" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
             </View>
-            <View className={`${isTablet ? "flex-row flex-1 justify-between" : "flex-row justify-between"}`}>
-              {['view', 'create', 'edit', 'delete'].map((action) => (
-                <TouchableOpacity
-                  key={action}
-                  onPress={() => handlePermissionToggle(permission.name, action)}
-                  className={`w-6 h-6 rounded border ${
-                    permissionMatrix[permission.name]?.[action] 
-                      ? 'bg-green-500 border-green-500' 
-                      : 'border-gray-300'
-                  } items-center justify-center`}
-                >
-                  {permissionMatrix[permission.name]?.[action] && (
-                    <Check size={16} color="white" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
+          ))}
+        </View>
 
         {/* Action Buttons */}
         <View className="flex-row justify-center space-x-4 mt-8">
@@ -140,6 +141,6 @@ export default function Employee() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   )
 }

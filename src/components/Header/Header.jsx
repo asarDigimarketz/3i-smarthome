@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Menu } from 'lucide-react-native';
+import React from 'react';
+import { Image, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Header({ onMenuPress }) {
   const insets = useSafeAreaInsets();
@@ -25,7 +25,7 @@ export default function Header({ onMenuPress }) {
         />
         <TouchableOpacity 
           onPress={onMenuPress}
-          className="w-10 h-10 items-center justify-center rounded-full bg-white/10"
+          className="w-10 h-10 items-center justify-center rounded-lg bg-white/10"
         >
           <Menu size={24} color="white" strokeWidth={1.5} />
         </TouchableOpacity>

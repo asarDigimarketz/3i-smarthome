@@ -1,12 +1,11 @@
-import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
-import { List, Speaker, Cctv, HouseWifi, Tv2 } from 'lucide-react-native';
+import { Cctv, HouseWifi, List, Speaker, Tv2 } from 'lucide-react-native';
+import { TouchableOpacity, View } from 'react-native';
 
 const filterIcons = [
   { name: 'All', icon: List },
   { name: 'Home Cinema', icon: Tv2 },
-  { name: 'Home Automation', icon: HouseWifi },
   { name: 'Security System', icon: Cctv },
+  { name: 'Home Automation', icon: HouseWifi },
   { name: 'Outdoor Audio', icon: Speaker }
 ];
 
@@ -15,10 +14,10 @@ const FilterTabs = ({ selectedFilter, onFilterChange }) => {
     switch (filterName) {
       case 'Home Cinema':
         return 'bg-services-cinema-light border border-services-cinema-border';
-      case 'Home Automation':
-        return 'bg-services-automation-light border border-services-automation-border';
       case 'Security System':
         return 'bg-services-security-light border border-services-security-border';
+      case 'Home Automation':
+        return 'bg-services-automation-light border border-services-automation-border';  
       case 'Outdoor Audio':
         return 'bg-services-audio-light border border-services-audio-border';
       default:
@@ -34,10 +33,10 @@ const FilterTabs = ({ selectedFilter, onFilterChange }) => {
         return '#374151';
       case 'Home Cinema':
         return '#7c3aed';
-      case 'Home Automation':
-        return '#2563eb';
       case 'Security System':
         return '#0891b2';
+      case 'Home Automation':
+        return '#2563eb';  
       case 'Outdoor Audio':
         return '#db2777';
       default:

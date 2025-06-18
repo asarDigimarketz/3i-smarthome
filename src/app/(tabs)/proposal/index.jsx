@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
-import { Search, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { Plus, Search } from 'lucide-react-native';
+import { useState } from 'react';
+import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import FilterTabs from '../../../components/Common/FilterTabs';
 import { proposalData } from '../../../data/mockData';
 
@@ -59,7 +59,7 @@ const ProposalList = () => {
         case 'Warm':
           return 'bg-[#ffdeb0]';
         case 'Scrap':
-          return 'bg-[#999999]';
+          return 'bg-[#fff4e5]';
         case 'Confirm':
           return 'bg-[#beeecf]';
         default:
@@ -70,10 +70,7 @@ const ProposalList = () => {
     return (
       <TouchableOpacity 
         className={`p-4 mb-3 rounded-lg shadow-sm ${getServiceStyles(item.service)}`}
-        onPress={() => router.push({
-          pathname: '/(tabs)/proposal/ProposalDetail',
-          params: { proposalId: item.id }
-        })}
+        onPress={() => router.push(`/proposal/${item.id}`)}
       >
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-lg font-bold text-gray-800">{item.name}</Text>
@@ -92,7 +89,7 @@ const ProposalList = () => {
         <View className="border-t border-gray-100 pt-2">
           <View className="flex-row justify-between items-center">
             <Text className="text-gray-600 text-sm">Size: {item.size}</Text>
-            <Text className="text-gray-900 font-bold">{item.amount}</Text>
+            <Text className="text-gray-900 font-bold">₹{item.amount}</Text>
           </View>
         </View>
       </TouchableOpacity>

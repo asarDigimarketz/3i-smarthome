@@ -1,17 +1,16 @@
-import React, { useState } from "react";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  useWindowDimensions,
-} from "react-native";
-import { ChevronDown, Calendar, Upload, ArrowLeft } from "lucide-react-native";
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import { useRouter } from "expo-router";
+import { ArrowLeft, Calendar, ChevronDown, Upload } from "lucide-react-native";
+import { useState } from "react";
+import {
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { TextInput } from "react-native-paper";
 
 const AddProject = () => {
   const { width } = useWindowDimensions();
@@ -86,31 +85,6 @@ const AddProject = () => {
     }
   };
 
-  // First, update the InputField component to match AddProposal's style:
-  const InputField = ({
-    placeholder,
-    value,
-    onChangeText,
-    hasDropdown = false,
-    keyboardType = "default",
-  }) => (
-    <View className="relative">
-      <TextInput
-        className="h-12 border border-gray-200 rounded-full px-4 bg-white text-gray-700 text-base"
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        placeholderTextColor="#9CA3AF"
-      />
-      {hasDropdown && (
-        <View className="absolute right-4 top-3.5">
-          <ChevronDown size={20} color="#9CA3AF" />
-        </View>
-      )}
-    </View>
-  );
-
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -144,232 +118,190 @@ const AddProject = () => {
         </View>
       </View>
 
-      <KeyboardAwareScrollView
-        className="flex-1"
-        contentContainerStyle={{ flexGrow: 1 }}
-        enableOnAndroid={true}
-        enableAutomaticScroll={true}
-        keyboardShouldPersistTaps="handled"
-        extraScrollHeight={140}
-        keyboardOpeningTime={0}
-      >
+      <KeyboardAwareScrollView className="flex-1">
         <View className="p-6">
           {/* Customer Details */}
-          <Text className="text-base font-medium text-gray-700 mb-4">
+          <Text className="text-lg font-medium text-gray-700 mb-4">
             Customer Details
           </Text>
 
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <TouchableOpacity
-                onPress={() => setShowStatusDropdown(true)}
-                className="relative"
-              >
-                <InputField
-                  placeholder="Customer Name"
-                  value={formData.customerName}
-                  onChangeText={(text) =>
-                    handleInputChange("customerName", text)
-                  }
-                  hasDropdown
-                />
-              </TouchableOpacity>
+              <TextInput
+                mode="outlined"
+                label="Customer Name"
+                value={formData.customerName}
+                onChangeText={(text) => handleInputChange("customerName", text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
+              />
             </View>
 
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="Contact Number"
+              <TextInput
+                mode="outlined"
+                label="Contact Number"
                 value={formData.contactNumber}
-                onChangeText={(text) =>
-                  handleInputChange("contactNumber", text)
-                }
+                onChangeText={(text) => handleInputChange("contactNumber", text)}
                 keyboardType="phone-pad"
-                hasDropdown
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="Email Id"
+              <TextInput
+                mode="outlined"
+                label="Email Id"
                 value={formData.emailId}
                 onChangeText={(text) => handleInputChange("emailId", text)}
                 keyboardType="email-address"
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
 
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <TouchableOpacity onPress={showDatePicker} className="relative">
-                <InputField
-                  placeholder="Date of Booking"
-                  value={formData.dateOfBooking}
-                  editable={false}
-                />
-                <View className="absolute right-4 top-3.5">
-                  <Calendar size={20} color="#9CA3AF" />
-                </View>
-              </TouchableOpacity>
+              <TextInput
+                mode="outlined"
+                label="Date of Booking"
+                value={formData.dateOfBooking}
+                editable={false}
+                right={
+                  <TextInput.Icon
+                    icon={() => <Calendar size={20} color="#9CA3AF" />}
+                    onPress={showDatePicker}
+                  />
+                }
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
+              />
             </View>
           </View>
 
           {/* Address Section */}
-          <Text className="text-base font-medium text-gray-700 mb-4 mt-6">
+          <Text className="text-lg font-medium text-gray-700 mb-4 mt-6">
             Address
           </Text>
 
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="Address Line 1"
+              <TextInput
+                mode="outlined"
+                label="Address Line 1"
                 value={formData.addressLine1}
-                onChangeText={(value) =>
-                  handleInputChange("addressLine1", value)
-                }
+                onChangeText={(text) => handleInputChange("addressLine1", text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
 
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="City / Town / Village"
+              <TextInput
+                mode="outlined"
+                label="City / Town / Village"
                 value={formData.cityTownVillage}
-                onChangeText={(value) =>
-                  handleInputChange("cityTownVillage", value)
-                }
+                onChangeText={(text) => handleInputChange("cityTownVillage", text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="District"
+              <TextInput
+                mode="outlined"
+                label="District"
                 value={formData.district}
-                onChangeText={(value) => handleInputChange("district", value)}
+                onChangeText={(text) => handleInputChange("district", text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
 
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="State"
+              <TextInput
+                mode="outlined"
+                label="State"
                 value={formData.state}
-                onChangeText={(value) => handleInputChange("state", value)}
+                onChangeText={(text) => handleInputChange("state", text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="Country"
+              <TextInput
+                mode="outlined"
+                label="Country"
                 value={formData.country}
-                onChangeText={(value) => handleInputChange("country", value)}
+                onChangeText={(text) => handleInputChange("country", text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
 
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="Pin Code"
+              <TextInput
+                mode="outlined"
+                label="Pin Code"
                 value={formData.pinCode}
-                onChangeText={(value) => handleInputChange("pinCode", value)}
+                onChangeText={(text) => handleInputChange("pinCode", text)}
                 keyboardType="numeric"
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
           </View>
 
           {/* Project Details Section */}
-          <Text className="text-base font-medium text-gray-700 mb-4 mt-6">
+          <Text className="text-lg font-medium text-gray-700 mb-4 mt-6">
             Project Details
           </Text>
 
-          <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
-            <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              {/* Service Dropdown */}
-              <View className="relative">
-                <TouchableOpacity
-                  onPress={() => setShowServiceDropdown(!showServiceDropdown)}
-                  className="flex-row items-center justify-between bg-gray-100 rounded-lg h-12 px-4 w-full"
-                >
-                  <Text className={`${
-                    formData.service ? 
-                      formData.service === 'Home Cinema' ? 'text-purple-600' :
-                      formData.service === 'Security System' ? 'text-cyan-600' :
-                      formData.service === 'Home Automation' ? 'text-blue-600' :
-                      formData.service === 'Outdoor Audio' ? 'text-pink-600' :
-                      'text-gray-500'
-                    : 'text-gray-500'
-                  } text-sm font-medium`}>
-                    {formData.service || 'Service'}
-                  </Text>
-                  <ChevronDown size={16} color="#6B7280" />
-                </TouchableOpacity>
-                
-                {showServiceDropdown && (
-                  <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
-                    {serviceOptions.map((service) => (
-                      <TouchableOpacity
-                        key={service.value}
-                        className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
-                        onPress={() => {
-                          setFormData({ ...formData, service: service.value });
-                          setShowServiceDropdown(false);
-                        }}
-                      >
-                        <Text className={`${service.color} text-sm font-medium`}>
-                          {service.value}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <InputField
-                placeholder="Project Description"
+              <TextInput
+                mode="outlined"
+                label="Project Description"
                 value={formData.projectDescription}
-                onChangeText={(value) =>
-                  handleInputChange("projectDescription", value)
-                }
+                onChangeText={(text) => handleInputChange("projectDescription", text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
               />
             </View>
 
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <View className="flex-row">
-                <TextInput
-                  className="flex-1 h-12 border border-gray-200 rounded-l-full px-4 bg-white text-gray-700"
-                  placeholder="Size"
-                  value={formData.size}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, size: text })
-                  }
-                  placeholderTextColor="#9CA3AF"
-                />
-                <View className="h-12 bg-gray-50 border-t border-r border-b border-gray-200 rounded-r-full px-4 justify-center">
-                  <Text className="text-gray-500">Sqt</Text>
-                </View>
-              </View>
+              <TextInput
+                mode="outlined"
+                label="Size"
+                value={formData.size}
+                onChangeText={(text) => handleInputChange("size", text)}
+                right={<TextInput.Affix text="Sqt" />}
+                keyboardType="numeric"
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
+              />
             </View>
           </View>
 
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
-              <View className="relative">
-                <InputField
-                  placeholder="Project Amount"
-                  value={formData.projectAmount}
-                  onChangeText={(value) =>
-                    handleInputChange("projectAmount", value)
-                  }
-                  keyboardType="numeric"
-                />
-                <View className="absolute right-4 top-3">
-                  <Text className="text-sm text-gray-500">₹</Text>
-                </View>
-              </View>
+              <TextInput
+                mode="outlined"
+                label="Project Amount"
+                value={formData.projectAmount}
+                onChangeText={(text) => handleInputChange("projectAmount", text)}
+                keyboardType="numeric"
+                right={<TextInput.Affix text="₹" />}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
+              />
             </View>
 
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
@@ -378,16 +310,22 @@ const AddProject = () => {
                   onPress={() => setShowStatusDropdown(!showStatusDropdown)}
                   className="flex-row items-center justify-between bg-gray-100 rounded-lg h-12 px-4 w-full"
                 >
-                  <Text className={`${
-                    formData.status ? 
-                      formData.status === 'New' ? 'text-blue-600' :
-                      formData.status === 'InProgress' ? 'text-yellow-600' :
-                      formData.status === 'Done' ? 'text-green-600' :
-                      formData.status === 'Complete' ? 'text-purple-600' :
-                      'text-gray-500'
-                    : 'text-gray-500'
-                  } text-sm font-medium`}>
-                    {formData.status || 'Select Status'}
+                  <Text
+                    className={`${
+                      formData.status
+                        ? formData.status === "New"
+                          ? "text-blue-600"
+                          : formData.status === "InProgress"
+                          ? "text-yellow-600"
+                          : formData.status === "Done"
+                          ? "text-green-600"
+                          : formData.status === "Complete"
+                          ? "text-purple-600"
+                          : "text-gray-500"
+                        : "text-gray-500"
+                    } text-base font-medium`}
+                  >
+                    {formData.status || "Select Status"}
                   </Text>
                   <ChevronDown size={16} color="#6B7280" />
                 </TouchableOpacity>
@@ -403,7 +341,7 @@ const AddProject = () => {
                           setShowStatusDropdown(false);
                         }}
                       >
-                        <Text className={`${status.color} text-sm font-medium`}>
+                        <Text className={`${status.color} text-lg font-medium`}>
                           {status.value}
                         </Text>
                       </TouchableOpacity>
@@ -420,7 +358,7 @@ const AddProject = () => {
           </Text>
 
           <TouchableOpacity
-            className="bg-red-600 h-12 rounded-full flex-row items-center justify-center mb-2"
+            className="bg-red-600 h-12 rounded-lg flex-row items-center justify-center mb-2"
             onPress={pickDocument}
           >
             <Upload size={20} color="white" className="mr-2" />
@@ -447,16 +385,16 @@ const AddProject = () => {
           )}
 
           {/* Action Buttons */}
-          <View className="flex-row justify-center space-x-4 mt-8">
+          <View className="flex-row justify-center space-x-4 mt-8 gap-4">
             <TouchableOpacity
-              className="bg-gray-100 px-8 py-3 rounded-full"
+              className="bg-gray-100 px-8 py-3 rounded-lg"
               onPress={() => router.back()}
             >
               <Text className="text-gray-600 font-medium">Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="bg-red-600 px-8 py-3 rounded-full"
+              className="bg-red-600 px-8 py-3 rounded-lg"
               onPress={() => {
                 console.log("Form Data:", formData);
                 router.back();

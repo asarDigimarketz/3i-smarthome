@@ -1,9 +1,9 @@
-import { View, Text, TextInput, TouchableOpacity } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
 import { ArrowLeft, ChevronDown } from 'lucide-react-native'
+import { useState } from 'react'
+import { Text, TouchableOpacity, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
+import { TextInput } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const encryptionOptions = [
@@ -54,51 +54,55 @@ export default function EmailConfiguration() {
         <View className="space-y-4">
           {/* SMTP Server */}
           <View className="mb-4">
-            <Text className="text-gray-600 mb-2 text-base">SMTP Server</Text>
             <TextInput
-              className="h-12 px-4 border border-gray-200 rounded-full text-gray-900"
+              mode="outlined"
+              label="SMTP Server"
               placeholder="Enter Server Address"
               value={formData.serverAddress}
               onChangeText={(text) => setFormData({...formData, serverAddress: text})}
-              placeholderTextColor="#9CA3AF"
+              outlineColor="#d1d5db"
+              activeOutlineColor="#DC2626"
             />
           </View>
 
           {/* SMTP Port */}
           <View className="mb-4">
-            <Text className="text-gray-600 mb-2 text-base">SMTP Port</Text>
             <TextInput
-              className="h-12 px-4 border border-gray-200 rounded-full text-gray-900"
+              mode="outlined"
+              label="SMTP Port"
               placeholder="Enter SMTP Port"
               value={formData.smtpPort}
               onChangeText={(text) => setFormData({...formData, smtpPort: text})}
               keyboardType="number-pad"
-              placeholderTextColor="#9CA3AF"
+              outlineColor="#d1d5db"
+              activeOutlineColor="#DC2626"
             />
           </View>
 
           {/* SMTP Username */}
           <View className="mb-4">
-            <Text className="text-gray-600 mb-2 text-base">SMTP Username</Text>
             <TextInput
-              className="h-12 px-4 border border-gray-200 rounded-full text-gray-900"
+              mode="outlined"
+              label="SMTP Username"
               placeholder="Enter SMTP Username"
               value={formData.smtpUsername}
               onChangeText={(text) => setFormData({...formData, smtpUsername: text})}
-              placeholderTextColor="#9CA3AF"
+              outlineColor="#d1d5db"
+              activeOutlineColor="#DC2626"
             />
           </View>
 
           {/* SMTP Password */}
           <View className="mb-4">
-            <Text className="text-gray-600 mb-2 text-base">SMTP Password</Text>
             <TextInput
-              className="h-12 px-4 border border-gray-200 rounded-full text-gray-900"
+              mode="outlined"
+              label="SMTP Password"
               placeholder="Enter SMTP Password"
               value={formData.smtpPassword}
               onChangeText={(text) => setFormData({...formData, smtpPassword: text})}
               secureTextEntry
-              placeholderTextColor="#9CA3AF"
+              outlineColor="#d1d5db"
+              activeOutlineColor="#DC2626"
             />
           </View>
 
@@ -107,7 +111,7 @@ export default function EmailConfiguration() {
             <Text className="text-gray-600 mb-2 text-base">Encryption</Text>
             <TouchableOpacity
               onPress={() => setShowEncryptionDropdown(!showEncryptionDropdown)}
-              className="h-12 px-4 border border-gray-200 rounded-full flex-row items-center justify-between"
+              className="h-12 px-4 border border-gray-200 rounded-lg flex-row items-center justify-between"
             >
               <Text className={`${
                 formData.encryption ? 
@@ -144,14 +148,14 @@ export default function EmailConfiguration() {
         {/* Action Buttons */}
         <View className="flex-row justify-center space-x-4 my-6 gap-2">
           <TouchableOpacity 
-            className="bg-red-600 px-8 py-3 rounded-full"
+            className="bg-red-600 px-8 py-3 rounded-lg"
             onPress={() => {/* Handle save */}}
           >
             <Text className="text-white font-medium">Save</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            className="bg-gray-500 px-8 py-3 rounded-full"
+            className="bg-gray-500 px-8 py-3 rounded-lg"
             onPress={() => router.back()}
           >
             <Text className="text-white font-medium">Cancel</Text>
@@ -170,31 +174,33 @@ export default function EmailConfiguration() {
           <View className="space-y-4">
             {/* Sender Email */}
             <View className="mb-4">
-              <Text className="text-gray-600 mb-2 text-base">Sender</Text>
               <TextInput
-                className="h-12 px-4 border border-gray-200 rounded-full text-gray-900"
+                mode="outlined"
+                label="Sender Email"
                 placeholder="Email Address"
                 value={formData.senderEmail}
                 onChangeText={(text) => setFormData({...formData, senderEmail: text})}
                 keyboardType="email-address"
-                placeholderTextColor="#9CA3AF"
+                outlineColor="#d1d5db"
+                activeOutlineColor="#DC2626"
               />
             </View>
 
             {/* Test Mail */}
             <View className="flex-row items-center space-x-4 gap-2">
               <View className="flex-1">
-                <Text className="text-gray-600 mb-2 text-base">Test Mail</Text>
                 <TextInput
-                  className="h-12 px-4 border border-gray-200 rounded-full text-gray-900"
+                  mode="outlined"
+                  label="Test Mail"
                   placeholder="Test Message"
                   value={formData.testMessage}
                   onChangeText={(text) => setFormData({...formData, testMessage: text})}
-                  placeholderTextColor="#9CA3AF"
+                  outlineColor="#d1d5db"
+                  activeOutlineColor="#DC2626"
                 />
               </View>
               <TouchableOpacity 
-                className="bg-red-600 h-12 px-6 rounded-full items-center justify-center self-end"
+                className="bg-red-600 h-12 px-6 rounded-lg items-center justify-center self-end"
                 onPress={() => {/* Handle verify */}}
               >
                 <Text className="text-white font-medium">Verify</Text>

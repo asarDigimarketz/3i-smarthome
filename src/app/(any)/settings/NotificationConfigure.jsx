@@ -1,9 +1,9 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
-import { useState } from 'react'
-import { ArrowLeft, Upload } from 'lucide-react-native'
 import * as DocumentPicker from 'expo-document-picker'
+import { useRouter } from 'expo-router'
+import { ArrowLeft, X } from 'lucide-react-native'
+import { useState } from 'react'
+import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { TextInput } from 'react-native-paper'
 
 export default function NotificationConfiguration() {
   const router = useRouter()
@@ -11,6 +11,21 @@ export default function NotificationConfiguration() {
     projectId: '',
     serviceFile: null
   })
+  const [showSample, setShowSample] = useState(false)
+
+  const sampleJson = `{
+    "type": "service_account",
+    "project_id": "",
+    "private_key_id": "",
+    "private_key": "-----BEGIN PRIVATE KEY----------END PRIVATE KEY-----\\n",
+    "client_email": "",
+    "client_id": "",
+    "auth_uri": "",
+    "token_uri": "",
+    "auth_provider_x509_cert_url": "",
+    "client_x509_cert_url": "",
+    "universe_domain": "googleapis.com"
+  }`
 
   const pickDocument = async () => {
     try {
@@ -42,29 +57,31 @@ export default function NotificationConfiguration() {
       <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
         {/* Firebase Project ID */}
         <View className="mb-6">
-          <Text className="text-gray-600 mb-2 text-base">Firebase Project Id</Text>
           <TextInput
-            className="h-12 px-4 border border-gray-200 rounded-full text-gray-900"
+            mode="outlined"
+            label="Firebase Project Id"
             placeholder="Enter Project Id"
             value={formData.projectId}
             onChangeText={(text) => setFormData(prev => ({...prev, projectId: text}))}
-            placeholderTextColor="#9CA3AF"
+            outlineColor="#E5E7EB"
+            activeOutlineColor="#DC2626"
           />
         </View>
 
         {/* Firebase Service File Upload */}
         <View className="mb-6">
-          <Text className="text-gray-600 mb-2 text-base">Firebase Service File</Text>
           <View className="flex-row items-center space-x-4 gap-2">
             <TextInput
-              className="flex-1 h-12 px-4 border border-gray-200 rounded-full text-gray-900"
+              mode="outlined"
+              label="Firebase Service File"
               placeholder="Upload Json File Only"
               value={formData.serviceFile?.name || ''}
               editable={false}
-              placeholderTextColor="#9CA3AF"
+              outlineColor="#E5E7EB"
+              activeOutlineColor="#DC2626"
             />
             <TouchableOpacity 
-              className="bg-red-600 h-12 px-6 rounded-full items-center justify-center"
+              className="bg-red-600 h-12 px-6 rounded-lg items-center justify-center"
               onPress={pickDocument}
             >
               <Text className="text-white font-medium">Upload</Text>
@@ -73,14 +90,45 @@ export default function NotificationConfiguration() {
         </View>
 
         {/* Sample Service File Link */}
-        <TouchableOpacity className="mb-8">
+        <TouchableOpacity 
+          className="mb-8"
+          onPress={() => setShowSample(true)}
+        >
           <Text className="text-red-600 text-base">Sample Service File</Text>
         </TouchableOpacity>
+
+        {/* Sample JSON Modal */}
+        <Modal
+          visible={showSample}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSample(false)}
+        >
+          <View className="flex-1 bg-black/50 justify-center items-center p-4">
+            <View className="bg-white w-full max-w-lg rounded-xl p-4">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-bold text-gray-900">Sample Service Account JSON</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowSample(false)}
+                  className="p-2"
+                >
+                  <X size={24} color="#111827" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView 
+                className="bg-gray-50 rounded-lg p-4"
+                showsVerticalScrollIndicator={false}
+              >
+                <Text className="text-gray-700 font-mono">{sampleJson}</Text>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         {/* Action Buttons */}
         <View className="flex-row justify-center space-x-4 gap-2">
           <TouchableOpacity 
-            className="bg-red-600 px-8 py-3 rounded-full"
+            className="bg-red-600 px-8 py-3 rounded-lg"
             onPress={() => {
               // Handle save
               console.log('Saving configuration:', formData)
@@ -90,7 +138,7 @@ export default function NotificationConfiguration() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            className="bg-gray-500 px-8 py-3 rounded-full"
+            className="bg-gray-500 px-8 py-3 rounded-lg"
             onPress={() => router.back()}
           >
             <Text className="text-white font-medium">Cancel</Text>
