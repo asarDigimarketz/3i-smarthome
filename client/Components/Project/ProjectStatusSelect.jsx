@@ -1,20 +1,32 @@
 import { Select, SelectItem } from "@heroui/select";
 
-export function ProjectStatusSelect() {
+export function ProjectStatusSelect({
+  value,
+  onChange,
+  isInvalid,
+  errorMessage,
+}) {
   const statusOptions = [
     { label: "New Project", value: "new" },
-    { label: "InProgress", value: "inprogress" },
+    { label: "In Progress", value: "in-progress" },
     { label: "Done", value: "done" },
     { label: "Completed", value: "completed" },
-    { label: "Dropped/Cancelled", value: "dropped" },
+    { label: "Cancelled", value: "cancelled" },
   ];
 
   return (
     <Select
-      placeholder="Status"
+      placeholder="Select Status"
       radius="sm"
       variant="bordered"
       className="w-full"
+      selectedKeys={value ? [value] : []}
+      onSelectionChange={(keys) => {
+        const selectedValue = Array.from(keys)[0];
+        onChange && onChange(selectedValue);
+      }}
+      isInvalid={isInvalid}
+      errorMessage={errorMessage}
     >
       {statusOptions.map((status) => (
         <SelectItem key={status.value} value={status.value}>

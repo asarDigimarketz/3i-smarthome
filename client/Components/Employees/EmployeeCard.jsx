@@ -13,53 +13,65 @@ const EmployeeCard = ({
   email,
   phone,
   avatar,
+  userPermissions = {},
+  onEmployeeUpdate,
 }) => {
-  return (
-    <Card
-      as={Link}
-      href={`/dashboard/employees/${id}`}
-      isPressable
-      className="border border-default-200"
-    >
-      <CardBody className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <Avatar src={avatar} className="w-16 h-16" alt={name} />
-          <Chip
-            color={status === "Active" ? "success" : "danger"}
-            variant="flat"
-            size="sm"
-          >
-            {status}
-          </Chip>
-        </div>
+  const cardContent = (
+    <CardBody className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <Avatar src={avatar} className="w-16 h-16" alt={name} />
+        <Chip
+          color={status === "Active" ? "success" : "danger"}
+          variant="flat"
+          size="sm"
+        >
+          {status}
+        </Chip>
+      </div>
 
-        <h3 className="text-lg font-semibold">{name}</h3>
-        <p className="text-default-500">{role}</p>
+      <h3 className="text-lg font-semibold">{name}</h3>
+      <p className="text-default-500">{role}</p>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4">
-          <div>
-            <p className="text-sm text-default-500">Employee ID</p>
-            <p className="font-medium">{id}</p>
-          </div>
-          <div>
-            <p className="text-sm text-default-500">Department</p>
-            <p className="font-medium">{department}</p>
-          </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4">
+        <div>
+          <p className="text-sm text-default-500">Employee ID</p>
+          <p className="font-medium">{id}</p>
         </div>
+        <div>
+          <p className="text-sm text-default-500">Department</p>
+          <p className="font-medium">{department}</p>
+        </div>
+      </div>
 
-        <div className="mt-4 pt-4 border-t border-divider space-y-2">
-          <div className="flex items-center gap-2">
-            <Phone className="text-primary" width={16} />
-            <span className="text-sm">{phone}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Mail className="text-primary" width={16} />
-            <span className="text-sm">{email}</span>
-          </div>
+      <div className="mt-4 pt-4 border-t border-divider space-y-2">
+        <div className="flex items-center gap-2">
+          <Phone className="text-primary" width={16} />
+          <span className="text-sm">{phone}</span>
         </div>
-      </CardBody>
-    </Card>
+        <div className="flex items-center gap-2">
+          <Mail className="text-primary" width={16} />
+          <span className="text-sm">{email}</span>
+        </div>
+      </div>
+    </CardBody>
   );
+
+  // If user has view permission, make it a clickable link, otherwise just a card
+  if (userPermissions.hasViewPermission || userPermissions.hasEditPermission) {
+    return (
+      <Card
+        as={Link}
+        href={`/dashboard/employees/${id}`}
+        isPressable
+        className="border border-default-200 hover:shadow-md transition-shadow"
+      >
+        {cardContent}
+      </Card>
+    );
+  }
+
+  // If no view permission, render as non-clickable card
+  return <Card className="border border-default-200">{cardContent}</Card>;
 };
 
 export default EmployeeCard;

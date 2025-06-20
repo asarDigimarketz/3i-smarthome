@@ -1,30 +1,27 @@
 "use client";
 import Link from "next/link";
+import { useRouter, useParams } from "next/navigation";
 import { Card, CardBody } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
+import { Skeleton } from "@heroui/skeleton";
+import { addToast } from "@heroui/toast";
 import { ArrowLeft, Edit, File, Mail, Phone } from "lucide-react";
 import ProjectCard from "../Dashboard/ProjectCard.jsx";
-import { useState } from "react";
-import { EmployeeModal } from "./EmployeeAddingOrEditModal";
+import { useState, useEffect } from "react";
+import { EmployeeModal } from "./EmployeeModal";
 
-const employeeData = {
-  id: "EMP-001",
-  name: "Arun R",
-  role: "Installation Specialist",
-  department: "Installation",
-  dateOfBirth: "09/04/1996",
-  dateOfJoining: "20/06/2023",
-  phone: "+91 87541 486311",
-  email: "vinoth@gmail.com",
-  note: "All rounder -Installation, electrician, Service technician",
-  attachments: ["aadhaar.pdf"],
-  stats: {
-    completed: 20,
-    ongoing: 1,
-    projects: 2,
-  },
-  projects: [
+const EmployeeDetail = () => {
+  const router = useRouter();
+  const params = useParams();
+  const employeeId = params?.employeeId;
+
+  const [employeeData, setEmployeeData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Mock projects data - you can replace this with actual API call
+  const mockProjects = [
     {
       id: "1",
       customer: "Vinoth R",
@@ -36,18 +33,162 @@ const employeeData = {
       progress: "1/3",
       color: "bg-blue-500",
     },
-  ],
-};
+  ];
 
-const EmployeeDetail = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Fetch employee data from API
+  const fetchEmployeeData = async () => {
+    if (!employeeId) return;
+
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement/${employeeId}`,
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch employee data");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        // Transform backend data to match frontend format
+        const emp = data.employee;
+        const transformedEmployee = {
+          id: emp.employeeId,
+          name: `${emp.firstName} ${emp.lastName}`,
+          role: emp.role?.role || "N/A",
+          department: emp.department?.name || "N/A",
+          dateOfBirth: emp.dateOfBirth
+            ? new Date(emp.dateOfBirth).toLocaleDateString("en-GB")
+            : "N/A",
+          dateOfJoining: emp.dateOfHiring
+            ? new Date(emp.dateOfHiring).toLocaleDateString("en-GB")
+            : "N/A",
+          phone: emp.mobileNo || "N/A",
+          email: emp.email || "N/A",
+          note: emp.notes || "No notes available",
+          avatar:
+            emp.avatar ||
+            `https://img.heroui.chat/image/avatar?w=200&h=200&u=${Math.floor(
+              Math.random() * 10
+            )}`,
+          attachments: emp.documents || [],
+          status: emp.status,
+          stats: {
+            completed: 20, // Mock data
+            ongoing: 1, // Mock data
+            projects: 2, // Mock data
+          },
+          projects: mockProjects,
+          originalData: emp,
+        };
+        setEmployeeData(transformedEmployee);
+      } else {
+        throw new Error(data.message || "Failed to fetch employee data");
+      }
+    } catch (error) {
+      console.error("Error fetching employee:", error);
+      addToast({
+        title: "Error",
+        description: "Failed to load employee details. Please try again.",
+        color: "danger",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployeeData();
+  }, [employeeId]);
+
+  const handleModalClose = (shouldRefresh = false) => {
+    setIsModalOpen(false);
+    if (shouldRefresh) {
+      fetchEmployeeData();
+    }
+  };
+
+  // Loading skeleton component
+  const EmployeeDetailSkeleton = () => (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64 rounded-lg" />
+          <Skeleton className="h-4 w-48 rounded-lg" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-20 rounded-lg" />
+          <Skeleton className="h-10 w-20 rounded-lg" />
+        </div>
+      </div>
+
+      <Card className="border border-default-200">
+        <CardBody className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex flex-col items-center text-center">
+              <Skeleton className="w-32 h-32 rounded-full mb-4" />
+              <Skeleton className="h-6 w-32 rounded-lg mb-2" />
+              <Skeleton className="h-4 w-24 rounded-lg" />
+            </div>
+            <div className="space-y-4 md:col-span-2">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-20 rounded-lg" />
+                    <Skeleton className="h-4 w-32 rounded-lg" />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full rounded-lg" />
+                <Skeleton className="h-4 w-3/4 rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  if (loading) {
+    return <EmployeeDetailSkeleton />;
+  }
+
+  if (!employeeData) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="text-center">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Employee not found
+          </h3>
+          <p className="text-gray-500 mb-4">
+            The employee you're looking for doesn't exist.
+          </p>
+          <Button
+            as={Link}
+            href="/dashboard/employees"
+            color="primary"
+            startContent={<ArrowLeft />}
+          >
+            Back to Employees
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-primary">Employee Details</h1>
-          <p className="text-default-500">Manage Customer List</p>
+          <p className="text-default-500">Manage Employee Information</p>
         </div>
 
         <div className="flex gap-2">
@@ -76,12 +217,21 @@ const EmployeeDetail = () => {
             {/* Left Column - Avatar and Role */}
             <div className="flex flex-col items-center text-center">
               <Avatar
-                src="https://img.heroui.chat/image/avatar?w=200&h=200&u=1"
+                src={employeeData.avatar}
                 className="w-32 h-32"
                 alt={employeeData.name}
               />
               <h2 className="text-xl font-bold mt-4">{employeeData.name}</h2>
               <p className="text-default-500">{employeeData.role}</p>
+              <div
+                className={`mt-2 px-3 py-1 rounded-full text-sm font-medium ${
+                  employeeData.status === "active"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                {employeeData.status === "active" ? "Active" : "Inactive"}
+              </div>
             </div>
 
             {/* Middle Column - Employee Details */}
@@ -116,17 +266,24 @@ const EmployeeDetail = () => {
               </div>
 
               <div>
-                <p className="text-default-500">Note</p>
+                <p className="text-default-500">Notes</p>
                 <p>{employeeData.note}</p>
               </div>
 
-              <div>
-                <p className="text-default-500">Attachments</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <File className="text-primary" width={16} />
-                  <span className="text-sm">{employeeData.attachments[0]}</span>
-                </div>
-              </div>
+              {employeeData.attachments &&
+                employeeData.attachments.length > 0 && (
+                  <div>
+                    <p className="text-default-500">Documents</p>
+                    <div className="space-y-1 mt-1">
+                      {employeeData.attachments.map((attachment, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <File className="text-primary" width={16} />
+                          <span className="text-sm">Document {index + 1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </div>
           </div>
         </CardBody>
@@ -147,7 +304,7 @@ const EmployeeDetail = () => {
               <p className="text-2xl font-bold">{employeeData.stats.ongoing}</p>
             </div>
             <div>
-              <p className="text-default-500">Project</p>
+              <p className="text-default-500">Projects</p>
               <p className="text-2xl font-bold">
                 {employeeData.stats.projects}
               </p>
@@ -179,8 +336,12 @@ const EmployeeDetail = () => {
 
       <EmployeeModal
         isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        employeeData={employeeData}
+        onOpenChange={handleModalClose}
+        employeeData={{
+          ...employeeData,
+          originalData: employeeData.originalData,
+        }}
+        onSuccess={() => handleModalClose(true)}
       />
     </div>
   );

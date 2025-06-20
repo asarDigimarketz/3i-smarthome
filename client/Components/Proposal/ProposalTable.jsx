@@ -1,5 +1,5 @@
 "use client";
-import { ChevronDown, Edit3, Eye, Check, X } from "lucide-react";
+import { ChevronDown, Edit3, Eye, Check, X, Edit } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -10,15 +10,81 @@ import {
 } from "@heroui/table";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
-import { useState } from "react";
+import { Select, SelectItem } from "@heroui/select";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 import ProposalDetailsModal from "./ProposalDetailsModal";
 
-const ProposalTable = () => {
+const ProposalTable = ({
+  searchQuery,
+  statusFilter,
+  dateRange,
+  serviceFilter,
+}) => {
+  const router = useRouter();
+  const [proposals, setProposals] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [sortDescriptor, setSortDescriptor] = useState();
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCell, setEditingCell] = useState({ row: null, column: null });
   const [editValue, setEditValue] = useState("");
+
+  // Fetch proposals from API
+  const fetchProposals = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+
+      // Add search parameter
+      if (searchQuery) {
+        params.append("search", searchQuery);
+      }
+
+      // Add status filter
+      if (statusFilter) {
+        params.append("status", statusFilter);
+      }
+
+      // Add date range filter
+      if (dateRange && dateRange.start && dateRange.end) {
+        params.append("dateFrom", dateRange.start.toString());
+        params.append("dateTo", dateRange.end.toString());
+      }
+
+      // Add service filter
+      if (serviceFilter) {
+        params.append("service", serviceFilter);
+      }
+
+      // Add pagination
+      params.append("limit", "50"); // Get more records for table
+
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals?${params.toString()}`,
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setProposals(response.data.data.proposals);
+      }
+    } catch (error) {
+      console.error("Error fetching proposals:", error);
+      alert("Failed to fetch proposals");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch proposals on component mount and when filters change
+  useEffect(() => {
+    fetchProposals();
+  }, [searchQuery, statusFilter, dateRange, serviceFilter]);
 
   const handleRowClick = (proposal) => {
     // Only open modal if we're not currently editing
@@ -29,128 +95,164 @@ const ProposalTable = () => {
   };
 
   const handleStartEdit = (e, item, columnKey) => {
-    e.stopPropagation(); // Prevent row click
-    setEditingCell({ row: item.customerName, column: columnKey });
+    setEditingCell({ row: item._id, column: columnKey });
     setEditValue(item[columnKey]);
   };
 
-  const handleSaveEdit = (item) => {
-    // Here you would typically update your data source
-    console.log("Saving edit for", item.customerName, "new value:", editValue);
-    setEditingCell({ row: null, column: null });
-    setEditValue("");
+  const handleSaveEdit = async (item) => {
+    try {
+      const response = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${item._id}/field`,
+        {
+          field: editingCell.column,
+          value: editValue,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update local state
+        setProposals((prev) =>
+          prev.map((proposal) =>
+            proposal._id === item._id
+              ? { ...proposal, [editingCell.column]: editValue }
+              : proposal
+          )
+        );
+
+        setEditingCell({ row: null, column: null });
+        setEditValue("");
+      }
+    } catch (error) {
+      console.error("Error updating proposal:", error);
+      alert(error.response?.data?.error || "Failed to update proposal");
+    }
   };
 
   const handleCancelEdit = (e) => {
-    e?.stopPropagation(); // Optional event param
     setEditingCell({ row: null, column: null });
     setEditValue("");
   };
 
-  const proposals = [
-    {
-      customerName: "Vinoth R",
-      contact: "+91 94536 345357",
-      location: "123/ss colont, Thirunagar, Madurai-625018",
-      size: "1200 X 3450 sqt",
-      comment: "Quotation sent & confirmed",
-      amount: "₹30,0000",
-      status: "Hot",
-    },
-    {
-      customerName: "Varadharajan M",
-      contact: "+91 84353 756453",
-      location: "23/98,selva 1st, Iyerbunglow, Madurai-625015",
-      size: "1400 X 1950 sqt",
-      comment: "Quotation sent & confirmed",
-      amount: "₹22,0000",
-      status: "Cold",
-    },
-    {
-      customerName: "Magesh J",
-      contact: "+91 75644 57345",
-      location: "34 AC nagar, Goripalayam, Madurai-625002",
-      size: "2500 X 1450 sqt",
-      comment: "Quotation sent & confirmed",
-      amount: "₹26,00,000",
-      status: "Warm",
-    },
-    {
-      customerName: "Aravind U",
-      contact: "+91 85646 976234",
-      location: "1A/67 Anbu Nagar, Anna Nagar, Madurai-625018",
-      size: "1200 X 3450 sqt",
-      comment: "Quotation sent & confirmed",
-      amount: "₹22,00,000",
-      status: "Hot",
-    },
-    {
-      customerName: "Raghul T",
-      contact: "+91 9834 578341",
-      location: "123/ss colont, Thirunagar, Madurai-625018",
-      size: "1200 X 3450 sqt",
-      comment: "Quotation sent & confirmed",
-      amount: "₹30,000",
-      status: "Hot",
-    },
-    {
-      customerName: "Dinesh A",
-      contact: "+91 84353 756453",
-      location: "23/98,selva 1st, Iyerbunglow, Madurai-625015",
-      size: "1200 X 3450 sqt",
-      comment: "Quotation sent & confirmed",
-      amount: "₹36,00,000",
-      status: "Cold",
-    },
-  ];
+  const handleDelete = async (proposalId) => {
+    if (!confirm("Are you sure you want to delete this proposal?")) {
+      return;
+    }
 
+    try {
+      const response = await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalId}`,
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Remove from local state
+        setProposals((prev) =>
+          prev.filter((proposal) => proposal._id !== proposalId)
+        );
+        alert("Proposal deleted successfully");
+      }
+    } catch (error) {
+      console.error("Error deleting proposal:", error);
+      alert(error.response?.data?.error || "Failed to delete proposal");
+    }
+  };
+
+  // Exact colors from your design system
   const getStatusColor = (status) => {
     switch (status) {
       case "Hot":
-        return "bg-red-50 text-red-600 border border-red-200";
+        return "#C92125"; // Exact red from image
       case "Cold":
-        return "bg-blue-50 text-blue-600 border border-blue-200";
+        return "#00AED6"; // Exact cyan from image
       case "Warm":
-        return "bg-yellow-50 text-yellow-600 border border-yellow-200";
+        return "#FDEBB0"; // Exact warm color from image
+      case "Scrap":
+        return "#999999"; // Exact gray from image
+      case "Confirmed":
+        return "#BEEED0"; // Exact green from image
       default:
-        return "bg-gray-50 text-gray-600 border border-gray-200";
+        return "#6B7280"; // Default gray
+    }
+  };
+
+  const getStatusBackgroundColor = (status) => {
+    switch (status) {
+      case "Hot":
+        return "#F7DBDD"; // Exact light pink from image
+      case "Cold":
+        return "#D9FCFF"; // Exact light cyan from image
+      case "Warm":
+        return "#FFDEB0"; // Exact light orange from image
+      case "Scrap":
+        return "#999999"; // Light gray for scrap
+      case "Confirmed":
+        return "#BEEED0"; // Exact light green from image
+      default:
+        return "#F3F4F6"; // Default light gray
+    }
+  };
+
+  const getServiceBackgroundColor = (service) => {
+    if (!service) return "#FAE9EA"; // White for no service
+
+    switch (service) {
+      case "Home Cinema":
+        return "#F3F3FF"; // Exact light purple from image
+      case "Home Automation":
+        return "#EBF8FC"; // Exact light blue from image
+      case "Security System":
+        return "#EBF8FC"; // Exact light blue from image (same as Home Automation)
+      case "Outdoor Audio Solution":
+        return "#FFE9F6"; // Exact light cream/yellow from image
+      default:
+        return "#FAE9EA"; // White for unknown services
     }
   };
 
   const columns = [
     { key: "customerName", label: "Customer Name", allowsSorting: true },
-    { key: "contact", label: "Contact" },
-    { key: "location", label: "Location" },
+    { key: "contactNumber", label: "Contact" },
+    { key: "fullAddress", label: "Location" },
     { key: "size", label: "Size" },
     { key: "comment", label: "Comment" },
-    { key: "amount", label: "Amount", allowsSorting: true },
+    { key: "formattedAmount", label: "Amount", allowsSorting: true },
     { key: "status", label: "Status", allowsSorting: true },
   ];
 
   const renderCell = (item, columnKey) => {
     const isEditing =
-      editingCell.row === item.customerName && editingCell.column === columnKey;
+      editingCell.row === item._id && editingCell.column === columnKey;
 
     switch (columnKey) {
       case "customerName":
         return (
-          <div className="font-semibold text-gray-900 py-2">
-            {item[columnKey]}
-          </div>
+          <div className="font-semibold text-gray-900">{item[columnKey]}</div>
         );
-      case "contact":
-        return <div className="text-gray-700 py-2">{item[columnKey]}</div>;
-      case "location":
+      case "contactNumber":
+        return <div className="text-gray-700">{item[columnKey]}</div>;
+      case "fullAddress":
         return (
-          <div className="text-gray-700 py-2 max-w-[200px]">
-            {item[columnKey]}
+          <div className="text-gray-700 max-w-[200px]">
+            {item.address
+              ? `${item.address.addressLine}, ${item.address.city}, ${item.address.district}, ${item.address.state} - ${item.address.pincode}`
+              : "N/A"}
           </div>
         );
       case "size":
-        return <div className="text-gray-700 py-2">{item[columnKey]}</div>;
+        return <div className="text-gray-700">{item[columnKey]} sqt</div>;
       case "comment":
         return (
-          <div className="flex items-center space-x-2 py-2">
+          <div className="flex items-center space-x-2">
             {isEditing ? (
               <div className="flex items-center gap-2 min-w-[200px]">
                 <Textarea
@@ -167,8 +269,7 @@ const ProposalTable = () => {
                     size="sm"
                     color="primary"
                     className="min-w-unit-6 w-6 h-6"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onPress={(e) => {
                       handleSaveEdit(item);
                     }}
                   >
@@ -179,7 +280,7 @@ const ProposalTable = () => {
                     size="sm"
                     variant="bordered"
                     className="min-w-unit-6 w-6 h-6"
-                    onClick={(e) => handleCancelEdit(e)}
+                    onPress={(e) => handleCancelEdit(e)}
                   >
                     <X className="w-3 h-3" />
                   </Button>
@@ -187,13 +288,15 @@ const ProposalTable = () => {
               </div>
             ) : (
               <>
-                <span className="text-gray-700">{item[columnKey]}</span>
+                <span className="text-gray-700">
+                  {item[columnKey] || "No comment"}
+                </span>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
                   className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
-                  onClick={(e) => handleStartEdit(e, item, columnKey)}
+                  onPress={(e) => handleStartEdit(e, item, columnKey)}
                 >
                   <Edit3 className="w-3 h-3" />
                 </Button>
@@ -201,9 +304,9 @@ const ProposalTable = () => {
             )}
           </div>
         );
-      case "amount":
+      case "formattedAmount":
         return (
-          <div className="flex items-center space-x-2 py-2">
+          <div className="flex items-center space-x-2">
             {isEditing ? (
               <div className="flex items-center gap-2">
                 <Input
@@ -211,7 +314,7 @@ const ProposalTable = () => {
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   className="w-32"
-                  startContent="₹"
+                  type="number"
                   onClick={(e) => e.stopPropagation()}
                   autoFocus
                 />
@@ -221,8 +324,7 @@ const ProposalTable = () => {
                     size="sm"
                     color="primary"
                     className="min-w-unit-6 w-6 h-6"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onPress={(e) => {
                       handleSaveEdit(item);
                     }}
                   >
@@ -233,7 +335,7 @@ const ProposalTable = () => {
                     size="sm"
                     variant="bordered"
                     className="min-w-unit-6 w-6 h-6"
-                    onClick={(e) => handleCancelEdit(e)}
+                    onPress={(e) => handleCancelEdit(e)}
                   >
                     <X className="w-3 h-3" />
                   </Button>
@@ -242,14 +344,14 @@ const ProposalTable = () => {
             ) : (
               <>
                 <span className="font-semibold text-gray-900">
-                  {item[columnKey]}
+                  ₹{item.projectAmount?.toLocaleString("en-IN") || "0"}
                 </span>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
                   className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
-                  onClick={(e) => handleStartEdit(e, item, columnKey)}
+                  onPress={(e) => handleStartEdit(e, item, "projectAmount")}
                 >
                   <Edit3 className="w-3 h-3" />
                 </Button>
@@ -258,25 +360,128 @@ const ProposalTable = () => {
           </div>
         );
       case "status":
+        const isEditingStatus =
+          editingCell.row === item._id && editingCell.column === columnKey;
+        const statusOptions = ["Hot", "Cold", "Warm", "Scrap", "Confirmed"];
+
         return (
-          <div className="flex items-center space-x-2 py-2">
-            <span
-              className={`px-3 py-1 rounded-md text-xs font-medium ${getStatusColor(
-                item[columnKey]
-              )}`}
-            >
-              {item[columnKey]}
-            </span>
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center space-x-2">
+            {isEditingStatus ? (
+              <div className="flex items-center gap-2 min-w-[150px]">
+                <Select
+                  size="sm"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="flex-1"
+                  onClick={(e) => e.stopPropagation()}
+                  autoFocus
+                >
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </Select>
+                <div className="flex flex-col gap-1">
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    color="primary"
+                    className="min-w-unit-6 w-6 h-6"
+                    onPress={(e) => {
+                      handleSaveEdit(item);
+                    }}
+                  >
+                    <Check className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="bordered"
+                    className="min-w-unit-6 w-6 h-6"
+                    onPress={(e) => handleCancelEdit(e)}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span
+                  className="px-3 py-1 rounded-md text-xs font-medium border cursor-pointer"
+                  style={{
+                    color: "#383838",
+                    backgroundColor: getStatusBackgroundColor(item[columnKey]),
+                    borderColor: getStatusColor(item[columnKey]) + "33", // 20% opacity border
+                  }}
+                  onClick={(e) => handleStartEdit(e, item, columnKey)}
+                >
+                  {item[columnKey]}
+                </span>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
+                  onPress={(e) => handleStartEdit(e, item, columnKey)}
+                >
+                  <Edit3 className="w-3 h-3" />
+                </Button>
+              </>
+            )}
           </div>
         );
       default:
-        return <div className="text-gray-700 py-2">{item[columnKey]}</div>;
+        return <div className="text-gray-700">{item[columnKey]}</div>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="text-gray-500">Loading proposals...</div>
+      </div>
+    );
+  }
+
+  // Get header background color based on service filter
+  const getHeaderBackgroundColor = () => {
+    if (!serviceFilter) return "#FAE9EA"; // White for "All" or no filter
+
+    switch (serviceFilter) {
+      case "Home Cinema":
+        return "#F3F3FF"; // Light purple
+      case "Home Automation":
+        return "#EBFBFC"; // Light blue
+      case "Security System":
+        return "#EBFBFC"; // Light blue (same as Home Automation)
+      case "Outdoor Audio Solution":
+        return "#FEEFB8"; // Light cream/yellow
+      default:
+        return "#FAE9EA"; // White for unknown services
+    }
+  };
+
+  // Get header text color based on service filter
+  const getHeaderTextColor = () => {
+    if (!serviceFilter) return "#C92125"; // Primary red for "All"
+
+    switch (serviceFilter) {
+      case "Home Cinema":
+        return "#5500FF"; // Purple
+      case "Home Automation":
+        return "#006BAD"; // Blue
+      case "Security System":
+        return "#006BAD"; // Blue
+      case "Outdoor Audio Solution":
+        return "#DB0A89"; // Pink
+      default:
+        return "#C92125"; // Primary red for unknown services
     }
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
       <Table
         aria-label="Proposals table"
         sortDescriptor={sortDescriptor}
@@ -286,26 +491,34 @@ const ProposalTable = () => {
           base: "w-full bg-white shadow-sm rounded-lg overflow-hidden",
           wrapper: "overflow-x-auto",
           table: "w-full",
-          thead: "[&>tr]:first:shadow-none",
+          thead: "[&>tr]:first:shadow-none ",
           th: [
-            "bg-transparent",
-            "text-red-500",
-            "font-semibold",
+            "font-medium",
             "text-sm",
-            "py-3",
-            "px-4",
-            "border-b",
-            "border-gray-200",
+            "py-4",
+            "px-6",
+            "border-b-3",
             "first:pl-6",
             "last:pr-6",
+
+            "transition-colors",
+            "duration-200",
           ],
           tr: [
-            "hover:bg-gray-50",
+            "group",
             "border-b",
-            "border-gray-100",
+            "border-gray-200",
             "transition-colors",
+            "hover:opacity-90",
           ],
-          td: ["py-0", "px-4", "first:pl-6", "last:pr-6", "border-b-0"],
+          td: [
+            "px-6",
+            "py-4",
+            "first:pl-6",
+            "last:pr-6",
+            "border-b-0",
+            "text-sm",
+          ],
         }}
       >
         <TableHeader columns={columns}>
@@ -318,17 +531,25 @@ const ProposalTable = () => {
                   ? sortDescriptor.direction
                   : undefined
               }
+              style={{
+                backgroundColor: getHeaderBackgroundColor(),
+                color: getHeaderTextColor(),
+                borderColor: "#E5E7EB",
+              }}
             >
               {column.label}
             </TableColumn>
           )}
         </TableHeader>
-        <TableBody items={proposals}>
+        <TableBody items={proposals} emptyContent="No proposals found">
           {(item) => (
             <TableRow
-              key={item.customerName}
+              key={item._id}
               className="h-16 cursor-pointer"
               onClick={() => handleRowClick(item)}
+              style={{
+                backgroundColor: getServiceBackgroundColor(item.services),
+              }}
             >
               {(columnKey) => (
                 <TableCell>{renderCell(item, columnKey)}</TableCell>
@@ -342,22 +563,9 @@ const ProposalTable = () => {
         <ProposalDetailsModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          proposalData={{
-            customer: selectedProposal.customerName,
-            date: new Date().toLocaleDateString(),
-            contact: selectedProposal.contact,
-            email: `${selectedProposal.customerName
-              .toLowerCase()
-              .replace(/\s/g, "")}@gmail.com`,
-            address: selectedProposal.location,
-            service: "Home Cinema",
-            description: "Full home automation system including lights",
-            size: selectedProposal.size,
-            amount: selectedProposal.amount,
-            comment: selectedProposal.comment,
-            status: selectedProposal.status,
-            attachment: "proposal.pdf",
-          }}
+          proposalData={selectedProposal}
+          onUpdate={fetchProposals}
+          onDelete={handleDelete}
         />
       )}
     </div>

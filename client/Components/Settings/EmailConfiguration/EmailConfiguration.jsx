@@ -166,7 +166,14 @@ const EmailConfiguration = () => {
     const fetchEmailConfig = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/settings/emailConfiguration`);
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/settings/emailConfiguration`,
+          {
+            headers: {
+              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            },
+          }
+        );
         if (response.data.success && response.data.emailConfig) {
           setFormData(response.data.emailConfig);
         }
@@ -205,8 +212,13 @@ const EmailConfiguration = () => {
     try {
       setSaveLoading(true);
       const response = await axios.post(
-        `/api/settings/emailConfiguration`,
-        formData
+        `${process.env.NEXT_PUBLIC_API_URL}/api/settings/emailConfiguration`,
+        formData,
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
       );
       if (response.data.success) {
         // toast.success("Email configuration saved successfully");
@@ -228,10 +240,18 @@ const EmailConfiguration = () => {
     try {
       setTestLoading(true);
       setError(null);
-      const response = await axios.put(`/api/settings/emailConfiguration`, {
-        testEmail: testData.email,
-        message: testData.message,
-      });
+      const response = await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/settings/emailConfiguration`,
+        {
+          testEmail: testData.email,
+          message: testData.message,
+        },
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
       if (response.data.success) {
         setError(null);
         // toast.success("Test email sent successfully");
@@ -385,7 +405,7 @@ const EmailConfiguration = () => {
                 className="w-1/3"
               />
               <Button
-                className="bg-hotel-primary text-white w-1/12 rounded-full"
+                className="bg-primary text-white w-1/12 rounded-full"
                 onClick={handleTestEmail}
                 isLoading={testLoading}
               >
@@ -397,7 +417,7 @@ const EmailConfiguration = () => {
         <div className="flex justify-end mt-auto">
           <Button
             type="submit"
-            className="min-w-40 mt-6 bg-hotel-primary text-white rounded-full"
+            className="min-w-40 mt-6 bg-primary text-white rounded-full"
             isLoading={saveLoading}
           >
             {saveLoading ? "Saving..." : "Save"}

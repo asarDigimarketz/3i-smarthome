@@ -1,0 +1,612 @@
+const Proposal = require("../../models/proposal/Proposal");
+const Project = require("../../models/project/Project");
+const {
+  deleteFile,
+  getFileUrl,
+  handleFileUpdate,
+} = require("../../middleware/upload");
+
+/**
+ * Proposal Controller
+ * Handles all CRUD operations for proposals
+ * Based on client component requirements
+ */
+
+/**
+ * @desc    Create new proposal
+ * @route   POST /api/proposals
+ * @access  Private
+ */
+const createProposal = async (req, res) => {
+  try {
+    const {
+      customerName,
+      contactNumber,
+      email,
+      address,
+      services,
+      projectDescription,
+      projectAmount,
+      size,
+      status,
+      comment,
+      date,
+      amountOptions,
+    } = req.body;
+
+    // Validate required fields
+    if (
+      !customerName ||
+      !contactNumber ||
+      !email ||
+      !address ||
+      !services ||
+      !projectDescription ||
+      !projectAmount ||
+      !size
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "Please provide all required fields",
+      });
+    }
+
+    // Parse address if it's a string
+    let parsedAddress = address;
+    if (typeof address === "string") {
+      try {
+        parsedAddress = JSON.parse(address);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid address format",
+        });
+      }
+    }
+
+    // Parse amountOptions if it's a string
+    let parsedAmountOptions = amountOptions;
+    if (typeof amountOptions === "string") {
+      try {
+        parsedAmountOptions = JSON.parse(amountOptions);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid amount options format",
+        });
+      }
+    }
+
+    // Create proposal data object
+    const proposalData = {
+      customerName,
+      contactNumber,
+      email,
+      address: parsedAddress,
+      services,
+      projectDescription,
+      projectAmount: parseFloat(projectAmount),
+      size,
+      status: status || "Warm",
+      comment,
+      date: date ? new Date(date) : new Date(),
+      amountOptions: parsedAmountOptions,
+    };
+
+    // Add file information if file was uploaded
+    if (req.fileInfo) {
+      proposalData.attachment = {
+        filename: req.fileInfo.filename,
+        originalName: req.fileInfo.originalName,
+        mimetype: req.fileInfo.mimetype,
+        size: req.fileInfo.size,
+        path: req.fileInfo.path,
+      };
+    }
+
+    // Create proposal
+    const proposal = await Proposal.create(proposalData);
+
+    // Return success response
+    res.status(201).json({
+      success: true,
+      data: {
+        proposal,
+        attachmentUrl: proposal.attachment
+          ? getFileUrl(proposal.attachment.filename)
+          : null,
+      },
+      message: "Proposal created successfully",
+    });
+  } catch (error) {
+    // If there was an error and file was uploaded, clean up the file
+    if (req.fileInfo) {
+      await deleteFile(req.fileInfo.path).catch(console.error);
+    }
+
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(". "),
+      });
+    }
+
+    console.error("Create proposal error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while creating proposal",
+    });
+  }
+};
+
+/**
+ * @desc    Get all proposals with filtering and pagination
+ * @route   GET /api/proposals
+ * @access  Private
+ */
+const getProposals = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      search = "",
+      status = "",
+      dateFrom = "",
+      dateTo = "",
+      service = "",
+    } = req.query;
+
+    // Prepare filter options
+    const filterOptions = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sortBy,
+      sortOrder,
+      search,
+      status,
+      dateFrom,
+      dateTo,
+    };
+
+    // Add service filter if provided
+    let additionalFilters = {};
+    if (service) {
+      additionalFilters.services = service;
+    }
+
+    // Get proposals with filters
+    const proposals = await Proposal.getProposalsWithFilters(
+      additionalFilters,
+      filterOptions
+    );
+
+    // Get total count for pagination
+    const total = await Proposal.getProposalsCount({
+      search,
+      status,
+      dateFrom,
+      dateTo,
+      ...additionalFilters,
+    });
+
+    // Add file URLs to proposals
+    const proposalsWithUrls = proposals.map((proposal) => ({
+      ...proposal,
+      attachmentUrl: proposal.attachment
+        ? getFileUrl(proposal.attachment.filename)
+        : null,
+    }));
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        proposals: proposalsWithUrls,
+        pagination: {
+          current: parseInt(page),
+          total: totalPages,
+          count: total,
+          limit: parseInt(limit),
+          hasNext: hasNextPage,
+          hasPrev: hasPrevPage,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Get proposals error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while fetching proposals",
+    });
+  }
+};
+
+/**
+ * @desc    Get single proposal by ID
+ * @route   GET /api/proposals/:id
+ * @access  Private
+ */
+const getProposal = async (req, res) => {
+  try {
+    const proposal = await Proposal.findById(req.params.id);
+
+    if (!proposal) {
+      return res.status(404).json({
+        success: false,
+        error: "Proposal not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        proposal,
+        attachmentUrl: proposal.attachment
+          ? getFileUrl(proposal.attachment.filename)
+          : null,
+      },
+    });
+  } catch (error) {
+    console.error("Get proposal error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while fetching proposal",
+    });
+  }
+};
+
+/**
+ * @desc    Update proposal
+ * @route   PUT /api/proposals/:id
+ * @access  Private
+ */
+const updateProposal = async (req, res) => {
+  try {
+    let proposal = await Proposal.findById(req.params.id);
+
+    if (!proposal) {
+      return res.status(404).json({
+        success: false,
+        error: "Proposal not found",
+      });
+    }
+
+    // Store old file info for cleanup if new file is uploaded
+    const oldAttachment = proposal.attachment;
+
+    // Prepare update data
+    const updateData = { ...req.body };
+
+    // Parse address if it's a string
+    if (updateData.address && typeof updateData.address === "string") {
+      try {
+        updateData.address = JSON.parse(updateData.address);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid address format",
+        });
+      }
+    }
+
+    // Parse amountOptions if it's a string
+    if (
+      updateData.amountOptions &&
+      typeof updateData.amountOptions === "string"
+    ) {
+      try {
+        updateData.amountOptions = JSON.parse(updateData.amountOptions);
+      } catch (error) {
+        // Keep existing amountOptions if parsing fails
+        delete updateData.amountOptions;
+      }
+    }
+
+    // Convert projectAmount to number if provided
+    if (updateData.projectAmount) {
+      updateData.projectAmount = parseFloat(updateData.projectAmount);
+    }
+
+    // Handle file update
+    if (req.fileInfo) {
+      updateData.attachment = {
+        filename: req.fileInfo.filename,
+        originalName: req.fileInfo.originalName,
+        mimetype: req.fileInfo.mimetype,
+        size: req.fileInfo.size,
+        path: req.fileInfo.path,
+      };
+    }
+
+    // Update proposal
+    proposal = await Proposal.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    // If new file was uploaded, delete old file
+    if (req.fileInfo && oldAttachment && oldAttachment.path) {
+      await handleFileUpdate(oldAttachment.path);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        proposal,
+        attachmentUrl: proposal.attachment
+          ? getFileUrl(proposal.attachment.filename)
+          : null,
+      },
+      message: "Proposal updated successfully",
+    });
+  } catch (error) {
+    // If there was an error and file was uploaded, clean up the new file
+    if (req.fileInfo) {
+      await deleteFile(req.fileInfo.path).catch(console.error);
+    }
+
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(". "),
+      });
+    }
+
+    console.error("Update proposal error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while updating proposal",
+    });
+  }
+};
+
+/**
+ * @desc    Update specific field of proposal (for inline editing)
+ * @route   PATCH /api/proposals/:id/field
+ * @access  Private
+ */
+const updateProposalField = async (req, res) => {
+  try {
+    const { field, value } = req.body;
+
+    if (!field || value === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "Field name and value are required",
+      });
+    }
+
+    // Allowed fields for inline editing
+    const allowedFields = [
+      "comment",
+      "projectAmount",
+      "status",
+      "amountOptions",
+    ];
+
+    if (!allowedFields.includes(field)) {
+      return res.status(400).json({
+        success: false,
+        error: "Field is not allowed for inline editing",
+      });
+    }
+
+    let proposal = await Proposal.findById(req.params.id);
+
+    if (!proposal) {
+      return res.status(404).json({
+        success: false,
+        error: "Proposal not found",
+      });
+    }
+
+    // Store old status to check if it changed to "Confirmed"
+    const oldStatus = proposal.status;
+
+    // Prepare update data
+    const updateData = {};
+
+    // Special handling for different field types
+    if (field === "projectAmount") {
+      updateData[field] = parseFloat(value);
+    } else if (field === "amountOptions") {
+      // Handle array of amount options
+      updateData[field] = Array.isArray(value) ? value : [value];
+    } else {
+      updateData[field] = value;
+    }
+
+    // Update proposal
+    proposal = await Proposal.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    // Check if status changed to "Confirmed" and create project automatically
+    if (
+      field === "status" &&
+      value === "Confirmed" &&
+      oldStatus !== "Confirmed"
+    ) {
+      try {
+        // Check if project already exists for this proposal
+        const existingProject = await Project.findOne({
+          proposalId: proposal._id,
+        });
+
+        if (!existingProject) {
+          // Create project from proposal data
+          const projectData = {
+            proposalId: proposal._id,
+            customerName: proposal.customerName,
+            contactNumber: proposal.contactNumber,
+            email: proposal.email,
+            address: proposal.address,
+            services: proposal.services,
+            projectDescription: proposal.projectDescription,
+            projectAmount: proposal.projectAmount,
+            size: proposal.size,
+            comment: proposal.comment,
+            projectStatus: "new",
+            projectDate: new Date(),
+            proposalDate: proposal.date,
+          };
+
+          // Copy attachment if exists
+          if (proposal.attachment) {
+            projectData.attachment = proposal.attachment;
+          }
+
+          const project = await Project.create(projectData);
+
+          // Add project info to response
+          return res.status(200).json({
+            success: true,
+            data: {
+              proposal,
+              project,
+              attachmentUrl: proposal.attachment
+                ? getFileUrl(proposal.attachment.filename)
+                : null,
+            },
+            message: `${field} updated successfully and project created automatically`,
+          });
+        }
+      } catch (projectError) {
+        console.error(
+          "Error creating project from confirmed proposal:",
+          projectError
+        );
+        // Continue with normal response even if project creation fails
+        // The proposal update was successful
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        proposal,
+        attachmentUrl: proposal.attachment
+          ? getFileUrl(proposal.attachment.filename)
+          : null,
+      },
+      message: `${field} updated successfully`,
+    });
+  } catch (error) {
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(". "),
+      });
+    }
+
+    console.error("Update proposal field error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while updating proposal field",
+    });
+  }
+};
+
+/**
+ * @desc    Delete proposal
+ * @route   DELETE /api/proposals/:id
+ * @access  Private
+ */
+const deleteProposal = async (req, res) => {
+  try {
+    const proposal = await Proposal.findById(req.params.id);
+
+    if (!proposal) {
+      return res.status(404).json({
+        success: false,
+        error: "Proposal not found",
+      });
+    }
+
+    // Delete associated file if exists
+    if (proposal.attachment && proposal.attachment.path) {
+      await deleteFile(proposal.attachment.path).catch(console.error);
+    }
+
+    // Delete proposal
+    await Proposal.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: "Proposal deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete proposal error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while deleting proposal",
+    });
+  }
+};
+
+/**
+ * @desc    Get proposal statistics
+ * @route   GET /api/proposals/stats
+ * @access  Private
+ */
+const getProposalStats = async (req, res) => {
+  try {
+    const stats = await Proposal.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$projectAmount" },
+        },
+      },
+    ]);
+
+    const totalProposals = await Proposal.countDocuments();
+    const totalAmount = await Proposal.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$projectAmount" },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        statusStats: stats,
+        totalProposals,
+        totalAmount: totalAmount[0]?.total || 0,
+      },
+    });
+  } catch (error) {
+    console.error("Get proposal stats error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while fetching proposal statistics",
+    });
+  }
+};
+
+module.exports = {
+  createProposal,
+  getProposals,
+  getProposal,
+  updateProposal,
+  updateProposalField,
+  deleteProposal,
+  getProposalStats,
+};

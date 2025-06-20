@@ -6,8 +6,16 @@ import {
 } from "@heroui/dropdown";
 import { Button } from "@heroui/button";
 import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 
-export function StatusDropdown() {
+export function StatusDropdown({ onStatusChange }) {
+  const [selectedStatus, setSelectedStatus] = useState("Status");
+
+  const handleStatusSelect = (status) => {
+    setSelectedStatus(status);
+    onStatusChange && onStatusChange(status === "Status" ? "" : status);
+  };
+
   return (
     <Dropdown>
       <DropdownTrigger>
@@ -16,15 +24,19 @@ export function StatusDropdown() {
           radius="sm"
           endContent={<ChevronDown className="text-gray-600" />}
         >
-          Status
+          {selectedStatus}
         </Button>
       </DropdownTrigger>
-      <DropdownMenu aria-label="Status options">
-        <DropdownItem key="hot">Hot</DropdownItem>
-        <DropdownItem key="cold">Cold</DropdownItem>
-        <DropdownItem key="warm">Warm</DropdownItem>
-        <DropdownItem key="frozen">Frozen</DropdownItem>
-        <DropdownItem key="complete">Complete</DropdownItem>
+      <DropdownMenu
+        aria-label="Status options"
+        onAction={(key) => handleStatusSelect(key)}
+      >
+        <DropdownItem key="Status">All Status</DropdownItem>
+        <DropdownItem key="Hot">Hot</DropdownItem>
+        <DropdownItem key="Cold">Cold</DropdownItem>
+        <DropdownItem key="Warm">Warm</DropdownItem>
+        <DropdownItem key="Scrap">Scrap</DropdownItem>
+        <DropdownItem key="Confirmed">Confirmed</DropdownItem>
       </DropdownMenu>
     </Dropdown>
   );

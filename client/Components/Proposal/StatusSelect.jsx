@@ -1,23 +1,26 @@
 import React from "react";
 import { Select, SelectItem } from "@heroui/select";
-export const statusOptions = [
-  { label: "Hot", key: "hot" },
-  { label: "Cold", key: "cold" },
-  { label: "Warm", key: "warm" },
-  { label: "Frozen", key: "frozen" },
-  { label: "Complete", key: "complete" },
-];
-export function StatusSelect() {
-  const [value, setValue] = React.useState("");
 
+export const statusOptions = [
+  { label: "Hot", key: "Hot" },
+  { label: "Cold", key: "Cold" },
+  { label: "Warm", key: "Warm" },
+  { label: "Scrap", key: "Scrap" },
+  { label: "Confirmed", key: "Confirmed" },
+];
+
+export function StatusSelect({ value, onChange }) {
   return (
     <Select
       placeholder="Status"
       radius="sm"
       variant="bordered"
       className="w-full"
-      selectedKey={value}
-      onSelectionChange={(key) => setValue(key)}
+      selectedKeys={value ? [value] : []}
+      onSelectionChange={(keys) => {
+        const selectedValue = Array.from(keys)[0];
+        onChange && onChange(selectedValue);
+      }}
     >
       {statusOptions.map((status) => (
         <SelectItem key={status.key} value={status.key}>

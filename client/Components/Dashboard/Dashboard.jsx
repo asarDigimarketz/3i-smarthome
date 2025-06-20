@@ -3,6 +3,9 @@
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -165,9 +168,73 @@ const recentProjects = [
 ];
 
 const Dashboard = () => {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  // Permission checks based on user's actual permissions
+  const [userPermissions, setUserPermissions] = useState({
+    projects: { hasViewPermission: false },
+    proposals: { hasViewPermission: false },
+    customers: { hasViewPermission: false },
+    employees: { hasViewPermission: false },
+    tasks: { hasViewPermission: false },
+  });
+
+  // Check user permissions on component mount
+  useEffect(() => {
+    const checkUserPermissions = () => {
+      if (!session?.user) return;
+
+      // Hotel admin has all permissions
+      if (!session.user.isEmployee) {
+        setUserPermissions({
+          projects: { hasViewPermission: true },
+          proposals: { hasViewPermission: true },
+          customers: { hasViewPermission: true },
+          employees: { hasViewPermission: true },
+          tasks: { hasViewPermission: true },
+        });
+        return;
+      }
+
+      // Check employee permissions for each module
+      const permissions = session.user.permissions || [];
+      const modulePermissions = {};
+
+      ["projects", "proposals", "customers", "employees", "tasks"].forEach(
+        (module) => {
+          const permission = permissions.find(
+            (p) => p.page?.toLowerCase() === module
+          );
+          modulePermissions[module] = {
+            hasViewPermission: permission?.actions?.view || false,
+          };
+        }
+      );
+
+      setUserPermissions(modulePermissions);
+    };
+
+    checkUserPermissions();
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) {
+      router.push("/login");
+    }
+  }, [session, router]);
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Dashboard</h1>
+          <p className="text-default-500">
+            Welcome back,{" "}
+            {session?.user?.name || session?.user?.firstName || "User"}!
+          </p>
+        </div>
+      </div>
 
       {/* Service Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -241,38 +308,94 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Projects */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Recent Projects</h2>
-          <Button
-            as={Link}
-            href="/projects"
-            variant="flat"
-            color="primary"
-            size="sm"
-            endContent={<ArrowRight />}
-          >
-            View All
-          </Button>
+      {/* Recent Projects - Only show if user has projects view permission */}
+      {userPermissions.projects.hasViewPermission && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-primary">Recent Projects</h2>
+            <Button
+              as={Link}
+              href="/dashboard/projects"
+              variant="flat"
+              color="primary"
+              size="sm"
+              endContent={<ArrowRight />}
+            >
+              View All
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {recentProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                id={project.id}
+                customer={project.customer}
+                status={project.status}
+                service={project.service}
+                amount={project.amount}
+                date={project.date}
+                address={project.address}
+                progress={project.progress}
+                color={project.color}
+                userPermissions={userPermissions.projects}
+              />
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {recentProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              id={project.id}
-              customer={project.customer}
-              status={project.status}
-              service={project.service}
-              amount={project.amount}
-              date={project.date}
-              address={project.address}
-              progress={project.progress}
-              color={project.color}
-            />
-          ))}
-        </div>
-      </div>
+      )}
+
+      {/* Quick Actions Section */}
+      <Card>
+        <CardBody>
+          <h2 className="text-xl font-bold text-primary mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {userPermissions.proposals.hasViewPermission && (
+              <Button
+                as={Link}
+                href="/dashboard/proposal"
+                variant="flat"
+                className="h-20 flex-col"
+              >
+                <span className="text-2xl mb-2">📋</span>
+                <span>Proposals</span>
+              </Button>
+            )}
+            {userPermissions.customers.hasViewPermission && (
+              <Button
+                as={Link}
+                href="/dashboard/customers"
+                variant="flat"
+                className="h-20 flex-col"
+              >
+                <span className="text-2xl mb-2">👥</span>
+                <span>Customers</span>
+              </Button>
+            )}
+            {userPermissions.employees.hasViewPermission && (
+              <Button
+                as={Link}
+                href="/dashboard/employees"
+                variant="flat"
+                className="h-20 flex-col"
+              >
+                <span className="text-2xl mb-2">🏢</span>
+                <span>Employees</span>
+              </Button>
+            )}
+            {userPermissions.tasks.hasViewPermission && (
+              <Button
+                as={Link}
+                href="/dashboard/task"
+                variant="flat"
+                className="h-20 flex-col"
+              >
+                <span className="text-2xl mb-2">✅</span>
+                <span>Tasks</span>
+              </Button>
+            )}
+          </div>
+        </CardBody>
+      </Card>
     </div>
   );
 };

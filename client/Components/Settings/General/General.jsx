@@ -4,39 +4,88 @@ import React, { useState, useEffect, useRef } from "react";
 import { Select, SelectItem } from "@heroui/select";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
+import { addToast } from "@heroui/toast";
+import { useSession } from "next-auth/react";
 import axios from "axios";
-// import { toast } from "react-toastify";
 import Image from "next/image";
 
 const General = ({ initialHotelData }) => {
+  const { data: session } = useSession();
+
+  // Permission checks based on user's actual permissions
+  const [userPermissions, setUserPermissions] = useState({
+    hasEditPermission: false,
+    hasViewPermission: false,
+  });
+
   const [hotelData, setHotelData] = useState(initialHotelData);
-  const [color, setColor] = useState(initialHotelData.color || "#00569B");
-  const [colorInput, setColorInput] = useState(
-    initialHotelData.color || "#00569B"
-  );
+  // const [color, setColor] = useState(initialHotelData.color || "#00569B");
+  // const [colorInput, setColorInput] = useState(
+  //   initialHotelData.color || "#00569B"
+  // );
   const [isLoading, setIsLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState(initialHotelData.logo);
   const [isImageLoading, setIsImageLoading] = useState(false);
-  const colorInputRef = useRef(null);
+  // const colorInputRef = useRef(null);
+
+  // Check user permissions on component mount
+  useEffect(() => {
+    const checkUserPermissions = () => {
+      if (!session?.user) return;
+
+      // Hotel admin has all permissions
+      if (!session.user.isEmployee) {
+        setUserPermissions({
+          hasEditPermission: true,
+          hasViewPermission: true,
+        });
+        return;
+      }
+
+      // Check employee permissions for settings module
+      const permissions = session.user.permissions || [];
+      const settingsPermission = permissions.find(
+        (p) => p.page?.toLowerCase() === "settings"
+      );
+
+      if (settingsPermission && settingsPermission.actions) {
+        setUserPermissions({
+          hasViewPermission: settingsPermission.actions.view || false,
+          hasEditPermission: settingsPermission.actions.edit || false,
+        });
+      }
+    };
+
+    checkUserPermissions();
+  }, [session]);
 
   useEffect(() => {
     setHotelData(initialHotelData);
-    fetchColor(); // Fetch color when component mounts
+    // fetchColor(); // Fetch color when component mounts
   }, [initialHotelData]);
 
-  const fetchColor = async () => {
-    try {
-      const response = await axios.get("/api/hotelColor");
-      if (response.data.success) {
-        setColor(response.data.color);
-        setColorInput(response.data.color); // Also update the input field
-      }
-    } catch (error) {
-      console.error("Error fetching color:", error);
-    }
-  };
+  // const fetchColor = async () => {
+  //   try {
+  //     const response = await axios.get("/api/hotelColor");
+  //     if (response.data.success) {
+  //       setColor(response.data.color);
+  //       setColorInput(response.data.color); // Also update the input field
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching color:", error);
+  //   }
+  // };
 
   const handleInputChange = (e) => {
+    if (!userPermissions.hasEditPermission) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to edit settings",
+        color: "danger",
+      });
+      return;
+    }
+
     const { name, value } = e.target;
 
     if (name === "hotelName") {
@@ -62,16 +111,33 @@ const General = ({ initialHotelData }) => {
   };
 
   const handleFileChange = async (e) => {
+    if (!userPermissions.hasEditPermission) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to edit settings",
+        color: "danger",
+      });
+      return;
+    }
+
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         // 5MB limit
-        // toast.error("File size should be less than 5MB");
+        addToast({
+          title: "File Size Error",
+          description: "File size should be less than 5MB",
+          color: "danger",
+        });
         return;
       }
 
       if (!file.type.startsWith("image/")) {
-        // toast.error("Please upload an image file");
+        addToast({
+          title: "File Type Error",
+          description: "Please upload an image file",
+          color: "danger",
+        });
         return;
       }
 
@@ -90,13 +156,13 @@ const General = ({ initialHotelData }) => {
     }
   };
 
-  const handleColorChange = (e) => {
-    const newColor = e.target.value;
-    setColorInput(newColor);
-    if (isValidHexColor(newColor)) {
-      setColor(newColor);
-    }
-  };
+  // const handleColorChange = (e) => {
+  //   const newColor = e.target.value;
+  //   setColorInput(newColor);
+  //   if (isValidHexColor(newColor)) {
+  //     setColor(newColor);
+  //   }
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -104,17 +170,17 @@ const General = ({ initialHotelData }) => {
 
     try {
       // First update the color if it's valid
-      if (
-        isValidHexColor(colorInput) &&
-        colorInput !== initialHotelData.color
-      ) {
-        const colorResponse = await axios.put("/api/hotelColor", {
-          color: colorInput,
-        });
-        if (!colorResponse.data.success) {
-          throw new Error("Failed to update color");
-        }
-      }
+      // if (
+      //   isValidHexColor(colorInput) &&
+      //   colorInput !== initialHotelData.color
+      // ) {
+      //   const colorResponse = await axios.put("/api/hotelColor", {
+      //     color: colorInput,
+      //   });
+      //   if (!colorResponse.data.success) {
+      //     throw new Error("Failed to update color");
+      //   }
+      // }
 
       // Then update other hotel details
       const { newLogo, ...updateData } = hotelData;
@@ -122,7 +188,15 @@ const General = ({ initialHotelData }) => {
         updateData.logo = newLogo;
       }
 
-      const response = await axios.put(`/api/hotelDetails`, updateData);
+      const response = await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/settings/general`,
+        updateData,
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
 
       if (response.data.success) {
         setHotelData((prev) => ({
@@ -141,13 +215,13 @@ const General = ({ initialHotelData }) => {
     }
   };
 
-  const isValidHexColor = (color) => {
-    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
-  };
+  // const isValidHexColor = (color) => {
+  //   return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
+  // };
 
-  const triggerColorPicker = () => {
-    colorInputRef.current?.click();
-  };
+  // const triggerColorPicker = () => {
+  //   colorInputRef.current?.click();
+  // };
 
   const LogoPreview = () => (
     <div className="flex flex-col items-center space-y-4">
@@ -224,7 +298,7 @@ const General = ({ initialHotelData }) => {
               id="hotelName"
               name="hotelName"
               placeholder="Hotel name"
-              value={hotelData.hotelName}
+              value={hotelData.companyName}
               onChange={handleInputChange}
             />
           </div>
@@ -361,7 +435,7 @@ const General = ({ initialHotelData }) => {
           </div>
         </div>
 
-        <div className="relative">
+        {/* <div className="relative">
           <label
             htmlFor="color"
             className="block text-sm font-medium text-gray-700"
@@ -402,12 +476,12 @@ const General = ({ initialHotelData }) => {
               Please enter a valid hex color code (e.g., #00569B)
             </small>
           )}
-        </div>
+        </div> */}
 
         <div aria-label="Form Actions" className="flex justify-end">
           <Button
             radius="full"
-            className=" bg-hotel-primary text-white  w-1/6"
+            className=" bg-primary text-white  w-1/6"
             type="submit"
             disabled={isLoading}
           >

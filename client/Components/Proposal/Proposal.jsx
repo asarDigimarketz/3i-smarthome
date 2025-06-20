@@ -1,20 +1,105 @@
 "use client";
-// import TopHeader from './components/TopHeader'
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
 import Link from "next/link.js";
 import ProposalFilters from "./ProposalFilters.jsx";
 import ProposalTable from "./ProposalTable.jsx";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Pagination } from "@heroui/pagination";
+import { addToast } from "@heroui/toast";
+import { useSession } from "next-auth/react";
 import { StatusDropdown } from "./status-dropdown";
 import { Plus, Search } from "lucide-react";
 import { DateRangePicker } from "@heroui/date-picker";
+import axios from "axios";
 
 function App() {
+  const { data: session } = useSession();
+
+  // Permission checks based on user's actual permissions
+  const [userPermissions, setUserPermissions] = useState({
+    hasAddPermission: false,
+    hasEditPermission: false,
+    hasDeletePermission: false,
+    hasViewPermission: false,
+  });
+
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  // Debounce search query
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  // Check user permissions on component mount
+  useEffect(() => {
+    const checkUserPermissions = () => {
+      if (!session?.user) return;
+
+      // Hotel admin has all permissions
+      if (!session.user.isEmployee) {
+        setUserPermissions({
+          hasAddPermission: true,
+          hasEditPermission: true,
+          hasDeletePermission: true,
+          hasViewPermission: true,
+        });
+        return;
+      }
+
+      // Check employee permissions for proposals module
+      const permissions = session.user.permissions || [];
+      const proposalPermission = permissions.find(
+        (p) => p.page?.toLowerCase() === "proposals"
+      );
+
+      if (proposalPermission && proposalPermission.actions) {
+        setUserPermissions({
+          hasViewPermission: proposalPermission.actions.view || false,
+          hasAddPermission: proposalPermission.actions.add || false,
+          hasEditPermission: proposalPermission.actions.edit || false,
+          hasDeletePermission: proposalPermission.actions.delete || false,
+        });
+      }
+    };
+
+    checkUserPermissions();
+  }, [session]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Handle status filter change
+  const handleStatusChange = (status) => {
+    setStatusFilter(status);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  // Handle service filter change (from ProposalFilters)
+  const handleServiceChange = (service) => {
+    setServiceFilter(service === "All" ? "" : service);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  const handleAddProposal = () => {
+    if (!userPermissions.hasAddPermission) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to add proposals",
+        color: "danger",
+      });
+      return;
+    }
+  };
 
   return (
     <div className="flex bg-gray-50 min-h-screen">
@@ -35,6 +120,8 @@ function App() {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
@@ -53,26 +140,43 @@ function App() {
                   label: "text-gray-600",
                 }}
               />
-              <StatusDropdown />{" "}
-              <Link href="/dashboard/proposal/add-proposal">
-                <Button color="danger" radius="sm" startContent={<Plus />}>
+              <StatusDropdown onStatusChange={handleStatusChange} />
+              {userPermissions.hasAddPermission ? (
+                <Link href="/dashboard/proposal/add-proposal">
+                  <Button color="danger" radius="sm" startContent={<Plus />}>
+                    Add New
+                  </Button>
+                </Link>
+              ) : (
+                <Button
+                  color="danger"
+                  radius="sm"
+                  startContent={<Plus />}
+                  onPress={handleAddProposal}
+                >
                   Add New
                 </Button>
-              </Link>
+              )}
             </div>
           </div>
 
           {/* Components with box shadow */}
           <div className="space-y-6 bg-white rounded-xl shadow-lg p-6">
-            <div className=" ">
-              <ProposalFilters />
+            <div className="">
+              <ProposalFilters onServiceChange={handleServiceChange} />
             </div>
             <div className="p-6">
-              <ProposalTable />
+              <ProposalTable
+                searchQuery={debouncedSearchQuery}
+                statusFilter={statusFilter}
+                dateRange={dateRange}
+                serviceFilter={serviceFilter}
+                userPermissions={userPermissions}
+              />
             </div>
             <div className="flex justify-end mt-6">
               <Pagination
-                total={8}
+                total={totalPages}
                 initialPage={1}
                 page={currentPage}
                 onChange={setCurrentPage}

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { cn } from "../../lib/utils";
 import General from "./General/General";
 import EmailConfiguration from "./EmailConfiguration/EmailConfiguration";
-
+import UserManagement from "./RolesResponsiblity/RolesResponsiblity.jsx";
 import axios from "axios";
 
 export default function HotelManagementInterface() {
@@ -14,26 +14,33 @@ export default function HotelManagementInterface() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // useEffect(() => {
-  //   const fetchHotelData = async () => {
-  //     try {
-  //       setLoading(true);
-  //       const response = await axios.get(`/api/hotelDetails`);
-  //       if (response.data.success) {
-  //         const hotelData = response.data.hotelData;
-  //         setHotelData(hotelData);
-  //       } else {
-  //         setError(response.data.message || "Failed to fetch hotel data.");
-  //       }
-  //     } catch (err) {
-  //       setError(err.message || "An error occurred.");
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
+  useEffect(() => {
+    const fetchHotelData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/settings/general`,
+          {
+            headers: {
+              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            },
+          }
+        );
+        if (response.data.success) {
+          const hotelData = response.data.generalData;
+          setHotelData(hotelData);
+        } else {
+          setError(response.data.message || "Failed to fetch hotel data.");
+        }
+      } catch (err) {
+        setError(err.message || "An error occurred.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  //   fetchHotelData();
-  // }, []);
+    fetchHotelData();
+  }, []);
 
   if (loading)
     return (
@@ -46,6 +53,7 @@ export default function HotelManagementInterface() {
   const tabs = [
     { key: "general", title: "General" },
     { key: "email", title: "Email Configuration" },
+    { key: "user-management", title: "User Management" },
   ];
 
   return (
@@ -55,7 +63,7 @@ export default function HotelManagementInterface() {
     >
       <nav
         aria-label="Settings Navigation"
-        className="bg-hotel-primary rounded-lg overflow-x-auto shadow-sm mx-4 lg:mx-6"
+        className="bg-primary rounded-lg overflow-x-auto shadow-sm mx-4 lg:mx-6"
       >
         <div className="min-w-max lg:max-w-[70rem] mx-auto">
           <div className="flex flex-nowrap">
@@ -66,8 +74,8 @@ export default function HotelManagementInterface() {
                 className={cn(
                   "px-4 lg:px-6 py-3 lg:py-4 text-sm font-medium transition-colors whitespace-nowrap",
                   selectedTab === tab.key
-                    ? "bg-white text-hotel-primary font-[700] rounded-t-lg mt-3"
-                    : "text-white hover:bg-hotel-primary"
+                    ? "bg-white text-primary font-[700] rounded-t-lg mt-3"
+                    : "text-white hover:bg-primary"
                 )}
               >
                 {tab.title}
@@ -88,6 +96,7 @@ export default function HotelManagementInterface() {
             <General initialHotelData={hotelData} />
           )}
           {selectedTab === "email" && <EmailConfiguration />}
+          {selectedTab === "user-management" && <UserManagement />}
         </div>
       </div>
     </section>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dropdown,
   DropdownTrigger,
@@ -9,109 +9,129 @@ import {
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Pagination } from "@heroui/pagination";
+import { Skeleton } from "@heroui/skeleton";
+import { addToast } from "@heroui/toast";
+import { useSession } from "next-auth/react";
 import EmployeeCard from "./EmployeeCard.jsx";
 import { ChevronDown, Plus, Search } from "lucide-react";
-import { EmployeeModal } from "./EmployeeAddingOrEditModal";
-
-const employees = [
-  {
-    id: "EMP-001",
-    name: "Arun R",
-    role: "Lead Technician",
-    department: "Installation",
-    status: "Active",
-    email: "arun@gmail.com",
-    phone: "+91 96541 867957",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=1",
-  },
-  {
-    id: "EMP-002",
-    name: "Vickey H",
-    role: "Lead Technician",
-    department: "Installation",
-    status: "Inactive",
-    email: "vickey@gmail.com",
-    phone: "+91 96541 12348",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=2",
-  },
-  {
-    id: "EMP-001",
-    name: "Vinoth Kumar J",
-    role: "Installation Specialist",
-    department: "Installation",
-    status: "Active",
-    email: "vinothkumar12@gmail.com",
-    phone: "+91 87541 486311",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=3",
-  },
-  {
-    id: "EMP-006",
-    name: "Bala D",
-    role: "Installation Specialist",
-    department: "Installation",
-    status: "Active",
-    email: "bala.d347@gmail.com",
-    phone: "+91 87541 486311",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=4",
-  },
-  {
-    id: "EMP-003",
-    name: "Anbarasan V",
-    role: "Service Technician",
-    department: "Service",
-    status: "Active",
-    email: "ramanathan55@gmail.com",
-    phone: "+91 96541 486322",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=5",
-  },
-  {
-    id: "EMP-004",
-    name: "Rahul G",
-    role: "Lead Technician",
-    department: "Installation",
-    status: "Inactive",
-    email: "rahul@gmail.com",
-    phone: "+91 97621 488567",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=6",
-  },
-  {
-    id: "EMP-007",
-    name: "Ariyalakan",
-    role: "Installation Specialist",
-    department: "Installation",
-    status: "Active",
-    email: "arivalakan@gmail.com",
-    phone: "+91 87541 486311",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=7",
-  },
-  {
-    id: "EMP-008",
-    name: "Aravind",
-    role: "Lead Technician",
-    department: "Installation",
-    status: "Inactive",
-    email: "aravind@gmail.com",
-    phone: "+91 96541 486322",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=8",
-  },
-  {
-    id: "EMP-009",
-    name: "Suresh Kumar",
-    role: "Lead Technician",
-    department: "Installation",
-    status: "Active",
-    email: "sureshkumar@gmail.com",
-    phone: "+91 96541 486322",
-    avatar: "https://img.heroui.chat/image/avatar?w=200&h=200&u=9",
-  },
-];
+import { EmployeeModal } from "./EmployeeModal";
 
 const Employees = () => {
+  const { data: session } = useSession();
+
+  // Permission checks based on user's actual permissions
+  const [userPermissions, setUserPermissions] = useState({
+    hasAddPermission: false,
+    hasEditPermission: false,
+    hasDeletePermission: false,
+    hasViewPermission: false,
+  });
+
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const itemsPerPage = 6;
+
+  // Check user permissions on component mount
+  useEffect(() => {
+    const checkUserPermissions = () => {
+      if (!session?.user) return;
+
+      // Hotel admin has all permissions
+      if (!session.user.isEmployee) {
+        setUserPermissions({
+          hasAddPermission: true,
+          hasEditPermission: true,
+          hasDeletePermission: true,
+          hasViewPermission: true,
+        });
+        return;
+      }
+
+      // Check employee permissions for employees module
+      const permissions = session.user.permissions || [];
+      const employeePermission = permissions.find(
+        (p) => p.page?.toLowerCase() === "employees"
+      );
+
+      if (employeePermission && employeePermission.actions) {
+        setUserPermissions({
+          hasViewPermission: employeePermission.actions.view || false,
+          hasAddPermission: employeePermission.actions.add || false,
+          hasEditPermission: employeePermission.actions.edit || false,
+          hasDeletePermission: employeePermission.actions.delete || false,
+        });
+      }
+    };
+
+    checkUserPermissions();
+  }, [session]);
+
+  // Fetch employees from API
+  const fetchEmployees = async () => {
+    if (!userPermissions.hasViewPermission) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement`,
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch employees");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        // Transform backend data to match frontend format
+        const transformedEmployees = data.employees.map((emp) => ({
+          id: emp.employeeId,
+          name: `${emp.firstName} ${emp.lastName}`,
+          role: emp.role?.role || "N/A",
+          department: emp.department?.name || "N/A",
+          status: emp.status === "active" ? "Active" : "Inactive",
+          email: emp.email,
+          phone: emp.mobileNo,
+          avatar:
+            emp.avatar ||
+            `https://img.heroui.chat/image/avatar?w=200&h=200&u=${Math.floor(
+              Math.random() * 10
+            )}`,
+          _id: emp._id,
+          originalData: emp,
+        }));
+        setEmployees(transformedEmployees);
+      } else {
+        throw new Error(data.message || "Failed to fetch employees");
+      }
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      addToast({
+        title: "Error",
+        description: "Failed to load employees. Please try again.",
+        color: "danger",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userPermissions.hasViewPermission) {
+      fetchEmployees();
+    }
+  }, [userPermissions.hasViewPermission]);
 
   const filteredEmployees = employees.filter((employee) => {
     const matchesSearch =
@@ -133,6 +153,42 @@ const Employees = () => {
 
   const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
 
+  const handleModalClose = (shouldRefresh = false) => {
+    setIsModalOpen(false);
+    if (shouldRefresh) {
+      fetchEmployees();
+    }
+  };
+
+  const handleAddEmployee = () => {
+    if (!userPermissions.hasAddPermission) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to add employees",
+        color: "danger",
+      });
+      return;
+    }
+    setIsModalOpen(true);
+  };
+
+  // Loading skeleton component
+  const EmployeeSkeleton = () => (
+    <div className="space-y-3 p-4 border rounded-lg">
+      <div className="flex items-center space-x-4">
+        <Skeleton className="flex rounded-full w-12 h-12" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-4 w-3/4 rounded-lg" />
+          <Skeleton className="h-3 w-1/2 rounded-lg" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-full rounded-lg" />
+        <Skeleton className="h-3 w-2/3 rounded-lg" />
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -143,13 +199,15 @@ const Employees = () => {
           <p className="text-default-500">Manage employees List</p>
         </div>
 
-        <Button
-          color="primary"
-          startContent={<Plus />}
-          onPress={() => setIsModalOpen(true)}
-        >
-          Add
-        </Button>
+        {userPermissions.hasAddPermission && (
+          <Button
+            color="primary"
+            startContent={<Plus />}
+            onPress={handleAddEmployee}
+          >
+            Add Employee
+          </Button>
+        )}
       </div>
 
       {/* Filters and Search */}
@@ -188,36 +246,78 @@ const Employees = () => {
 
       {/* Employee Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {paginatedEmployees.map((employee) => (
-          <EmployeeCard
-            key={`${employee.id}-${employee.name}`}
-            id={employee.id}
-            name={employee.name}
-            role={employee.role}
-            department={employee.department}
-            status={employee.status}
-            email={employee.email}
-            phone={employee.phone}
-            avatar={employee.avatar}
-          />
-        ))}
+        {loading ? (
+          // Show loading skeletons
+          Array.from({ length: 6 }).map((_, index) => (
+            <EmployeeSkeleton key={index} />
+          ))
+        ) : paginatedEmployees.length > 0 ? (
+          paginatedEmployees.map((employee) => (
+            <EmployeeCard
+              key={`${employee.id}-${employee.name}`}
+              id={employee.id}
+              name={employee.name}
+              role={employee.role}
+              department={employee.department}
+              status={employee.status}
+              email={employee.email}
+              phone={employee.phone}
+              avatar={employee.avatar}
+              userPermissions={userPermissions}
+              onEmployeeUpdate={fetchEmployees}
+            />
+          ))
+        ) : (
+          // Empty state
+          <div className="col-span-full flex flex-col items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                <Plus className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No employees found
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {searchQuery || statusFilter !== "all"
+                  ? "No employees match your current filters."
+                  : "Get started by adding your first employee."}
+              </p>
+              {!searchQuery &&
+                statusFilter === "all" &&
+                userPermissions.hasAddPermission && (
+                  <Button
+                    color="primary"
+                    startContent={<Plus />}
+                    onPress={handleAddEmployee}
+                  >
+                    Add First Employee
+                  </Button>
+                )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center">
           <Pagination
             total={totalPages}
-            initialPage={1}
             page={currentPage}
             onChange={setCurrentPage}
-            showControls
             color="primary"
+            showControls
           />
         </div>
       )}
 
-      <EmployeeModal isOpen={isModalOpen} onOpenChange={setIsModalOpen} />
+      {userPermissions.hasAddPermission && (
+        <EmployeeModal
+          isOpen={isModalOpen}
+          onOpenChange={handleModalClose}
+          onSuccess={() => handleModalClose(true)}
+        />
+      )}
     </div>
   );
 };
