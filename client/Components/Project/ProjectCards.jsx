@@ -4,8 +4,10 @@ import { Chip } from "@heroui/chip";
 import { Progress } from "@heroui/progress";
 import { Phone } from "lucide-react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export function ProjectCards() {
+  const router = useRouter();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -179,6 +181,11 @@ export function ProjectCards() {
     return total > 0 ? (current / total) * 100 : 0;
   };
 
+  // Navigate to task page with project ID
+  const handleProjectClick = (projectId) => {
+    router.push(`/dashboard/task?projectId=${projectId}`);
+  };
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -198,7 +205,11 @@ export function ProjectCards() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((project) => (
-        <Card key={project.id} className="overflow-hidden">
+        <Card
+          key={project.id}
+          className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => handleProjectClick(project.id)}
+        >
           <div
             className={`p-6 ${project.color} bg-gradient-to-br from-opacity-80 to-opacity-100 text-white`}
           >

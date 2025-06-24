@@ -10,9 +10,9 @@ const {
   updateProjectField,
   deleteProject,
   getProjectStats,
-  addTaskToProject,
   updateTaskStatus,
   updateProjectProgress,
+  syncProjectWithTasks,
 } = require("../../controllers/project/projectController");
 
 const router = express.Router();
@@ -135,12 +135,6 @@ router.put("/:id", handleFileUpload, updateProject);
 // @access  Private
 router.patch("/:id/field", updateProjectField);
 
-// Task Management Routes
-// @route   POST /api/projects/:id/tasks
-// @desc    Add task to project
-// @access  Private
-router.post("/:id/tasks", addTaskToProject);
-
 // @route   PATCH /api/projects/:id/tasks/:taskId
 // @desc    Update task status
 // @access  Private
@@ -150,6 +144,11 @@ router.patch("/:id/tasks/:taskId", updateTaskStatus);
 // @desc    Update project progress manually
 // @access  Private
 router.patch("/:id/progress", updateProjectProgress);
+
+// @route   POST /api/projects/:id/sync-tasks
+// @desc    Sync project with its tasks (progress and assigned employees)
+// @access  Private
+router.post("/:id/sync-tasks", syncProjectWithTasks);
 
 // @route   DELETE /api/projects/:id
 // @desc    Delete project

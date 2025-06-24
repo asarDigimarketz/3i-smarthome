@@ -204,12 +204,19 @@ const General = ({ initialHotelData }) => {
           ...response.data.hotelData,
           newLogo: null,
         }));
-        // toast.success("Hotel details updated successfully!");
+        addToast({
+          title: "Success",
+          description: "Company details updated successfully!",
+          color: "success",
+        });
       }
     } catch (error) {
-      // toast.error(
-      //   error.response?.data?.message || "Failed to update hotel details"
-      // );
+      addToast({
+        title: "Error",
+        description:
+          error.response?.data?.message || "Failed to update company details",
+        color: "danger",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -292,12 +299,12 @@ const General = ({ initialHotelData }) => {
         <div aria-label="Hotel Information" className="flex space-x-4">
           <div className="w-1/2">
             <label htmlFor="hotelName" className="block mb-2">
-              Hotel Name
+              Company Name
             </label>
             <Input
               id="hotelName"
               name="hotelName"
-              placeholder="Hotel name"
+              placeholder="Company name"
               value={hotelData.companyName}
               onChange={handleInputChange}
             />

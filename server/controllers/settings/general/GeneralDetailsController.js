@@ -3,6 +3,7 @@ const path = require("path");
 const General = require("../../../models/settings/general/general");
 const { saveFile } = require("../../../utils/helpers/fileUpload");
 const { DEFAULT_GENERAL_DATA } = require("../../../config/defaultGeneralData");
+const fs = require("fs");
 
 // Configure multer for handling file uploads
 const storage = multer.diskStorage({

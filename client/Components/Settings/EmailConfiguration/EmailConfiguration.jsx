@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Select, SelectItem } from "@heroui/select";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-// import { toast } from "react-toastify";
 import axios from "axios";
+import { addToast } from "@heroui/toast";
 
 const emailProviders = [
   { label: "Gmail", value: "gmail", host: "smtp.gmail.com", port: "587" },
@@ -221,11 +221,19 @@ const EmailConfiguration = () => {
         }
       );
       if (response.data.success) {
-        // toast.success("Email configuration saved successfully");
+        addToast({
+          title: "Success",
+          description: "Email configuration saved successfully",
+          color: "success",
+        });
       }
     } catch (err) {
       setError(err.message || "Failed to save settings");
-      // toast.error(err.message || "Failed to save settings");
+      addToast({
+        title: "Error",
+        description: err.message || "Failed to save settings",
+        color: "danger",
+      });
     } finally {
       setSaveLoading(false);
     }
@@ -233,7 +241,11 @@ const EmailConfiguration = () => {
 
   const handleTestEmail = async () => {
     if (!testData.email || !testData.email.includes("@")) {
-      // toast.error("Please enter a valid email address");
+      addToast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        color: "danger",
+      });
       return;
     }
 
@@ -254,7 +266,11 @@ const EmailConfiguration = () => {
       );
       if (response.data.success) {
         setError(null);
-        // toast.success("Test email sent successfully");
+        addToast({
+          title: "Success",
+          description: "Test email sent successfully",
+          color: "success",
+        });
       }
     } catch (err) {
       const errorMessage =
@@ -263,7 +279,11 @@ const EmailConfiguration = () => {
         err.message ||
         "Failed to send test email";
       setError(errorMessage);
-      // toast.error(errorMessage);
+      addToast({
+        title: "Error",
+        description: errorMessage,
+        color: "danger",
+      });
     } finally {
       setTestLoading(false);
     }

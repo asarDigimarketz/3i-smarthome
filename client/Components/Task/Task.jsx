@@ -5,6 +5,7 @@ import { Button } from "@heroui/button";
 import { Divider } from "@heroui/divider";
 import { addToast } from "@heroui/toast";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import ProjectDetails from "./ProjectDetails";
 import TaskList from "./TaskList";
 import TaskForm from "./TaskForm";
@@ -13,6 +14,8 @@ import ProposalFilters from "../Proposal/ProposalFilters";
 
 const Task = () => {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId");
 
   // Permission checks based on user's actual permissions
   const [userPermissions, setUserPermissions] = useState({
@@ -59,7 +62,21 @@ const Task = () => {
     checkUserPermissions();
   }, [session]);
 
+  // Reset the form when project changes
+  useEffect(() => {
+    setShowTaskForm(false);
+  }, [projectId]);
+
   const handleAddTask = () => {
+    if (!projectId) {
+      addToast({
+        title: "Select a Project",
+        description: "Please select a project first to add a task",
+        color: "warning",
+      });
+      return;
+    }
+
     if (!userPermissions.hasAddPermission) {
       addToast({
         title: "Access Denied",
@@ -115,15 +132,16 @@ const Task = () => {
             <div className="w-1/3">
               <ProjectDetails userPermissions={userPermissions} />
             </div>
-            <Divider orientation="vertical" />
+            <Divider className="my-2" orientation="vertical" />
             <div className="w-2/3 bg-white border-1 border-gray-200 p-4 rounded-lg shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Tasks</h2>
+                <h2 className="text-xl font-semibold">Task</h2>
                 {userPermissions.hasAddPermission && (
                   <Button
                     color="primary"
                     onPress={handleAddTask}
                     startContent={<Plus />}
+                    className="rounded-lg"
                   >
                     Add Task
                   </Button>

@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import ProposalDetailsModal from "./ProposalDetailsModal";
+import { addToast } from "@heroui/toast";
 
 const ProposalTable = ({
   searchQuery,
@@ -75,7 +76,11 @@ const ProposalTable = ({
       }
     } catch (error) {
       console.error("Error fetching proposals:", error);
-      alert("Failed to fetch proposals");
+      addToast({
+        title: "Error",
+        description: "Failed to fetch proposals",
+        color: "danger",
+      });
     } finally {
       setLoading(false);
     }
@@ -130,7 +135,11 @@ const ProposalTable = ({
       }
     } catch (error) {
       console.error("Error updating proposal:", error);
-      alert(error.response?.data?.error || "Failed to update proposal");
+      addToast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to update proposal",
+        color: "danger",
+      });
     }
   };
 
@@ -159,11 +168,19 @@ const ProposalTable = ({
         setProposals((prev) =>
           prev.filter((proposal) => proposal._id !== proposalId)
         );
-        alert("Proposal deleted successfully");
+        addToast({
+          title: "Success",
+          description: "Proposal deleted successfully",
+          color: "success",
+        });
       }
     } catch (error) {
       console.error("Error deleting proposal:", error);
-      alert(error.response?.data?.error || "Failed to delete proposal");
+      addToast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to delete proposal",
+        color: "danger",
+      });
     }
   };
 

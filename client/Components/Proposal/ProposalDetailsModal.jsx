@@ -19,6 +19,7 @@ import { Chip } from "@heroui/chip";
 import { X, FileText, ChevronDown, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { addToast } from "@heroui/toast";
 
 const ProposalDetailsModal = ({
   isOpen,
@@ -131,13 +132,21 @@ const ProposalDetailsModal = ({
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       ];
       if (!allowedTypes.includes(file.type)) {
-        alert("Please select a valid file (PDF, JPEG, PNG, DOC, DOCX)");
+        addToast({
+          title: "Invalid File Type",
+          description: "Please select a valid file (PDF, JPEG, PNG, DOC, DOCX)",
+          color: "danger",
+        });
         return;
       }
 
       // Validate file size (10MB)
       if (file.size > 10 * 1024 * 1024) {
-        alert("File size must be less than 10MB");
+        addToast({
+          title: "File Too Large",
+          description: "File size must be less than 10MB",
+          color: "danger",
+        });
         return;
       }
 
@@ -212,14 +221,22 @@ const ProposalDetailsModal = ({
       );
 
       if (response.data.success) {
-        alert("Proposal updated successfully!");
+        addToast({
+          title: "Success",
+          description: "Proposal updated successfully!",
+          color: "success",
+        });
         setIsEditing(false);
         onUpdate && onUpdate(); // Refresh the table
         onClose();
       }
     } catch (error) {
       console.error("Error updating proposal:", error);
-      alert(error.response?.data?.error || "Failed to update proposal");
+      addToast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to update proposal",
+        color: "danger",
+      });
     } finally {
       setLoading(false);
     }
@@ -273,24 +290,37 @@ const ProposalDetailsModal = ({
         );
 
         if (projectResponse.data.success) {
-          alert("Project confirmed and created successfully!");
+          addToast({
+            title: "Success",
+            description: "Project confirmed and created successfully!",
+            color: "success",
+          });
           onUpdate && onUpdate(); // Refresh the table
           onClose();
         } else {
-          alert("Proposal confirmed but failed to create project");
+          addToast({
+            title: "Warning",
+            description: "Proposal confirmed but failed to create project",
+            color: "warning",
+          });
         }
       }
     } catch (error) {
       console.error("Error confirming project:", error);
-      if (
-        error.response?.status === 400 &&
-        error.response?.data?.error?.includes("already exists")
-      ) {
-        alert("Project confirmed! (Project already exists for this proposal)");
-        onUpdate && onUpdate();
-        onClose();
+      if (error.response?.data?.message?.includes("already exists")) {
+        addToast({
+          title: "Info",
+          description:
+            "Project confirmed! (Project already exists for this proposal)",
+          color: "primary",
+        });
       } else {
-        alert(error.response?.data?.error || "Failed to confirm project");
+        addToast({
+          title: "Error",
+          description:
+            error.response?.data?.error || "Failed to confirm project",
+          color: "danger",
+        });
       }
     } finally {
       setLoading(false);

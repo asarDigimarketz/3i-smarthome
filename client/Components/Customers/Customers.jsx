@@ -20,63 +20,23 @@ import {
 import { DateRangePicker } from "@heroui/date-picker";
 import { addToast } from "@heroui/toast";
 import { useSession } from "next-auth/react";
+import axios from "axios";
 
 import Link from "next/link";
 import { ChevronDown, Home, Plus, Search, Shield, Tv } from "lucide-react";
 
-const customers = [
-  {
-    id: "1",
-    name: "Vinoth R",
-    phone: "+91 94536 345357",
-    location: "123/ss colont, Thirunager, Madurai-625018",
-    services: ["Home Cinema", "Security"],
-    amount: "₹30,0000",
-  },
-  {
-    id: "2",
-    name: "Varadharajan M",
-    phone: "+91 84353 756453",
-    location: "23/98,selva 1st, Iyerbunglow, Madurai-625015",
-    services: ["Home Automation"],
-    amount: "₹22,0000",
-  },
-  {
-    id: "3",
-    name: "Magesh J",
-    phone: "+91 75644 57345",
-    location: "34 AC nager, Goripalayam, Madurai-625002",
-    services: ["Home Cinema"],
-    amount: "₹26,00,000",
-  },
-  {
-    id: "4",
-    name: "Aravind U",
-    phone: "+91 85646 976234",
-    location: "1A/67 Anbu Nager, Anna Nager,Madurai-625018",
-    services: ["Security"],
-    amount: "₹22,00,000",
-  },
-  {
-    id: "5",
-    name: "Raghul T",
-    phone: "+91 9834 578341",
-    location: "123/ss colont, Thirunager, Madurai-625018",
-    services: ["Home Automation"],
-    amount: "₹30,0000",
-  },
-  {
-    id: "6",
-    name: "Dinesh A",
-    phone: "+91 84353 756453",
-    location: "23/98,selva 1st, Iyerbunglow, Madurai-625015",
-    services: ["Security"],
-    amount: "₹30,00,000",
-  },
-];
-
 const Customers = () => {
   const { data: session } = useSession();
+
+  // State for customers data
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCustomers: 0,
+    limit: 10,
+  });
 
   // Permission checks based on user's actual permissions
   const [userPermissions, setUserPermissions] = useState({
@@ -89,6 +49,56 @@ const Customers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [serviceFilter, setServiceFilter] = useState("all");
   const [dateRange, setDateRange] = useState(null);
+
+  // Fetch customers from API
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: pagination.currentPage.toString(),
+        limit: pagination.limit.toString(),
+        search: searchQuery,
+        service: serviceFilter,
+      });
+
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/customers?${params}`,
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Ensure customers is always an array
+        const customersData = Array.isArray(response.data.data.customers)
+          ? response.data.data.customers
+          : [];
+
+        setCustomers(customersData);
+        setPagination(
+          response.data.data.pagination || {
+            currentPage: 1,
+            totalPages: 1,
+            totalCustomers: 0,
+            limit: 10,
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      // Set empty array on error to prevent table issues
+      setCustomers([]);
+      addToast({
+        title: "Error",
+        description: "Failed to fetch customers",
+        color: "danger",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Check user permissions on component mount
   useEffect(() => {
@@ -125,26 +135,31 @@ const Customers = () => {
     checkUserPermissions();
   }, [session]);
 
-  const filteredCustomers = customers.filter((customer) => {
-    const matchesSearch =
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery) ||
-      customer.location.toLowerCase().includes(searchQuery.toLowerCase());
+  // Fetch customers when component mounts or filters change
+  useEffect(() => {
+    if (session) {
+      fetchCustomers();
+    }
+  }, [session, searchQuery, serviceFilter, pagination.currentPage]);
 
-    const matchesService =
-      serviceFilter === "all" ||
-      customer.services.some((service) =>
-        service.toLowerCase().includes(serviceFilter.toLowerCase())
-      );
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (pagination.currentPage !== 1) {
+        setPagination((prev) => ({ ...prev, currentPage: 1 }));
+      } else if (session) {
+        fetchCustomers();
+      }
+    }, 500);
 
-    return matchesSearch && matchesService;
-  });
+    return () => clearTimeout(timer);
+  }, [searchQuery, serviceFilter]);
 
   const getServiceIcon = (service) => {
     switch (service) {
       case "Home Cinema":
         return <Tv className="text-blue-500" width={18} />;
-      case "Security":
+      case "Security System":
         return <Shield className="text-red-500" width={18} />;
       case "Home Automation":
         return <Home className="text-teal-500" width={18} />;
@@ -162,12 +177,6 @@ const Customers = () => {
       });
       return;
     }
-    // Add customer logic here
-    addToast({
-      title: "Feature Coming Soon",
-      description: "Customer creation feature will be available soon",
-      color: "warning",
-    });
   };
 
   return (
@@ -179,13 +188,15 @@ const Customers = () => {
         </div>
 
         {userPermissions.hasAddPermission && (
-          <Button
-            color="primary"
-            startContent={<Plus />}
-            onPress={handleAddCustomer}
-          >
-            Add Customer
-          </Button>
+          <Link href="/dashboard/customers/add-customer">
+            <Button
+              color="primary"
+              startContent={<Plus />}
+              onPress={handleAddCustomer}
+            >
+              Add Customer
+            </Button>
+          </Link>
         )}
       </div>
 
@@ -230,71 +241,104 @@ const Customers = () => {
               selectionMode="single"
             >
               <DropdownItem key="all">All Services</DropdownItem>
-              <DropdownItem key="home cinema">Home Cinema</DropdownItem>
-              <DropdownItem key="home automation">Home Automation</DropdownItem>
-              <DropdownItem key="security">Security System</DropdownItem>
+              <DropdownItem key="Home Cinema">Home Cinema</DropdownItem>
+              <DropdownItem key="Home Automation">Home Automation</DropdownItem>
+              <DropdownItem key="Security System">Security System</DropdownItem>
             </DropdownMenu>
           </Dropdown>
         </div>
       </div>
 
       {/* Customers Table */}
-      <Card>
-        <CardBody className="p-0">
-          <Table
-            aria-label="Customers table"
-            removeWrapper
-            classNames={{
-              th: "bg-red-50 text-default-700",
-              td: "py-4",
-            }}
-          >
-            <TableHeader>
-              <TableColumn>Customer Name</TableColumn>
-              <TableColumn>Contact</TableColumn>
-              <TableColumn>Location</TableColumn>
-              <TableColumn>Services</TableColumn>
-              <TableColumn>Amount</TableColumn>
-            </TableHeader>
-            <TableBody>
-              {filteredCustomers.map((customer) => {
-                // Only make row clickable if user has view or edit permissions
-                const RowComponent =
-                  userPermissions.hasViewPermission ||
-                  userPermissions.hasEditPermission
-                    ? (props) => (
-                        <TableRow
-                          as={Link}
-                          href={`/dashboard/customers/${customer.id}`}
-                          {...props}
-                        />
-                      )
-                    : TableRow;
+      {session ? (
+        <Card>
+          <CardBody className="p-0">
+            <Table
+              aria-label="Customers table"
+              removeWrapper
+              classNames={{
+                th: "bg-red-50 text-default-700",
+                td: "py-4",
+              }}
+            >
+              <TableHeader>
+                <TableColumn>Customer Name</TableColumn>
+                <TableColumn>Contact</TableColumn>
+                <TableColumn>Location</TableColumn>
+                <TableColumn>Services</TableColumn>
+                <TableColumn>Amount</TableColumn>
+              </TableHeader>
+              <TableBody
+                emptyContent={
+                  loading ? "Loading customers..." : "No customers found"
+                }
+              >
+                {customers.map((customer) => {
+                  const customerKey =
+                    customer._id || customer.id || Math.random().toString();
 
-                return (
-                  <RowComponent key={customer.id}>
-                    <TableCell>
-                      <div className="font-medium">{customer.name}</div>
-                    </TableCell>
-                    <TableCell>{customer.phone}</TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {customer.location}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {customer.services.map((service, index) => (
-                          <div key={index}>{getServiceIcon(service)}</div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>{customer.amount}</TableCell>
-                  </RowComponent>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardBody>
-      </Card>
+                  return (
+                    <TableRow
+                      key={customerKey}
+                      className={
+                        userPermissions.hasViewPermission ||
+                        userPermissions.hasEditPermission
+                          ? "cursor-pointer hover:bg-gray-50"
+                          : ""
+                      }
+                      onClick={() => {
+                        if (
+                          userPermissions.hasViewPermission ||
+                          userPermissions.hasEditPermission
+                        ) {
+                          window.location.href = `/dashboard/customers/${customer._id}`;
+                        }
+                      }}
+                    >
+                      <TableCell>
+                        <div className="font-medium">
+                          {customer.customerName || "N/A"}
+                        </div>
+                      </TableCell>
+                      <TableCell>{customer.contactNumber || "N/A"}</TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {customer.fullAddress ||
+                          (customer.address
+                            ? `${customer.address.city || ""}, ${
+                                customer.address.state || ""
+                              }`
+                            : "N/A")}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {customer.services &&
+                          Array.isArray(customer.services) ? (
+                            customer.services.map((service, index) => (
+                              <div key={`${customerKey}-service-${index}`}>
+                                {getServiceIcon(service)}
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-gray-400">No services</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {customer.formattedTotalSpent ||
+                          `₹${(customer.totalSpent || 0).toLocaleString(
+                            "en-IN"
+                          )}`}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
+      ) : (
+        <div className="text-center py-8">Please log in to view customers</div>
+      )}
     </div>
   );
 };

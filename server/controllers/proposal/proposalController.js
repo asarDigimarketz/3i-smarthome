@@ -1,5 +1,6 @@
 const Proposal = require("../../models/proposal/Proposal");
 const Project = require("../../models/project/Project");
+const Customer = require("../../models/customer/Customer");
 const {
   deleteFile,
   getFileUrl,
@@ -282,6 +283,9 @@ const updateProposal = async (req, res) => {
     // Store old file info for cleanup if new file is uploaded
     const oldAttachment = proposal.attachment;
 
+    // Store old status to check if it changed to "Confirmed"
+    const oldStatus = proposal.status;
+
     // Prepare update data
     const updateData = { ...req.body };
 
@@ -335,6 +339,80 @@ const updateProposal = async (req, res) => {
     // If new file was uploaded, delete old file
     if (req.fileInfo && oldAttachment && oldAttachment.path) {
       await handleFileUpdate(oldAttachment.path);
+    }
+
+    // Check if status changed to "Confirmed" and create project automatically
+    if (updateData.status === "Confirmed" && oldStatus !== "Confirmed") {
+      try {
+        // Check if project already exists for this proposal
+        const existingProject = await Project.findOne({
+          proposalId: proposal._id,
+        });
+
+        if (!existingProject) {
+          // Create project from proposal data
+          const projectData = {
+            proposalId: proposal._id,
+            customerName: proposal.customerName,
+            contactNumber: proposal.contactNumber,
+            email: proposal.email,
+            address: proposal.address,
+            services: proposal.services,
+            projectDescription: proposal.projectDescription,
+            projectAmount: proposal.projectAmount,
+            size: proposal.size,
+            comment: proposal.comment,
+            projectStatus: "new",
+            projectDate: new Date(),
+            proposalDate: proposal.date,
+          };
+
+          // Copy attachment if exists
+          if (proposal.attachment) {
+            projectData.attachment = proposal.attachment;
+          }
+
+          // Create or update customer automatically
+          const customerData = {
+            customerName: proposal.customerName,
+            contactNumber: proposal.contactNumber,
+            email: proposal.email,
+            address: proposal.address,
+          };
+
+          const customer = await Customer.findOrCreateCustomer(customerData);
+
+          // Add customer reference to project data
+          projectData.customerId = customer.customerId;
+
+          // Create the project
+          const project = await Project.create(projectData);
+
+          // Update customer statistics
+          await customer.updateStatistics();
+
+          // Return response with project info
+          return res.status(200).json({
+            success: true,
+            data: {
+              proposal,
+              project,
+              customer,
+              attachmentUrl: proposal.attachment
+                ? getFileUrl(proposal.attachment.filename)
+                : null,
+            },
+            message:
+              "Proposal updated successfully and project created automatically",
+          });
+        }
+      } catch (projectError) {
+        console.error(
+          "Error creating project from confirmed proposal:",
+          projectError
+        );
+        // Continue with normal response even if project creation fails
+      }
     }
 
     res.status(200).json({
@@ -467,7 +545,24 @@ const updateProposalField = async (req, res) => {
             projectData.attachment = proposal.attachment;
           }
 
+          // Create or update customer automatically
+          const customerData = {
+            customerName: proposal.customerName,
+            contactNumber: proposal.contactNumber,
+            email: proposal.email,
+            address: proposal.address,
+          };
+
+          const customer = await Customer.findOrCreateCustomer(customerData);
+
+          // Add customer reference to project data
+          projectData.customerId = customer.customerId;
+
+          // Create the project
           const project = await Project.create(projectData);
+
+          // Update customer statistics
+          await customer.updateStatistics();
 
           // Add project info to response
           return res.status(200).json({
@@ -475,6 +570,7 @@ const updateProposalField = async (req, res) => {
             data: {
               proposal,
               project,
+              customer,
               attachmentUrl: proposal.attachment
                 ? getFileUrl(proposal.attachment.filename)
                 : null,

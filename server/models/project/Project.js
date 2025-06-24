@@ -14,6 +14,12 @@ const projectSchema = new mongoose.Schema(
       required: false, // Not required for manually created projects
     },
 
+    // Reference to customer (when customer is created)
+    customerId: {
+      type: String,
+      sparse: true, // Allows null/undefined while maintaining uniqueness
+    },
+
     // Customer Information (from AddProject form)
     customerName: {
       type: String,
@@ -194,32 +200,6 @@ const projectSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Completed tasks cannot be negative"],
     },
-
-    // Task list for detailed tracking
-    tasks: [
-      {
-        title: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        description: {
-          type: String,
-          trim: true,
-        },
-        isCompleted: {
-          type: Boolean,
-          default: false,
-        },
-        completedDate: {
-          type: Date,
-        },
-        assignedTo: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Employee",
-        },
-      },
-    ],
   },
   {
     timestamps: true,
@@ -241,6 +221,27 @@ projectSchema.virtual("fullAddress").get(function () {
  */
 projectSchema.virtual("formattedAmount").get(function () {
   return `₹${this.projectAmount.toLocaleString("en-IN")}`;
+});
+
+/**
+ * Virtual field to get progress as a percentage number
+ */
+projectSchema.virtual("progressPercentage").get(function () {
+  if (this.totalTasks === 0) return 0;
+  return Math.round((this.completedTasks / this.totalTasks) * 100);
+});
+
+/**
+ * Virtual field to get progress status text
+ */
+projectSchema.virtual("progressStatus").get(function () {
+  const percentage = this.progressPercentage;
+  if (percentage === 0) return "Not Started";
+  if (percentage === 100) return "Completed";
+  if (percentage >= 75) return "Near Completion";
+  if (percentage >= 50) return "In Progress";
+  if (percentage >= 25) return "Started";
+  return "Just Started";
 });
 
 /**
@@ -317,14 +318,12 @@ projectSchema.statics.getProjectsWithFilters = function (
   // Calculate skip
   const skip = (page - 1) * limit;
 
-  return (
-    this.find(query)
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit))
-      // .populate("assignedEmployees", "name email")
-      .lean()
-  );
+  return this.find(query)
+    .sort(sort)
+    .skip(skip)
+    .limit(parseInt(limit))
+    .populate("assignedEmployees", "firstName lastName email")
+    .lean();
 };
 
 /**
@@ -352,6 +351,73 @@ projectSchema.statics.getProjectsCount = function (filters = {}) {
   }
 
   return this.countDocuments(query);
+};
+
+/**
+ * Static method to sync project with its tasks
+ * Useful for manual synchronization or data migration
+ */
+projectSchema.statics.syncProjectWithTasks = async function (projectId) {
+  const Task = require("./Task");
+
+  try {
+    // Get all tasks for the project with populated assignedTo field
+    const tasks = await Task.find({ projectId }).populate("assignedTo");
+
+    // Count total tasks
+    const totalTasks = tasks.length;
+
+    // Count completed tasks
+    const completedTasks = tasks.filter(
+      (task) => task.status === "completed"
+    ).length;
+
+    // Calculate progress percentage
+    let progressPercentage = 0;
+    if (totalTasks > 0) {
+      progressPercentage = Math.round((completedTasks / totalTasks) * 100);
+    }
+
+    // Get unique assigned employees from all tasks
+    const assignedEmployeeIds = new Set();
+    tasks.forEach((task) => {
+      if (task.assignedTo && task.assignedTo._id) {
+        assignedEmployeeIds.add(task.assignedTo._id.toString());
+      }
+    });
+
+    // Convert Set to Array for MongoDB
+    const uniqueAssignedEmployees = Array.from(assignedEmployeeIds);
+
+    // Update project with task counts, progress percentage, and assigned employees
+    const updatedProject = await this.findByIdAndUpdate(
+      projectId,
+      {
+        totalTasks,
+        completedTasks,
+        progress: `${progressPercentage}%`,
+        assignedEmployees: uniqueAssignedEmployees,
+      },
+      { new: true }
+    );
+
+    return {
+      success: true,
+      project: updatedProject,
+      stats: {
+        totalTasks,
+        completedTasks,
+        progressPercentage,
+        assignedEmployeesCount: uniqueAssignedEmployees.length,
+      },
+    };
+  } catch (error) {
+    console.error("Error syncing project with tasks:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
 };
 
 module.exports = mongoose.model("Project", projectSchema);

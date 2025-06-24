@@ -1,6 +1,7 @@
 const Project = require("../../models/project/Project");
 const Proposal = require("../../models/proposal/Proposal");
-
+const Customer = require("../../models/customer/Customer");
+const generateCustomerId = require("../../utils/helpers/customerIdGenerator");
 /**
  * Project Controller
  * Handles all CRUD operations for projects
@@ -93,12 +94,30 @@ const createProject = async (req, res) => {
       }
     }
 
+    // Create or update customer automatically
+    const customerData = {
+      customerName,
+      contactNumber,
+      email,
+      address: parsedAddress,
+    };
+
+    const customer = await Customer.findOrCreateCustomer(customerData);
+
+    // Add customer reference to project data
+    projectData.customerId = customer.customerId;
+
+    // Create the project
     const project = await Project.create(projectData);
+
+    // Update customer statistics
+    await customer.updateStatistics();
 
     res.status(201).json({
       success: true,
       data: project,
       message: "Project created successfully",
+      customer: customer,
     });
   } catch (error) {
     console.error("Create project error:", error);
@@ -175,12 +194,30 @@ const createProjectFromProposal = async (req, res) => {
       projectData.attachment = proposal.attachment;
     }
 
+    // Create or update customer automatically
+    const customerData = {
+      customerName: proposal.customerName,
+      contactNumber: proposal.contactNumber,
+      email: proposal.email,
+      address: proposal.address,
+    };
+
+    const customer = await Customer.findOrCreateCustomer(customerData);
+
+    // Add customer reference to project data
+    projectData.customerId = customer.customerId;
+
+    // Create the project
     const project = await Project.create(projectData);
+
+    // Update customer statistics
+    await customer.updateStatistics();
 
     res.status(201).json({
       success: true,
       data: project,
       message: "Project created successfully from proposal",
+      customer: customer,
     });
   } catch (error) {
     console.error("Create project from proposal error:", error);
@@ -468,48 +505,6 @@ const getProjectStats = async (req, res) => {
  * @route   POST /api/projects/:id/tasks
  * @access  Private
  */
-const addTaskToProject = async (req, res) => {
-  try {
-    const { title, description, assignedTo } = req.body;
-
-    if (!title) {
-      return res.status(400).json({
-        success: false,
-        message: "Task title is required",
-      });
-    }
-
-    const project = await Project.findById(req.params.id);
-    if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: "Project not found",
-      });
-    }
-
-    const newTask = {
-      title,
-      description,
-      assignedTo,
-      isCompleted: false,
-    };
-
-    project.tasks.push(newTask);
-    await project.save(); // This will trigger pre-save middleware to update progress
-
-    res.status(201).json({
-      success: true,
-      data: project,
-      message: "Task added successfully",
-    });
-  } catch (error) {
-    console.error("Add task error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while adding task",
-    });
-  }
-};
 
 /**
  * @desc    Update task status
@@ -603,6 +598,40 @@ const updateProjectProgress = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Sync project with its tasks (progress and assigned employees)
+ * @route   POST /api/projects/:id/sync-tasks
+ * @access  Private
+ */
+const syncProjectWithTasks = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Use the static method from the Project model
+    const result = await Project.syncProjectWithTasks(id);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: result.error || "Failed to sync project with tasks",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: result.project,
+      stats: result.stats,
+      message: "Project synchronized with tasks successfully",
+    });
+  } catch (error) {
+    console.error("Sync project with tasks error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while synchronizing project with tasks",
+    });
+  }
+};
+
 module.exports = {
   createProject,
   createProjectFromProposal,
@@ -612,7 +641,7 @@ module.exports = {
   updateProjectField,
   deleteProject,
   getProjectStats,
-  addTaskToProject,
   updateTaskStatus,
   updateProjectProgress,
+  syncProjectWithTasks,
 };

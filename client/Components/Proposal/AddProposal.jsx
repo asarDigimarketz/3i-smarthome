@@ -12,6 +12,7 @@ import { Calendar, Upload } from "lucide-react";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { addToast } from "@heroui/toast";
 
 export function AddProposalPage({ isEdit = false, proposalId = null }) {
   const router = useRouter();
@@ -85,7 +86,11 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       }
     } catch (error) {
       console.error("Error fetching proposal:", error);
-      alert("Failed to fetch proposal data");
+      addToast({
+        title: "Error",
+        description: "Failed to fetch proposal data",
+        color: "danger",
+      });
     } finally {
       setLoading(false);
     }
@@ -113,13 +118,21 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       ];
       if (!allowedTypes.includes(file.type)) {
-        alert("Please select a valid file (PDF, JPEG, PNG, DOC, DOCX)");
+        addToast({
+          title: "Invalid File Type",
+          description: "Please select a valid file (PDF, JPEG, PNG, DOC, DOCX)",
+          color: "danger",
+        });
         return;
       }
 
       // Validate file size (10MB)
       if (file.size > 10 * 1024 * 1024) {
-        alert("File size must be less than 10MB");
+        addToast({
+          title: "File Too Large",
+          description: "File size must be less than 10MB",
+          color: "danger",
+        });
         return;
       }
 
@@ -150,11 +163,14 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
         "size",
       ];
       const missingFields = requiredFields.filter((field) => !formData[field]);
-
       if (missingFields.length > 0) {
-        alert(
-          `Please fill in all required fields: ${missingFields.join(", ")}`
-        );
+        addToast({
+          title: "Error",
+          description: `Please fill in all required fields: ${missingFields.join(
+            ", "
+          )}`,
+          color: "danger",
+        });
         setLoading(false);
         return;
       }
@@ -206,16 +222,35 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       });
 
       if (response.data.success) {
-        alert(
-          isEdit
-            ? "Proposal updated successfully!"
-            : "Proposal created successfully!"
-        );
+        let message = isEdit
+          ? "Proposal updated successfully!"
+          : "Proposal created successfully!";
+
+        // Check if project was automatically created
+        if (response.data.data.project) {
+          message +=
+            " A project has been automatically created from this confirmed proposal.";
+        }
+
+        // Check if customer was created
+        if (response.data.data.customer) {
+          message += " Customer information has been saved.";
+        }
+
+        addToast({
+          title: "Success",
+          description: message,
+          color: "success",
+        });
         router.push("/dashboard/proposal");
       }
     } catch (error) {
       console.error("Error creating proposal:", error);
-      alert(error.response?.data?.error || "Failed to create proposal");
+      addToast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to create proposal",
+        color: "danger",
+      });
     } finally {
       setLoading(false);
     }
