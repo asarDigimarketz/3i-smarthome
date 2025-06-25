@@ -63,7 +63,7 @@ export default function HotelManagementInterface() {
     >
       <nav
         aria-label="Settings Navigation"
-        className="bg-primary rounded-lg overflow-x-auto shadow-sm mx-4 lg:mx-6"
+        className="bg-primary rounded-lg overflow-x-auto shadow-sm mx-4 lg:mx-6 mb-2"
       >
         <div className="min-w-max lg:max-w-[70rem] mx-auto">
           <div className="flex flex-nowrap">

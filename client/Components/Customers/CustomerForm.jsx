@@ -286,14 +286,21 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
         notes: formData.notes,
         status: formData.status,
       };
-
+      if (!isEdit && Object.keys(duplicates).length > 0) {
+        addToast({
+          title: "Error",
+          description: "Customer already exists",
+          color: "danger",
+        });
+        return;
+      }
       // Make API call
       const url = isEdit
         ? `${process.env.NEXT_PUBLIC_API_URL}/api/customers/${customerId}`
-        : `${process.env.NEXT_PUBLIC_API_URL}/api/customers`;
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/customers `;
 
       const method =
-        isEdit || customerId || Object.keys(duplicates).length > 0
+        (isEdit && customerId) || Object.keys(duplicates).length > 0
           ? "put"
           : "post";
 

@@ -18,13 +18,15 @@ const General = ({ initialHotelData }) => {
     hasViewPermission: false,
   });
 
-  const [hotelData, setHotelData] = useState(initialHotelData);
+  const [companyData, setCompanyData] = useState(initialHotelData);
   // const [color, setColor] = useState(initialHotelData.color || "#00569B");
   // const [colorInput, setColorInput] = useState(
   //   initialHotelData.color || "#00569B"
   // );
   const [isLoading, setIsLoading] = useState(false);
-  const [logoPreview, setLogoPreview] = useState(initialHotelData.logo);
+  const [logoPreview, setLogoPreview] = useState(
+    initialHotelData.logoUrl || initialHotelData.logo || null
+  );
   const [isImageLoading, setIsImageLoading] = useState(false);
   // const colorInputRef = useRef(null);
 
@@ -60,7 +62,9 @@ const General = ({ initialHotelData }) => {
   }, [session]);
 
   useEffect(() => {
-    setHotelData(initialHotelData);
+    setCompanyData(initialHotelData);
+    // Update logo preview with the full URL if available
+    setLogoPreview(initialHotelData.logo);
     // fetchColor(); // Fetch color when component mounts
   }, [initialHotelData]);
 
@@ -88,25 +92,25 @@ const General = ({ initialHotelData }) => {
 
     const { name, value } = e.target;
 
-    if (name === "hotelName") {
-      handleHotelNameChange(value);
+    if (name === "companyName") {
+      handleCompanyNameChange(value);
       return;
     }
 
-    setHotelData((prevData) => ({
+    setCompanyData((prevData) => ({
       ...prevData,
       [name]: value,
     }));
   };
 
-  const handleHotelNameChange = (value) => {
+  const handleCompanyNameChange = (value) => {
     const prefix = value.slice(0, 3).toLowerCase();
-    const newHotelDb = `${prefix}-${hotelData.preferenceId}`.toLowerCase();
+    const newCompanyDb = `${prefix}-${companyData.preferenceId}`.toLowerCase();
 
-    setHotelData((prevData) => ({
+    setCompanyData((prevData) => ({
       ...prevData,
-      hotelName: value,
-      hotelDb: newHotelDb,
+      companyName: value,
+      companyDb: newCompanyDb,
     }));
   };
 
@@ -142,17 +146,12 @@ const General = ({ initialHotelData }) => {
       }
 
       setIsImageLoading(true);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64Data = reader.result;
-        setHotelData((prev) => ({
-          ...prev,
-          newLogo: base64Data, // Store as newLogo to differentiate from existing logo
-        }));
-        setLogoPreview(base64Data);
-        setIsImageLoading(false);
-      };
-      reader.readAsDataURL(file);
+      setCompanyData((prev) => ({
+        ...prev,
+        newLogo: file, // Store the file object directly
+      }));
+      setLogoPreview(URL.createObjectURL(file)); // Create a preview URL for the uploaded image
+      setIsImageLoading(false);
     }
   };
 
@@ -169,41 +168,55 @@ const General = ({ initialHotelData }) => {
     setIsLoading(true);
 
     try {
-      // First update the color if it's valid
-      // if (
-      //   isValidHexColor(colorInput) &&
-      //   colorInput !== initialHotelData.color
-      // ) {
-      //   const colorResponse = await axios.put("/api/hotelColor", {
-      //     color: colorInput,
-      //   });
-      //   if (!colorResponse.data.success) {
-      //     throw new Error("Failed to update color");
-      //   }
-      // }
+      // Create FormData for file upload
+      const formData = new FormData();
 
-      // Then update other hotel details
-      const { newLogo, ...updateData } = hotelData;
-      if (newLogo) {
-        updateData.logo = newLogo;
+      // Add all company data fields to FormData
+      Object.keys(companyData).forEach((key) => {
+        if (
+          key !== "newLogo" &&
+          companyData[key] !== null &&
+          companyData[key] !== undefined
+        ) {
+          formData.append(key, companyData[key]);
+        }
+      });
+
+      // Add logo file if exists
+      if (companyData.newLogo && companyData.newLogo instanceof File) {
+        formData.append("logo", companyData.newLogo);
+        console.log("Adding logo file to FormData:", companyData.newLogo.name);
+      }
+
+      console.log("Sending FormData with entries:");
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
       }
 
       const response = await axios.put(
         `${process.env.NEXT_PUBLIC_API_URL}/api/settings/general`,
-        updateData,
+        formData,
         {
           headers: {
             "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            "Content-Type": "multipart/form-data",
           },
         }
       );
 
       if (response.data.success) {
-        setHotelData((prev) => ({
+        const updatedData = response.data.generalData;
+        setCompanyData((prev) => ({
           ...prev,
-          ...response.data.hotelData,
+          ...updatedData,
           newLogo: null,
         }));
+
+        // Update logo preview with the new logoUrl from response
+        if (updatedData.logoUrl) {
+          setLogoPreview(updatedData.logoUrl);
+        }
+
         addToast({
           title: "Success",
           description: "Company details updated successfully!",
@@ -211,6 +224,7 @@ const General = ({ initialHotelData }) => {
         });
       }
     } catch (error) {
+      console.error("Error updating company details:", error);
       addToast({
         title: "Error",
         description:
@@ -230,6 +244,45 @@ const General = ({ initialHotelData }) => {
   //   colorInputRef.current?.click();
   // };
 
+  const handleCleanupOldLogos = async () => {
+    if (!userPermissions.hasEditPermission) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to perform this action",
+        color: "danger",
+      });
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/settings/general/cleanup-logos`,
+        {},
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        addToast({
+          title: "Success",
+          description: "Old logo files cleaned up successfully!",
+          color: "success",
+        });
+      }
+    } catch (error) {
+      console.error("Error cleaning up old logos:", error);
+      addToast({
+        title: "Error",
+        description:
+          error.response?.data?.message || "Failed to cleanup old logo files",
+        color: "danger",
+      });
+    }
+  };
+
   const LogoPreview = () => (
     <div className="flex flex-col items-center space-y-4">
       {logoPreview && (
@@ -239,7 +292,7 @@ const General = ({ initialHotelData }) => {
           ) : (
             <Image
               src={logoPreview}
-              alt="Hotel Logo"
+              alt="Company Logo"
               width={192}
               height={192}
               className="object-contain"
@@ -266,27 +319,40 @@ const General = ({ initialHotelData }) => {
             variant="light"
             onClick={() => {
               setLogoPreview(null);
-              setHotelData((prev) => ({ ...prev, newLogo: null }));
+              setCompanyData((prev) => ({ ...prev, newLogo: null }));
             }}
           >
             Remove
           </Button>
         )}
       </div>
-      <small className="text-gray-500">
-        Recommended: Square image, max 5MB (PNG, JPG)
-      </small>
+      <div className="flex items-center space-x-2">
+        <small className="text-gray-500">
+          Recommended: Square image, max 5MB (PNG, JPG)
+        </small>
+        {/* {userPermissions.hasEditPermission && (
+          <Button
+            size="sm"
+            color="warning"
+            variant="light"
+            onClick={handleCleanupOldLogos}
+            className="text-xs"
+          >
+            Cleanup Old Logos
+          </Button>
+        )} */}
+      </div>
     </div>
   );
 
   return (
     <section
-      aria-label="General Hotel Settings"
+      aria-label="General Company Settings"
       className=" mx-auto space-y-8 bg-white rounded-lg p-8 shadow-sm"
     >
-      <h2 className="text-2xl font-bold mb-6">Hotel Details</h2>
+      <h2 className="text-2xl font-bold mb-6">Company Details</h2>
       <form
-        aria-label="Hotel Details Form"
+        aria-label="Company Details Form"
         className="space-y-6"
         onSubmit={handleSubmit}
       >
@@ -296,16 +362,16 @@ const General = ({ initialHotelData }) => {
         >
           <LogoPreview />
         </div>
-        <div aria-label="Hotel Information" className="flex space-x-4">
+        <div aria-label="Company Information" className="flex space-x-4">
           <div className="w-1/2">
-            <label htmlFor="hotelName" className="block mb-2">
+            <label htmlFor="companyName" className="block mb-2">
               Company Name
             </label>
             <Input
-              id="hotelName"
-              name="hotelName"
+              id="companyName"
+              name="companyName"
               placeholder="Company name"
-              value={hotelData.companyName}
+              value={companyData.companyName}
               onChange={handleInputChange}
             />
           </div>
@@ -317,7 +383,7 @@ const General = ({ initialHotelData }) => {
               id="gstNo"
               name="gstNo"
               placeholder="GST No"
-              value={hotelData.gstNo}
+              value={companyData.gstNo}
               onChange={handleInputChange}
             />
           </div>
@@ -332,7 +398,7 @@ const General = ({ initialHotelData }) => {
               id="firstName"
               name="firstName"
               placeholder="First Name"
-              value={hotelData.firstName}
+              value={companyData.firstName}
               onChange={handleInputChange}
             />
           </div>
@@ -344,7 +410,7 @@ const General = ({ initialHotelData }) => {
               id="lastName"
               name="lastName"
               placeholder="Last Name"
-              value={hotelData.lastName}
+              value={companyData.lastName}
               onChange={handleInputChange}
             />
           </div>
@@ -359,7 +425,7 @@ const General = ({ initialHotelData }) => {
               id="mobileNo"
               name="mobileNo"
               placeholder="Mobile No"
-              value={hotelData.mobileNo}
+              value={companyData.mobileNo}
               onChange={handleInputChange}
             />
           </div>
@@ -371,7 +437,7 @@ const General = ({ initialHotelData }) => {
               id="landlineNo"
               name="landlineNo"
               placeholder="Landline No"
-              value={hotelData.landlineNo}
+              value={companyData.landlineNo}
               onChange={handleInputChange}
             />
           </div>
@@ -384,7 +450,7 @@ const General = ({ initialHotelData }) => {
               name="emailId"
               type="email"
               placeholder="Email ID"
-              value={hotelData.emailId}
+              value={companyData.emailId}
               onChange={handleInputChange}
             />
           </div>
@@ -397,14 +463,14 @@ const General = ({ initialHotelData }) => {
               placeholder="Door No."
               className="w-1/2"
               name="doorNo"
-              value={hotelData.doorNo}
+              value={companyData.doorNo}
               onChange={handleInputChange}
             />
             <Input
               placeholder="Street Name"
               className="w-1/2"
               name="streetName"
-              value={hotelData.streetName}
+              value={companyData.streetName}
               onChange={handleInputChange}
             />
           </div>
@@ -413,14 +479,14 @@ const General = ({ initialHotelData }) => {
               placeholder="Pin code"
               className="w-1/2"
               name="pincode"
-              value={hotelData.pincode}
+              value={companyData.pincode}
               onChange={handleInputChange}
             />
             <Input
               placeholder="District"
               className="w-1/2"
               name="district"
-              value={hotelData.district}
+              value={companyData.district}
               onChange={handleInputChange}
             />
           </div>
@@ -429,14 +495,14 @@ const General = ({ initialHotelData }) => {
               placeholder="State"
               className="w-1/2"
               name="state"
-              value={hotelData.state}
+              value={companyData.state}
               onChange={handleInputChange}
             />
             <Input
               placeholder="Country"
               className="w-1/2"
               name="country"
-              value={hotelData.country}
+              value={companyData.country}
               onChange={handleInputChange}
             />
           </div>
