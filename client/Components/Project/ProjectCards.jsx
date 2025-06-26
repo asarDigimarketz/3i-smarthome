@@ -241,6 +241,14 @@ export function ProjectCards() {
               </div>
             </div>
           </div>
+          <div className="p-3">
+            {" "}
+            <Progress
+              value={getProgressPercent(project.progress)}
+              color="danger"
+              className="h-2"
+            />
+          </div>
 
           <div className="p-4 flex justify-between items-center">
             <div className="flex -space-x-2">
@@ -255,12 +263,6 @@ export function ProjectCards() {
             </div>
             <div className="text-gray-700 font-medium">{project.progress}</div>
           </div>
-
-          <Progress
-            value={getProgressPercent(project.progress)}
-            color="danger"
-            className="h-2"
-          />
         </Card>
       ))}
     </div>

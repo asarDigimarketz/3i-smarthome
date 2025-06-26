@@ -15,6 +15,7 @@ import { useSession } from "next-auth/react";
 import EmployeeCard from "./EmployeeCard.jsx";
 import { ChevronDown, Plus, Search } from "lucide-react";
 import { EmployeeModal } from "./EmployeeModal";
+import DashboardHeader from "../header/DashboardHeader.jsx";
 
 const Employees = () => {
   const { data: session } = useSession();
@@ -191,14 +192,11 @@ const Employees = () => {
 
   return (
     <div className="space-y-6">
+      <DashboardHeader
+        title="Employee Management"
+        description="Manage employees List"
+      />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-primary">
-            Employee Management
-          </h1>
-          <p className="text-default-500">Manage employees List</p>
-        </div>
-
         {userPermissions.hasAddPermission && (
           <Button
             color="primary"

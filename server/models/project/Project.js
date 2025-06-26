@@ -287,6 +287,8 @@ projectSchema.statics.getProjectsWithFilters = function (
     search = "",
     status = "",
     service = "",
+    startDate = "",
+    endDate = "",
   } = options;
 
   // Build query
@@ -311,6 +313,17 @@ projectSchema.statics.getProjectsWithFilters = function (
     query.services = service;
   }
 
+  // Add date range filter
+  if (startDate || endDate) {
+    query.projectDate = {};
+    if (startDate) {
+      query.projectDate.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      query.projectDate.$lte = new Date(endDate);
+    }
+  }
+
   // Build sort object
   const sort = {};
   sort[sortBy] = sortOrder === "desc" ? -1 : 1;
@@ -330,7 +343,13 @@ projectSchema.statics.getProjectsWithFilters = function (
  * Static method to get projects count
  */
 projectSchema.statics.getProjectsCount = function (filters = {}) {
-  const { search = "", status = "", service = "" } = filters;
+  const {
+    search = "",
+    status = "",
+    service = "",
+    startDate = "",
+    endDate = "",
+  } = filters;
 
   let query = { ...filters };
 
@@ -348,6 +367,17 @@ projectSchema.statics.getProjectsCount = function (filters = {}) {
 
   if (service) {
     query.services = service;
+  }
+
+  // Add date range filter
+  if (startDate || endDate) {
+    query.projectDate = {};
+    if (startDate) {
+      query.projectDate.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      query.projectDate.$lte = new Date(endDate);
+    }
   }
 
   return this.countDocuments(query);

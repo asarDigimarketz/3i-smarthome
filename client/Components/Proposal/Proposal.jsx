@@ -12,6 +12,7 @@ import { StatusDropdown } from "./status-dropdown";
 import { Plus, Search } from "lucide-react";
 import { DateRangePicker } from "@heroui/date-picker";
 import axios from "axios";
+import DashboardHeader from "../header/DashboardHeader.jsx";
 
 function App() {
   const { data: session } = useSession();
@@ -106,10 +107,10 @@ function App() {
       <div className="flex-1">
         <div className="p-6 space-y-6">
           {/* Page Header */}
-          <div>
-            <h1 className="text-3xl font-bold text-red-600">Proposal</h1>
-            <p className="text-gray-500">Manage all your proposal</p>
-          </div>
+          <DashboardHeader
+            title="Proposal"
+            description="Manage all your proposal"
+          />
 
           {/* Search and Controls */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">

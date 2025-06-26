@@ -175,6 +175,14 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
         return;
       }
 
+      // Add current project amount to amountOptions if not already present
+      const currentAmountFormatted = `₹${parseInt(
+        formData.projectAmount
+      ).toLocaleString("en-IN")}`;
+      if (!amountOptions.includes(currentAmountFormatted)) {
+        setAmountOptions((prev) => [...prev, currentAmountFormatted]);
+      }
+
       // Create FormData for file upload
       const submitData = new FormData();
 
@@ -200,7 +208,14 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       submitData.append("status", formData.status);
       submitData.append("comment", formData.comment);
       submitData.append("date", formData.date);
-      submitData.append("amountOptions", JSON.stringify(amountOptions));
+
+      // Include updated amountOptions with the current amount
+      const updatedAmountOptions = amountOptions.includes(
+        currentAmountFormatted
+      )
+        ? amountOptions
+        : [...amountOptions, currentAmountFormatted];
+      submitData.append("amountOptions", JSON.stringify(updatedAmountOptions));
 
       // Add file if selected
       if (selectedFile) {

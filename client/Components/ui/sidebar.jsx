@@ -64,21 +64,25 @@ export const DesktopSidebar = ({ className, children, ...props }) => {
     <>
       <motion.div
         className={cn(
-          "h-screen px-4 py-4 hidden md:flex md:flex-col bg-black dark:bg-neutral-800 max-w-[250px] flex-shrink-0 relative overflow-hidden",
+          "h-screen px-4 py-0 hidden md:flex md:flex-col dark:bg-neutral-800 max-w-[250px] flex-shrink-0 relative overflow-hidden",
           className
         )}
+        style={{
+          background:
+            "linear-gradient(356.27deg, #4E0E10 1.61%, #000000 77.8%)",
+        }}
         animate={{
           width: animate ? (open ? "280px" : "80px") : "280px",
           transition: { type: "spring", stiffness: 300, damping: 30 },
         }}
         {...props}
       >
-        <div className="flex-1 overflow-hidden">{children}</div>
+        <div className="flex-1 overflow-hidden pt-4">{children}</div>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setOpen(!open)}
-          className="bg-red-600 text-white shadow-lg dark:border-neutral-700 rounded-md p-2 cursor-pointer hover:bg-red-700 transition-all duration-200 mt-4"
+          className="bg-red-600 text-white shadow-lg dark:border-neutral-700 rounded-md p-2 cursor-pointer hover:bg-red-700 transition-all duration-200 mb-4"
         >
           {open ? (
             <IconChevronLeft className="h-5 w-5" />
@@ -98,8 +102,12 @@ export const MobileSidebar = ({ className, children, ...props }) => {
     <>
       <div
         className={cn(
-          "h-16 px-4 flex flex-row md:hidden items-center justify-between bg-[#404040] dark:bg-neutral-800 w-full fixed top-0 left-0 z-50"
+          "h-16 px-4 flex flex-row md:hidden items-center justify-between dark:bg-neutral-800 w-full fixed top-0 left-0 z-50"
         )}
+        style={{
+          background:
+            "linear-gradient(356.27deg, #4E0E10 1.61%, #000000 77.8%)",
+        }}
         {...props}
       >
         <div className="flex justify-end z-20 w-full">
@@ -119,9 +127,13 @@ export const MobileSidebar = ({ className, children, ...props }) => {
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-screen w-[280px] top-0 left-0 bg-[#404040] dark:bg-neutral-900 z-[100] flex flex-col",
+                "fixed h-screen w-[280px] top-0 left-0 dark:bg-neutral-900 z-[100] flex flex-col",
                 className
               )}
+              style={{
+                background:
+                  "linear-gradient(356.27deg, #4E0E10 1.61%, #000000 77.8%)",
+              }}
             >
               <div className="flex justify-end p-4">
                 <IconX

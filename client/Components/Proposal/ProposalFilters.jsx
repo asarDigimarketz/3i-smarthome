@@ -10,13 +10,14 @@ const ProposalFilters = ({ onServiceChange }) => {
       icon: List,
       label: "All",
       activeColor: "bg-red-50",
-      iconColor: "text-red-500",
+      iconColor: "text-[#C92125]",
+      backgroundColor: "#FAE9EA",
     },
     {
       icon: Tv2,
       label: "Home Cinema",
       activeColor: "bg-purple-50",
-      iconColor: "text-purple-600",
+      iconColor: "text-[#5500FF]",
       style: { color: "#5500FF" },
       backgroundColor: "#F3F3FF",
     },
@@ -24,25 +25,25 @@ const ProposalFilters = ({ onServiceChange }) => {
       icon: HouseWifi,
       label: "Home Automation",
       activeColor: "bg-blue-50",
-      iconColor: "text-blue-600",
+      iconColor: "text-[#00A8D6]",
       style: { color: "#006BAD" },
-      backgroundColor: "#EBFBFC",
+      backgroundColor: "#E8FAFF",
     },
     {
       icon: Cctv,
       label: "Security System",
       activeColor: "bg-blue-50",
-      iconColor: "text-blue-600",
+      iconColor: "text-[#0068AD]",
       style: { color: "#006BAD" },
-      backgroundColor: "#EBFBFC",
+      backgroundColor: "#DEF2FF",
     },
     {
       icon: Speaker,
       label: "Outdoor Audio Solution",
       activeColor: "bg-pink-50",
-      iconColor: "text-pink-600",
+      iconColor: "text-[#DB0A89]",
       style: { color: "#DB0A89" },
-      backgroundColor: "#FEEFB8", // Light cream/yellow - exact from color palette
+      backgroundColor: "#FFE9F6", // Light cream/yellow - exact from color palette
     },
   ];
 

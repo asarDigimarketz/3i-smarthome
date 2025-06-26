@@ -1,6 +1,7 @@
 import "./style.css";
 import { SidebarDemo } from "../../Components/sidebar/SideBar";
 import AuthGuard from "../../Components/auth/AuthGuard";
+import Header from "../../Components/header/Header";
 // import { ToastContainer } from "react-toastify";
 // import "react-toastify/dist/ReactToastify.css";
 // import DashboardFooter from "../../Components/dashboardFooter/DashboardFooter";
@@ -35,6 +36,7 @@ const Layout = ({ children }) => {
           role="main"
           aria-label="Main content area"
         >
+          <Header />
           <div className="mainContentWrapper">{children}</div>
           {/* <DashboardFooter /> */}
         </main>

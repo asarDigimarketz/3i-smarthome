@@ -243,6 +243,8 @@ const getProjects = async (req, res) => {
       search = "",
       status = "",
       service = "",
+      startDate = "",
+      endDate = "",
     } = req.query;
 
     const options = {
@@ -253,6 +255,8 @@ const getProjects = async (req, res) => {
       search,
       status,
       service,
+      startDate,
+      endDate,
     };
 
     const projects = await Project.getProjectsWithFilters({}, options);
@@ -262,6 +266,8 @@ const getProjects = async (req, res) => {
       search,
       status,
       service,
+      startDate,
+      endDate,
     });
 
     // Calculate pagination info
@@ -463,10 +469,22 @@ const deleteProject = async (req, res) => {
  */
 const getProjectStats = async (req, res) => {
   try {
-    const stats = await Project.aggregate([
+    // Status breakdown
+    const statusStats = await Project.aggregate([
       {
         $group: {
           _id: "$projectStatus",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$projectAmount" },
+        },
+      },
+    ]);
+
+    // Service breakdown
+    const serviceStats = await Project.aggregate([
+      {
+        $group: {
+          _id: "$services",
           count: { $sum: 1 },
           totalAmount: { $sum: "$projectAmount" },
         },
@@ -486,7 +504,8 @@ const getProjectStats = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        statusBreakdown: stats,
+        statusBreakdown: statusStats,
+        serviceBreakdown: serviceStats,
         totalProjects,
         totalValue: totalValue[0]?.total || 0,
       },

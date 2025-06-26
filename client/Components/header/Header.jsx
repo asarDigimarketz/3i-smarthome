@@ -1,53 +1,101 @@
-const Header = () => {
-  return (
-    <div className="w-full bg-black">
-      <div className="flex items-center justify-between px-6 py-4">
-        {/* Right Side Content */}
-        <div className="flex items-center space-x-4">
-          {/* Notification Bell */}
-          <div className="relative">
-            <div className="relative cursor-pointer">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
-              <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full">
-                3
-              </span>
-            </div>
-          </div>
+"use client";
+import { Bell, ChevronDown, User, LogOut, Settings } from "lucide-react";
+import { Button } from "@heroui/button";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/dropdown";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
-          {/* Admin User Profile */}
-          <div className="flex items-center space-x-3">
-            <span className="text-white">Admin User</span>
-            <button className="text-white">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
+const Header = () => {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut({ redirect: false });
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  const getUserDisplayName = () => {
+    if (!session?.user) return "User";
+
+    if (session.user.isEmployee === false) {
+      return "Admin";
+    }
+
+    if (session.user.firstName) {
+      return `${session.user.firstName} ${session.user.lastName || ""}`.trim();
+    }
+
+    return session.user.email?.split("@")[0] || "User";
+  };
+
+  return (
+    <header
+      className="w-full flex items-center justify-end"
+      style={{
+        background: "linear-gradient(356.27deg, #4E0E10 1.61%, #000000 77.8%)",
+      }}
+    >
+      {/* Right Side - Notifications and User */}
+      <div className="flex items-center space-x-2 md:space-x-4 mr-3">
+        {/* Notification Bell */}
+        <Button
+          isIconOnly
+          variant="light"
+          size="lg"
+          className="relative text-white hover:bg-white/10 transition-colors "
+          aria-label="Notifications"
+        >
+          <Bell className="h-4 w-4 md:h-5 md:w-5" />
+          <span className="absolute -top-[2px] -right-1 h-4 w-4 md:h-5 md:w-5 bg-white rounded-full flex items-center justify-center p-2">
+            <span className="text-xs text-primary font-medium">3</span>
+          </span>
+        </Button>
+
+        {/* User Dropdown */}
+        <Dropdown placement="bottom-end">
+          <DropdownTrigger>
+            <Button
+              variant="light"
+              className="flex items-center space-x-1 md:space-x-2 text-white hover:bg-white/10 px-2 md:px-3 py-2 transition-colors"
+              size="lg"
+            >
+              <User className="h-4 w-4 md:h-5 md:w-5" />
+              <span className="text-xs md:text-sm font-medium hidden sm:inline">
+                {getUserDisplayName()}
+              </span>
+              <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu aria-label="User menu">
+            <DropdownItem
+              key="settings"
+              startContent={<Settings className="h-4 w-4" />}
+              onPress={() => router.push("/dashboard/settings")}
+            >
+              Settings
+            </DropdownItem>
+            <DropdownItem
+              key="logout"
+              className="text-danger"
+              color="danger"
+              startContent={<LogOut className="h-4 w-4" />}
+              onPress={handleLogout}
+            >
+              Logout
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
       </div>
-    </div>
+    </header>
   );
 };
 

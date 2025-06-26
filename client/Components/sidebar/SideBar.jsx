@@ -197,7 +197,7 @@ export function SidebarDemo() {
             </div>
           </motion.div>
 
-          {/* User info section */}
+          {/* User info section
           {session?.user && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -225,7 +225,7 @@ export function SidebarDemo() {
                 )}
               </div>
             </motion.div>
-          )}
+          )} */}
         </SidebarBody>
       </Sidebar>
     </motion.div>

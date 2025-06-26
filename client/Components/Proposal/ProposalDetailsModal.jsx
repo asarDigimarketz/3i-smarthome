@@ -175,6 +175,36 @@ const ProposalDetailsModal = ({
     }
   };
 
+  // Handle amount selection from dropdown
+  const handleAmountSelect = (selectedAmount) => {
+    const numericValue = parseInt(selectedAmount.replace(/[^\d]/g, ""));
+    setFormData((prev) => ({
+      ...prev,
+      projectAmount: numericValue,
+    }));
+  };
+
+  // Handle adding current amount to options
+  const handleAddCurrentAmount = () => {
+    const currentAmountFormatted = `₹${formData.projectAmount.toLocaleString(
+      "en-IN"
+    )}`;
+    if (!amountOptions.includes(currentAmountFormatted)) {
+      setAmountOptions((prev) => [...prev, currentAmountFormatted]);
+      addToast({
+        title: "Success",
+        description: "Amount added to options",
+        color: "success",
+      });
+    } else {
+      addToast({
+        title: "Info",
+        description: "Amount already exists in options",
+        color: "primary",
+      });
+    }
+  };
+
   // Status options
   const statusOptions = [
     { key: "Hot", label: "Hot", color: "danger" },
@@ -388,7 +418,7 @@ const ProposalDetailsModal = ({
                   const numericValue = parseInt(
                     key.toString().replace(/[^\d]/g, "")
                   );
-                  handleInputChange("projectAmount", numericValue);
+                  handleAmountSelect(key);
                 }}
               >
                 {amountOptions.map((amount) => (
@@ -400,9 +430,9 @@ const ProposalDetailsModal = ({
               size="sm"
               color="primary"
               className="px-3"
-              onPress={() => setShowAmountInput(true)}
+              onPress={handleAddCurrentAmount}
             >
-              Add New
+              Add Current
             </Button>
           </>
         )}

@@ -100,18 +100,42 @@ const ProposalTable = ({
   };
 
   const handleStartEdit = (e, item, columnKey) => {
+    e.stopPropagation();
     setEditingCell({ row: item._id, column: columnKey });
-    setEditValue(item[columnKey]);
+
+    // Set appropriate edit value based on column type
+    if (columnKey === "projectAmount") {
+      setEditValue(item.projectAmount?.toString() || "0");
+    } else {
+      setEditValue(item[columnKey] || "");
+    }
   };
 
   const handleSaveEdit = async (item) => {
     try {
+      let updateData = {
+        field: editingCell.column,
+        value: editValue,
+      };
+
+      // If updating project amount, also update amountOptions
+      if (editingCell.column === "projectAmount") {
+        const currentAmountFormatted = `₹${parseInt(editValue).toLocaleString(
+          "en-IN"
+        )}`;
+        const currentAmountOptions = item.amountOptions || [];
+
+        if (!currentAmountOptions.includes(currentAmountFormatted)) {
+          updateData.amountOptions = [
+            ...currentAmountOptions,
+            currentAmountFormatted,
+          ];
+        }
+      }
+
       const response = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${item._id}/field`,
-        {
-          field: editingCell.column,
-          value: editValue,
-        },
+        updateData,
         {
           headers: {
             "Content-Type": "application/json",
@@ -125,13 +149,28 @@ const ProposalTable = ({
         setProposals((prev) =>
           prev.map((proposal) =>
             proposal._id === item._id
-              ? { ...proposal, [editingCell.column]: editValue }
+              ? {
+                  ...proposal,
+                  [editingCell.column]:
+                    editingCell.column === "projectAmount"
+                      ? parseInt(editValue)
+                      : editValue,
+                  ...(updateData.amountOptions && {
+                    amountOptions: updateData.amountOptions,
+                  }),
+                }
               : proposal
           )
         );
 
         setEditingCell({ row: null, column: null });
         setEditValue("");
+
+        addToast({
+          title: "Success",
+          description: "Proposal updated successfully",
+          color: "success",
+        });
       }
     } catch (error) {
       console.error("Error updating proposal:", error);
@@ -226,9 +265,9 @@ const ProposalTable = ({
       case "Home Cinema":
         return "#F3F3FF"; // Exact light purple from image
       case "Home Automation":
-        return "#EBF8FC"; // Exact light blue from image
+        return "#E8FAFF"; // Exact light blue from image
       case "Security System":
-        return "#EBF8FC"; // Exact light blue from image (same as Home Automation)
+        return "#DEF2FF"; // Exact light blue from image (same as Home Automation)
       case "Outdoor Audio Solution":
         return "#FFE9F6"; // Exact light cream/yellow from image
       default:
@@ -387,8 +426,11 @@ const ProposalTable = ({
               <div className="flex items-center gap-2 min-w-[150px]">
                 <Select
                   size="sm"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
+                  selectedKeys={editValue ? [editValue] : []}
+                  onSelectionChange={(keys) => {
+                    const selectedValue = Array.from(keys)[0];
+                    setEditValue(selectedValue);
+                  }}
                   className="flex-1"
                   onClick={(e) => e.stopPropagation()}
                   autoFocus
@@ -469,11 +511,11 @@ const ProposalTable = ({
       case "Home Cinema":
         return "#F3F3FF"; // Light purple
       case "Home Automation":
-        return "#EBFBFC"; // Light blue
+        return "#E8FAFF"; // Light blue
       case "Security System":
-        return "#EBFBFC"; // Light blue (same as Home Automation)
+        return "#DEF2FF"; // Light blue (same as Home Automation)
       case "Outdoor Audio Solution":
-        return "#FEEFB8"; // Light cream/yellow
+        return "#FFE9F6"; // Light cream/yellow
       default:
         return "#FAE9EA"; // White for unknown services
     }
@@ -487,9 +529,9 @@ const ProposalTable = ({
       case "Home Cinema":
         return "#5500FF"; // Purple
       case "Home Automation":
-        return "#006BAD"; // Blue
+        return "#00A8D6"; // Blue
       case "Security System":
-        return "#006BAD"; // Blue
+        return "#0068AD"; // Blue
       case "Outdoor Audio Solution":
         return "#DB0A89"; // Pink
       default:
