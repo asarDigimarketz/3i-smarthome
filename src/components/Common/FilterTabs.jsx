@@ -6,7 +6,7 @@ const filterIcons = [
   { name: 'Home Cinema', icon: Tv2 },
   { name: 'Security System', icon: Cctv },
   { name: 'Home Automation', icon: HouseWifi },
-  { name: 'Outdoor Audio', icon: Speaker }
+  { name: 'Outdoor Audio Solution', icon: Speaker }
 ];
 
 const FilterTabs = ({ selectedFilter, onFilterChange }) => {
@@ -18,7 +18,7 @@ const FilterTabs = ({ selectedFilter, onFilterChange }) => {
         return 'bg-services-security-light border border-services-security-border';
       case 'Home Automation':
         return 'bg-services-automation-light border border-services-automation-border';  
-      case 'Outdoor Audio':
+      case 'Outdoor Audio Solution':
         return 'bg-services-audio-light border border-services-audio-border';
       default:
         return 'bg-services-default-light border border-services-default-border';
@@ -37,7 +37,7 @@ const FilterTabs = ({ selectedFilter, onFilterChange }) => {
         return '#0891b2';
       case 'Home Automation':
         return '#2563eb';  
-      case 'Outdoor Audio':
+      case 'Outdoor Audio Solution':
         return '#db2777';
       default:
         return '#666666';

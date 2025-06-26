@@ -17,7 +17,6 @@ export default function Index() {
         <ScrollView className="flex-1 px-4">
           <DashboardSection />
           <ActivitiesSection />
-          
           {/* Recent Projects Section */}
           <View className="mb-6">
             <Text className="text-xl font-bold text-gray-600 my-4">Recent Projects</Text>

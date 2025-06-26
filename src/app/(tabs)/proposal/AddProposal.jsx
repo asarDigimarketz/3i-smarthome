@@ -4,6 +4,9 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, ChevronDown, Upload } from 'lucide-react-native';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -11,16 +14,21 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { TextInput } from 'react-native-paper';
+import axios from 'axios';
+
+// 🔧 NETWORK CONFIGURATION - UPDATE WITH YOUR DEVELOPMENT MACHINE'S IP
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL; // ✅ Your actual IP address
 
 const AddProposal = () => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768; // Standard tablet breakpoint
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     customerName: '',
     contactNumber: '',
     emailId: '',
-    date: '',
+    date: new Date().toISOString().split('T')[0], // Set default to today's date
     addressLine1: '',
     cityTownVillage: '',
     district: '',
@@ -37,24 +45,84 @@ const AddProposal = () => {
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const statusOptions = [
     { value: 'Hot', color: 'text-red-600', bg: 'bg-red-100' },
     { value: 'Cold', color: 'text-blue-600', bg: 'bg-blue-100' },
     { value: 'Warm', color: 'text-orange-600', bg: 'bg-orange-100' },
     { value: 'Scrap', color: 'text-yellow-600', bg: 'bg-yellow-100' },
-    { value: 'Confirm', color: 'text-green-600', bg: 'bg-green-100' }
+    { value: 'Confirmed', color: 'text-green-600', bg: 'bg-green-100' }
   ];
 
   const serviceOptions = [
     { value: 'Home Cinema', color: 'text-purple-600', bg: 'bg-purple-50' },
     { value: 'Security System', color: 'text-cyan-600', bg: 'bg-cyan-50' },
     { value: 'Home Automation', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { value: 'Outdoor Audio', color: 'text-pink-600', bg: 'bg-pink-50' }
+    { value: 'Outdoor Audio Solution', color: 'text-pink-600', bg: 'bg-pink-50' }
   ];
+
+  const stateOptions = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 
+    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 
+    'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 
+    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+    'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 
+    'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+  ];
+
+  const getDistrictsByState = (state) => {
+    const districtMap = {
+      'Tamil Nadu': [
+        'Ariyalur', 'Chengalpattu', 'Chennai', 'Coimbatore', 'Cuddalore', 'Dharmapuri', 
+        'Dindigul', 'Erode', 'Kallakurichi', 'Kanchipuram', 'Kanyakumari', 'Karur', 
+        'Krishnagiri', 'Madurai', 'Mayiladuthurai', 'Nagapattinam', 'Namakkal', 'Nilgiris', 
+        'Perambalur', 'Pudukkottai', 'Ramanathapuram', 'Ranipet', 'Salem', 'Sivaganga', 
+        'Tenkasi', 'Thanjavur', 'Theni', 'Thoothukudi', 'Tiruchirappalli', 'Tirunelveli', 
+        'Tirupathur', 'Tiruppur', 'Tiruvallur', 'Tiruvannamalai', 'Tiruvarur', 'Vellore', 'Viluppuram', 'Virudhunagar'
+      ],
+      'Karnataka': [
+        'Bagalkot', 'Ballari', 'Belagavi', 'Bengaluru Rural', 'Bengaluru Urban', 'Bidar', 
+        'Chamarajanagar', 'Chikballapur', 'Chikkamagaluru', 'Chitradurga', 'Dakshina Kannada', 
+        'Davanagere', 'Dharwad', 'Gadag', 'Hassan', 'Haveri', 'Kalaburagi', 'Kodagu', 
+        'Kolar', 'Koppal', 'Mandya', 'Mysuru', 'Raichur', 'Ramanagara', 'Shivamogga', 
+        'Tumakuru', 'Udupi', 'Uttara Kannada', 'Vijayapura', 'Yadgir'
+      ],
+      'Maharashtra': [
+        'Ahmednagar', 'Akola', 'Amravati', 'Aurangabad', 'Beed', 'Bhandara', 'Buldhana', 
+        'Chandrapur', 'Dhule', 'Gadchiroli', 'Gondia', 'Hingoli', 'Jalgaon', 'Jalna', 
+        'Kolhapur', 'Latur', 'Mumbai City', 'Mumbai Suburban', 'Nagpur', 'Nanded', 
+        'Nandurbar', 'Nashik', 'Osmanabad', 'Palghar', 'Parbhani', 'Pune', 'Raigad', 
+        'Ratnagiri', 'Sangli', 'Satara', 'Sindhudurg', 'Solapur', 'Thane', 'Wardha', 'Washim', 'Yavatmal'
+      ],
+      'Kerala': [
+        'Alappuzha', 'Ernakulam', 'Idukki', 'Kannur', 'Kasaragod', 'Kollam', 'Kottayam', 
+        'Kozhikode', 'Malappuram', 'Palakkad', 'Pathanamthitta', 'Thiruvananthapuram', 
+        'Thrissur', 'Wayanad'
+      ],
+      'Andhra Pradesh': [
+        'Anantapur', 'Chittoor', 'East Godavari', 'Guntur', 'Krishna', 'Kurnool', 
+        'Nellore', 'Prakasam', 'Srikakulam', 'Visakhapatnam', 'Vizianagaram', 
+        'West Godavari', 'YSR Kadapa'
+      ],
+      'Telangana': [
+        'Adilabad', 'Bhadradri Kothagudem', 'Hyderabad', 'Jagtial', 'Jangaon', 'Jayashankar Bhupalpally', 
+        'Jogulamba Gadwal', 'Kamareddy', 'Karimnagar', 'Khammam', 'Komaram Bheem Asifabad', 
+        'Mahabubabad', 'Mahabubnagar', 'Mancherial', 'Medak', 'Medchal–Malkajgiri', 'Mulugu', 
+        'Nagarkurnool', 'Nalgonda', 'Narayanpet', 'Nirmal', 'Nizamabad', 'Peddapalli', 
+        'Rajanna Sircilla', 'Rangareddy', 'Sangareddy', 'Siddipet', 'Suryapet', 'Vikarabad', 
+        'Wanaparthy', 'Warangal Rural', 'Warangal Urban', 'Yadadri Bhuvanagiri'
+      ],
+      // Add more states as needed
+      'Default': ['Please select a state first']
+    };
+    
+    return districtMap[state] || districtMap['Default'];
+  };
 
   const showDatePicker = () => {
     DateTimePickerAndroid.open({
@@ -92,6 +160,171 @@ const AddProposal = () => {
       }
     } catch (err) {
       console.log('Document picker error:', err);
+    }
+  };
+
+  const validateForm = () => {
+    const requiredFields = {
+      customerName: 'Customer Name',
+      contactNumber: 'Contact Number',
+      emailId: 'Email ID',
+      addressLine1: 'Address Line 1',
+      service: 'Service',
+      projectDescription: 'Project Description',
+      projectAmount: 'Project Amount',
+      size: 'Size'
+    };
+
+    for (const [key, label] of Object.entries(requiredFields)) {
+      if (!formData[key] || formData[key].trim() === '') {
+        Alert.alert('Validation Error', `${label} is required`);
+        return false;
+      }
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.emailId)) {
+      Alert.alert('Validation Error', 'Please enter a valid email address');
+      return false;
+    }
+
+    // Validate phone number (basic check)
+    if (formData.contactNumber.length < 10) {
+      Alert.alert('Validation Error', 'Please enter a valid contact number');
+      return false;
+    }
+
+    // Validate size format (Length X Width)
+    if (formData.size) {
+      const sizePattern = /^\d{1,4}(\.\d{1,2})?\s*X\s*\d{1,4}(\.\d{1,2})?$/i;
+      if (!sizePattern.test(formData.size.trim())) {
+        Alert.alert('Validation Error', 'Size must be in format: 1200.36 X 1600.63 (Length X Width)');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      console.log('🚀 Starting proposal creation...');
+      console.log('📋 Form Data:', formData);
+      
+      // Prepare FormData for file upload
+      const submitData = new FormData();
+      
+      // Add form fields
+      submitData.append('customerName', formData.customerName);
+      submitData.append('contactNumber', formData.contactNumber);
+      submitData.append('email', formData.emailId);
+      submitData.append('date', formData.date || new Date().toISOString());
+      
+      // Address object - mapping to server expected field names
+      const address = {
+        addressLine: formData.addressLine1,        // Server expects 'addressLine'
+        city: formData.cityTownVillage,           // Server expects 'city'
+        district: formData.district,
+        state: formData.state,
+        country: formData.country,
+        pincode: formData.pinCode                 // Server expects 'pincode' (lowercase)
+      };
+      console.log('🏠 Address Object (mapped for server):', address);
+      submitData.append('address', JSON.stringify(address));
+      
+      submitData.append('services', formData.service);
+      submitData.append('projectDescription', formData.projectDescription);
+      submitData.append('projectAmount', formData.projectAmount);
+      submitData.append('size', formData.size);
+      submitData.append('status', formData.status || 'Warm');
+      submitData.append('comment', formData.comment || '');
+
+      // Add file if selected
+      if (selectedFile) {
+        console.log('📎 File selected:', selectedFile.name);
+        submitData.append('attachment', {
+          uri: selectedFile.uri,
+          type: selectedFile.mimeType,
+          name: selectedFile.name
+        });
+      }
+
+      console.log('🔗 API URL:', `${API_BASE_URL}/api/proposals`);
+      console.log('🔑 API Key:', process.env.EXPO_PUBLIC_API_KEY ? 'Set' : 'Not Set');
+      console.log('📤 Sending request...');
+
+      const response = await axios.post(`${API_BASE_URL}/api/proposals`, submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'x-api-key': process.env.EXPO_PUBLIC_API_KEY
+        }
+      });
+
+      console.log('📥 Response Status:', response.status);
+      console.log('📥 Response Data:', response.data);
+
+      if (response.data.success) {
+        console.log('✅ Proposal created successfully!');
+        Alert.alert(
+          'Success', 
+          'Proposal created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        console.error('❌ API returned success: false');
+        console.error('❌ Error message:', response.data.error);
+        Alert.alert('Error', response.data.error || 'Failed to create proposal');
+      }
+    } catch (error) {
+      console.error('🚨 Error creating proposal:');
+      console.error('🚨 Error type:', error.name);
+      console.error('🚨 Error message:', error.message);
+      
+      if (error.response) {
+        // Server responded with error status
+        console.error('🚨 Response status:', error.response.status);
+        console.error('🚨 Response headers:', error.response.headers);
+        console.error('🚨 Response data:', error.response.data);
+        
+        let errorMessage = 'Server error occurred';
+        if (error.response.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.response.status === 400) {
+          errorMessage = 'Invalid data sent to server. Please check all fields.';
+        } else if (error.response.status === 401) {
+          errorMessage = 'Unauthorized. Please check your API key.';
+        } else if (error.response.status === 404) {
+          errorMessage = 'API endpoint not found. Please check server configuration.';
+        } else if (error.response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        Alert.alert('Error', errorMessage);
+      } else if (error.request) {
+        // Network error
+        console.error('🚨 Network Error - Request made but no response received');
+        console.error('🚨 Request details:', error.request);
+        Alert.alert('Network Error', 'No response from server. Please check your internet connection and server status.');
+      } else {
+        // Other error
+        console.error('🚨 Unexpected Error:', error);
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      console.log('🏁 Create operation completed');
+      setLoading(false);
     }
   };
 
@@ -322,11 +555,15 @@ const AddProposal = () => {
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
               <TextInput
                 mode="outlined"
-                label="Size"
+                label="Size (Length X Width)"
                 value={formData.size}
-                onChangeText={(text) => setFormData({...formData, size: text})}
+                onChangeText={(text) => {
+                  // Allow digits, decimal points, spaces, and X
+                  const formattedText = text.replace(/[^0-9.X\s]/g, '');
+                  setFormData({...formData, size: formattedText});
+                }}
+                placeholder="1200.36 X 1600.63"
                 right={<TextInput.Affix text="Sqt" />}
-                keyboardType="numeric"
                 outlineColor="#E5E7EB"
                 activeOutlineColor="#DC2626"
               />
@@ -345,7 +582,7 @@ const AddProposal = () => {
                   formData.status === 'Cold' ? 'text-blue-600' :
                   formData.status === 'Warm' ? 'text-orange-600' :
                   formData.status === 'Scrap' ? 'text-yellow-600' :
-                  formData.status === 'Confirm' ? 'text-green-600' :
+                  formData.status === 'Confirmed' ? 'text-green-600' :
                   'text-gray-500'
                 : 'text-gray-500'
               } text-base font-medium`}>
@@ -436,19 +673,24 @@ const AddProposal = () => {
             <TouchableOpacity 
               className="bg-gray-100 px-8 py-3 rounded-lg"
               onPress={() => router.back()}
+              disabled={loading}
             >
               <Text className="text-gray-600 font-medium">Cancel</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              className="bg-red-600 px-8 py-3 rounded-lg"
-              onPress={() => {
-                // Add your save logic here
-                console.log('Form Data:', formData);
-                router.back();
-              }}
+              className={`${loading ? 'bg-gray-400' : 'bg-red-600'} px-8 py-3 rounded-lg flex-row items-center`}
+              onPress={handleSubmit}
+              disabled={loading}
             >
-              <Text className="text-white font-medium">Save</Text>
+              {loading ? (
+                <>
+                  <ActivityIndicator size="small" color="white" />
+                  <Text className="text-white font-medium ml-2">Saving...</Text>
+                </>
+              ) : (
+                <Text className="text-white font-medium">Save Proposal</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>

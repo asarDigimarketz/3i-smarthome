@@ -1,7 +1,9 @@
+import React, { useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
-import { Calendar, Check, ChevronDown, FileText } from 'lucide-react-native';
-import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Calendar, Check, ChevronDown, FileText, X, User, Camera, Trash2 } from 'lucide-react-native';
+import { Image, ScrollView, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
+import { TextInput as PaperTextInput } from 'react-native-paper';
 
 const AddTaskForm = ({
   newTask,
@@ -15,8 +17,13 @@ const AddTaskForm = ({
   statusOptions,
   pickImages,
   removeImage,
-  setShowAddTaskForm
+  setShowAddTaskForm,
+  onCreateTask,
+  creating,
+  employees = []
 }) => {
+  const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -41,138 +48,199 @@ const AddTaskForm = ({
     }
   };
 
-  return (
-    <View className="border border-gray-100 rounded-lg p-4 mb-4">
-      {/* Title Input */}
-      <View className="flex-row items-center mb-2">
-        <View className="w-6 h-6 rounded-full bg-gray-200 items-center justify-center">
-          <Check size={16} color="white" />
-        </View>
-        <TextInput
-          className="flex-1 text-lg font-medium text-gray-900 ml-2"
-          placeholder="Enter task title"
-          value={newTask.title}
-          onChangeText={(text) => setNewTask({...newTask, title: text})}
-        />
-      </View>
+  const handleDateChange = (event, selectedDate) => {
+    if (selectedDate) {
+      setNewTask(prev => ({
+        ...prev,
+        [activeDateField]: selectedDate
+      }));
+    }
+    setShowDatePicker(false);
+    setActiveDateField(null);
+  };
 
-      {/* Assignee */}
-      <View className="mb-3">
-        <Text className="text-gray-600 text-sm">Assignee:</Text>
+  const openDatePicker = (field) => {
+    setActiveDateField(field);
+    setShowDatePicker(true);
+  };
+
+  const handleAssigneeSelect = (employee) => {
+    setNewTask(prev => ({
+      ...prev,
+      assignTo: employee.id
+    }));
+    setShowAssigneeDropdown(false);
+  };
+
+  const getSelectedEmployeeName = () => {
+    if (!newTask.assignTo) return 'Select Assignee';
+    const selectedEmployee = employees.find(emp => emp.id === newTask.assignTo);
+    return selectedEmployee ? selectedEmployee.name : 'Select Assignee';
+  };
+
+  const handleSubmit = () => {
+    if (!newTask.title.trim()) {
+      Alert.alert('Validation Error', 'Task title is required');
+      return;
+    }
+    if (!newTask.status) {
+      Alert.alert('Validation Error', 'Please select a status');
+      return;
+    }
+    
+    onCreateTask();
+  };
+
+  return (
+    <View className="bg-white p-4 rounded-lg border border-gray-200 mb-4">
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-lg font-semibold text-gray-900">Add New Task</Text>
         <TouchableOpacity 
-          className="mt-1 p-2 border border-gray-200 rounded-lg"
-          onPress={() => {/* Show assignee picker */}}
+          onPress={() => setShowAddTaskForm(false)}
+          className="p-2"
         >
-          <Text className="text-gray-900">
-            {newTask.assignee || 'Select assignee'}
-          </Text>
+          <X size={20} color="#6B7280" />
         </TouchableOpacity>
       </View>
 
-      {/* Dates Row */}
-      <View className="flex mb-4">
-        {/* Start Date */}
-        <View className="flex-1 mr-2">
-          <Text className="text-gray-500 mb-1">Start Date</Text>
-          <View className="relative">
-            <TouchableOpacity 
-              className="h-12 px-4 bg-gray-50 rounded-lg flex-row items-center justify-between"
-              onPress={() => {
-                setActiveDateField('start');
-                setShowDatePicker(true);
-              }}
-            >
-              <Text className="text-gray-700">
-                {newTask.startDate.toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric'
-                })}
-              </Text>
-              <Calendar size={20} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-        </View>
+      <View className="mb-4">
+        <PaperTextInput
+          label="Task Title"
+          value={newTask.title}
+          onChangeText={(text) => setNewTask(prev => ({ ...prev, title: text }))}
+          mode="outlined"
+          theme={{ colors: { primary: '#DC2626' } }}
+          left={<PaperTextInput.Icon icon={() => <FileText size={20} color="#6B7280" />} />}
+          placeholder="Enter task title"
+        />
+      </View>
 
-        {/* End Date */}
-        <View className="flex-1 ml-2">
-          <Text className="text-gray-500 mb-1">End Date</Text>
-          <View className="relative">
-            <TouchableOpacity 
-              className="h-12 px-4 bg-gray-50 rounded-lg flex-row items-center justify-between"
-              onPress={() => {
-                setActiveDateField('end');
-                setShowDatePicker(true);
-              }}
-            >
-              <Text className="text-gray-700">
-                {newTask.endDate.toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric'
-                })}
+      <View className="mb-4">
+        <Text className="text-sm font-medium text-gray-700 mb-2">Assignee</Text>
+        <View className="relative">
+          <TouchableOpacity
+            onPress={() => setShowAssigneeDropdown(!showAssigneeDropdown)}
+            className="flex-row items-center justify-between bg-gray-50 border border-gray-300 rounded-lg px-3 py-3"
+          >
+            <View className="flex-row items-center flex-1">
+              <User size={16} color="#6B7280" />
+              <Text className={`ml-2 ${newTask.assignTo ? 'text-gray-900' : 'text-gray-500'}`}>
+                {getSelectedEmployeeName()}
               </Text>
-              <Calendar size={20} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
+            </View>
+            <ChevronDown size={16} color="#6B7280" />
+          </TouchableOpacity>
+          
+          {showAssigneeDropdown && (
+            <View className="absolute top-12 left-0 bg-white rounded-lg shadow-xl z-20 w-full max-h-48 border border-gray-200">
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <TouchableOpacity
+                  className="px-4 py-3 border-b border-gray-100 flex-row items-center"
+                  onPress={() => {
+                    setNewTask(prev => ({ ...prev, assignTo: '' }));
+                    setShowAssigneeDropdown(false);
+                  }}
+                >
+                  <View className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center mr-3">
+                    <User size={16} color="#6B7280" />
+                  </View>
+                  <Text className="text-gray-600 text-sm">Unassigned</Text>
+                  {!newTask.assignTo && (
+                    <View className="w-2 h-2 rounded-full bg-red-600 ml-auto" />
+                  )}
+                </TouchableOpacity>
+
+                {employees.length === 0 ? (
+                  <View className="px-4 py-6 items-center">
+                    <Text className="text-gray-500 text-sm">No employees available</Text>
+                    <Text className="text-gray-400 text-xs mt-1">Add employees first</Text>
+                  </View>
+                ) : (
+                  employees.map((employee) => (
+                    <TouchableOpacity
+                      key={employee.id}
+                      className="px-4 py-3 border-b border-gray-100 flex-row items-center"
+                      onPress={() => handleAssigneeSelect(employee)}
+                    >
+                      <View className="w-8 h-8 rounded-full bg-blue-100 items-center justify-center mr-3">
+                        <Text className="text-blue-600 text-xs font-semibold">
+                          {employee.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-gray-900 text-sm font-medium">{employee.name}</Text>
+                        {employee.email && (
+                          <Text className="text-gray-500 text-xs">{employee.email}</Text>
+                        )}
+                      </View>
+                      {newTask.assignTo === employee.id && (
+                        <View className="w-2 h-2 rounded-full bg-red-600" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </View>
 
-      {/* Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={activeDateField === 'start' ? newTask.startDate : newTask.endDate}
-          mode="date"
-          display="default"
-          minimumDate={activeDateField === 'end' ? newTask.startDate : undefined}
-          onChange={(event, selectedDate) => {
-            setShowDatePicker(false);
-            if (selectedDate) {
-              setNewTask(prev => ({
-                ...prev,
-                [activeDateField === 'start' ? 'startDate' : 'endDate']: selectedDate
-              }));
-            }
-            setActiveDateField(null);
-          }}
-        />
-      )}
+      <View className="flex-row space-x-3 mb-4">
+        <View className="flex-1">
+          <Text className="text-sm font-medium text-gray-700 mb-2">Start Date</Text>
+          <TouchableOpacity
+            onPress={() => openDatePicker('startDate')}
+            className="flex-row items-center bg-gray-50 border border-gray-300 rounded-lg px-3 py-3"
+          >
+            <Calendar size={16} color="#6B7280" />
+            <Text className="ml-2 text-gray-900 text-sm">
+              {newTask.startDate.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View className="flex-1">
+          <Text className="text-sm font-medium text-gray-700 mb-2">End Date</Text>
+          <TouchableOpacity
+            onPress={() => openDatePicker('endDate')}
+            className="flex-row items-center bg-gray-50 border border-gray-300 rounded-lg px-3 py-3"
+          >
+            <Calendar size={16} color="#6B7280" />
+            <Text className="ml-2 text-gray-900 text-sm">
+              {newTask.endDate.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* Status Dropdown */}
       <View className="mb-4">
-        <Text className="text-gray-600 text-sm mb-1">Status:</Text>
+        <Text className="text-sm font-medium text-gray-700 mb-2">Status</Text>
         <View className="relative">
           <TouchableOpacity
             onPress={() => setShowStatusDropdown(!showStatusDropdown)}
-            className="flex-row items-center justify-between bg-gray-100 rounded-lg h-12 px-4 w-full"
+            className="flex-row items-center justify-between bg-gray-50 border border-gray-300 rounded-lg px-3 py-3"
           >
-            <Text className={`${
-              newTask.status ? 
-                newTask.status === 'New' ? 'text-blue-600' :
-                newTask.status === 'In Progress' ? 'text-yellow-600' :
-                newTask.status === 'Done' ? 'text-green-600' :
-                'text-gray-500'
-              : 'text-gray-500'
-            } text-sm font-medium`}>
-              {newTask.status || 'Select Status'}
+            <Text className={`${newTask.status ? 'text-gray-900' : 'text-gray-500'}`}>
+              {newTask.status ? statusOptions.find(s => s.value === newTask.status)?.label : 'Select Status'}
             </Text>
             <ChevronDown size={16} color="#6B7280" />
           </TouchableOpacity>
           
           {showStatusDropdown && (
-            <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
+            <View className="absolute top-12 left-0 bg-white rounded-lg shadow-xl z-10 w-full border border-gray-200">
               {statusOptions.map((status) => (
                 <TouchableOpacity
                   key={status.value}
-                  className={`px-4 py-3 border-b border-gray-100 ${status.bg}`}
+                  className={`px-4 py-3 border-b border-gray-100 flex-row items-center justify-between ${status.bg}`}
                   onPress={() => {
-                    setNewTask({ ...newTask, status: status.value });
+                    setNewTask(prev => ({ ...prev, status: status.value }));
                     setShowStatusDropdown(false);
                   }}
                 >
-                  <Text className={`${status.color} text-sm font-medium`}>
-                    {status.value}
-                  </Text>
+                  <Text className={`${status.color} font-medium`}>{status.label}</Text>
+                  {newTask.status === status.value && (
+                    <View className="w-2 h-2 rounded-full bg-red-600" />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -180,111 +248,107 @@ const AddTaskForm = ({
         </View>
       </View>
 
-      {/* Note */}
       <View className="mb-4">
-        <Text className="text-gray-600 text-sm">Note:</Text>
-        <TextInput
-          className="mt-1 p-2 border border-gray-200 rounded-lg"
-          placeholder="Add task note"
+        <PaperTextInput
+          label="Comment (Optional)"
+          value={newTask.comment}
+          onChangeText={(text) => setNewTask(prev => ({ ...prev, comment: text }))}
+          mode="outlined"
+          theme={{ colors: { primary: '#DC2626' } }}
           multiline
           numberOfLines={3}
-          value={newTask.note}
-          onChangeText={(text) => setNewTask({...newTask, note: text})}
+          placeholder="Add any additional notes or comments"
         />
       </View>
 
-      {/* Images */}
-      <View className="flex-row justify-between mb-4">
-        {/* Before Images */}
-        <View className="flex-1 mr-2">
-          <Text className="text-gray-600 text-sm mb-2">Before Images</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {newTask.beforeImages.map((uri, index) => (
-              <View key={index} className="mr-2 relative">
-                <Image 
-                  source={{ uri }}
-                  className="w-24 h-24 rounded-lg"
-                  resizeMode="cover"
-                />
-                <TouchableOpacity 
-                  className="absolute top-1 right-1 bg-red-500 rounded-full p-1"
+      <View className="mb-4">
+        <Text className="text-sm font-medium text-gray-700 mb-2">Before Images (Optional)</Text>
+        <TouchableOpacity
+          onPress={() => pickImages('beforeImages')}
+          className="flex-row items-center justify-center bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg py-4 mb-2"
+        >
+          <Camera size={20} color="#3B82F6" />
+          <Text className="text-blue-600 ml-2 font-medium">Add Before Images</Text>
+        </TouchableOpacity>
+        
+        {newTask.beforeImages && newTask.beforeImages.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+            {newTask.beforeImages.map((image, index) => (
+              <View key={index} className="relative mr-2">
+                <Image source={{ uri: image }} className="w-16 h-16 rounded-lg" />
+                <TouchableOpacity
                   onPress={() => removeImage('beforeImages', index)}
+                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
                 >
-                  <Text className="text-white text-xs">×</Text>
+                  <X size={12} color="white" />
                 </TouchableOpacity>
               </View>
             ))}
-            <TouchableOpacity 
-              className="w-24 h-24 border border-gray-200 rounded-lg items-center justify-center"
-              onPress={() => pickImages('beforeImages')}
-            >
-              <Text className="text-blue-600">+ Add</Text>
-            </TouchableOpacity>
           </ScrollView>
-        </View>
-
-        {/* After Images */}
-        <View className="flex-1 ml-2">
-          <Text className="text-gray-600 text-sm mb-2">After Images</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {newTask.afterImages.map((uri, index) => (
-              <View key={index} className="mr-2 relative">
-                <Image 
-                  source={{ uri }}
-                  className="w-24 h-24 rounded-lg"
-                  resizeMode="cover"
-                />
-                <TouchableOpacity 
-                  className="absolute top-1 right-1 bg-red-500 rounded-full p-1"
-                  onPress={() => removeImage('afterImages', index)}
-                >
-                  <Text className="text-white text-xs">×</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity 
-              className="w-24 h-24 border border-gray-200 rounded-lg items-center justify-center"
-              onPress={() => pickImages('afterImages')}
-            >
-              <Text className="text-blue-600">+ Add</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
+        )}
       </View>
 
-      {/* Attachment */}
-      <View className="mb-4">
-        <TouchableOpacity 
-          className="flex-row items-center bg-gray-50 p-3 rounded-lg"
-          onPress={pickDocument}
+      <View className="mb-6">
+        <Text className="text-sm font-medium text-gray-700 mb-2">After Images (Optional)</Text>
+        <TouchableOpacity
+          onPress={() => pickImages('afterImages')}
+          className="flex-row items-center justify-center bg-green-50 border-2 border-dashed border-green-300 rounded-lg py-4 mb-2"
         >
-          <FileText size={20} color="#6B7280" />
-          <Text className="flex-1 text-gray-600 text-sm ml-2">
-            {newTask.attachment?.name || 'Add attachment'}
-          </Text>
-          {newTask.attachment && (
-            <TouchableOpacity
-              className="bg-red-100 rounded-full p-1"
-              onPress={() => setNewTask(prev => ({ ...prev, attachment: null }))}
-            >
-              <Text className="text-red-600 text-xs px-1">×</Text>
-            </TouchableOpacity>
+          <Camera size={20} color="#10B981" />
+          <Text className="text-green-600 ml-2 font-medium">Add After Images</Text>
+        </TouchableOpacity>
+        
+        {newTask.afterImages && newTask.afterImages.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+            {newTask.afterImages.map((image, index) => (
+              <View key={index} className="relative mr-2">
+                <Image source={{ uri: image }} className="w-16 h-16 rounded-lg" />
+                <TouchableOpacity
+                  onPress={() => removeImage('afterImages', index)}
+                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                >
+                  <X size={12} color="white" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      <View className="flex-row space-x-3">
+        <TouchableOpacity
+          onPress={() => setShowAddTaskForm(false)}
+          className="flex-1 bg-gray-100 py-3 rounded-lg"
+        >
+          <Text className="text-gray-700 text-center font-medium">Cancel</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          onPress={handleSubmit}
+          disabled={creating}
+          className={`flex-1 py-3 rounded-lg ${
+            creating ? 'bg-red-400' : 'bg-red-600'
+          }`}
+        >
+          {creating ? (
+            <View className="flex-row items-center justify-center">
+              <ActivityIndicator size="small" color="white" />
+              <Text className="text-white font-medium ml-2">Creating...</Text>
+            </View>
+          ) : (
+            <Text className="text-white text-center font-medium">Create Task</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Submit Buttons */}
-      <View className="flex-row space-x-2 gap-2">
-        <TouchableOpacity 
-          className="flex-1 bg-red-600 p-4 rounded-full"
-          onPress={() => {
-            // Handle task creation
-            setShowAddTaskForm(false);
-          }}
-        >
-          <Text className="text-white text-center font-medium">Create Task</Text>
-        </TouchableOpacity>
-      </View>
+      {showDatePicker && (
+        <DateTimePicker
+          value={newTask[activeDateField] || new Date()}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
     </View>
   );
 };

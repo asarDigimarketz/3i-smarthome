@@ -11,7 +11,7 @@ const ProjectCard = ({ project, customer }) => {
         return ['#026b87', '#5deaff'];
       case 'Security System':
         return ['#014c95', '#36b9f6'];
-      case 'Outdoor Audio':
+      case 'Outdoor Audio Solution':
         return ['#df2795', '#eb7ab7'];
       default:
         return ['#4F46E5', '#06B6D4'];

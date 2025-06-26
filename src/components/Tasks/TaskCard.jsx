@@ -1,11 +1,11 @@
 import * as FileSystem from 'expo-file-system';
-import { ArrowLeft, Check, FileText, Share2, SquarePen } from 'lucide-react-native';
+import { ArrowLeft, Check, FileText, Share2, SquarePen, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import ImageView from 'react-native-image-viewing';
 import PDFView from 'react-native-view-pdf';
 
-const TaskCard = ({ task, employees, handleEditTask }) => {
+const TaskCard = ({ task, employees, handleEditTask, onDeleteTask }) => {
   const [isImageViewVisible, setIsImageViewVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedImageType, setSelectedImageType] = useState('before');
@@ -46,8 +46,20 @@ const TaskCard = ({ task, employees, handleEditTask }) => {
           {task.title}
         </Text>
         <View className="ml-auto">
-          <View className="bg-green-100 px-3 py-1 rounded-full">
-            <Text className="text-green-600 text-xs font-medium">{task.status}</Text>
+          <View className={`px-3 py-1 rounded-full ${
+            task.status === 'New' ? 'bg-blue-100' :
+            task.status === 'In Progress' ? 'bg-yellow-100' :
+            task.status === 'Done' ? 'bg-green-100' :
+            'bg-gray-100'
+          }`}>
+            <Text className={`text-xs font-medium ${
+              task.status === 'New' ? 'text-blue-600' :
+              task.status === 'In Progress' ? 'text-yellow-600' :
+              task.status === 'Done' ? 'text-green-600' :
+              'text-gray-600'
+            }`}>
+              {task.status}
+            </Text>
           </View>
         </View>
       </View>
@@ -192,19 +204,21 @@ const TaskCard = ({ task, employees, handleEditTask }) => {
       </TouchableOpacity>
 
       <View className="mt-4">
-        <View className="flex-row justify-end space-x-2">
+        <View className="flex-row justify-end space-x-2 gap-2">
           <TouchableOpacity 
-            className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+            className="w-8 h-8 bg-gray-100 rounded-lg items-center justify-center p-2"
             onPress={() => handleEditTask(task)}
           >
             <SquarePen size={16} color="#6B7280" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
-            onPress={() => {/* Handle share */}}
-          >
-            <Share2 size={16} color="#6B7280" />
-          </TouchableOpacity>
+          {onDeleteTask && (
+            <TouchableOpacity 
+              className="w-8 h-8 bg-red-100 rounded-lg items-center justify-center p-2"
+              onPress={onDeleteTask}
+            >
+              <Trash2 size={16} color="#DC2626" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>

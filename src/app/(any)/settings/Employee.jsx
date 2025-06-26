@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router'
 import { ArrowLeft, Check, ChevronDown, Eye, PenSquare, Plus, Trash2 } from 'lucide-react-native'
 import { useState } from 'react'
 import { Text, TouchableOpacity, useWindowDimensions, View } from 'react-native'
+import { DataTable } from 'react-native-paper'
 
 const roles = [
   { id: 1, name: 'Admin' },
@@ -9,7 +10,6 @@ const roles = [
   { id: 3, name: 'Employee' }
 ]
 
-// Replace PERMISSION_ACTIONS array with icon mapping
 const PERMISSION_ACTIONS = [
   { name: 'view', icon: Eye },
   { name: 'create', icon: Plus },
@@ -32,6 +32,7 @@ export default function Employee() {
   const router = useRouter()
   const [showRoleDropdown, setShowRoleDropdown] = useState(false)
   const [selectedRole, setSelectedRole] = useState('')
+  const [checked, setChecked] = useState({}); // { [permissionId_actionName]: true }
 
   return (
     <View className="flex-1 bg-white">
@@ -48,7 +49,7 @@ export default function Employee() {
         <View className="mb-6">
           <TouchableOpacity
             onPress={() => setShowRoleDropdown(!showRoleDropdown)}
-            className="h-12 px-4 border border-gray-200 rounded-full flex-row items-center justify-between"
+            className="h-12 px-4 border border-gray-200 rounded-lg flex-row items-center justify-between"
           >
             <Text className="text-gray-900 text-base">
               {selectedRole || 'Select Role'}
@@ -57,7 +58,7 @@ export default function Employee() {
           </TouchableOpacity>
 
           {showRoleDropdown && (
-            <View className="absolute top-14 left-0 right-0 bg-white rounded-xl shadow-xl z-50 border border-gray-100">
+            <View className="absolute top-14 left-0 right-0 bg-white rounded-lg shadow-xl z-50 border border-gray-100">
               {roles.map((role) => (
                 <TouchableOpacity
                   key={role.id}
@@ -77,64 +78,74 @@ export default function Employee() {
         {/* Permission Title */}
         <Text className="text-xl font-bold text-gray-900 mb-4">Permission</Text>
 
-        {/* Table Header */}
-        <View className="mb-4 bg-red-600 rounded-t-xl p-2">
-          <View className="flex-row items-center">
-            <View className="flex-1 min-w-[32%]">
-              <Text className="text-white text-base font-medium">Descriptions</Text>
-            </View>
-            <View className="flex-row justify-between flex-1 min-w-[68%]">
-              {PERMISSION_ACTIONS.map(action => (
-                <View key={action.name} className="w-12 items-center">
-                  <action.icon size={20} color="white" />
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
+        {/* Permissions Table using react-native-paper */}
+        <DataTable style={{ borderRadius: 4, overflow: 'hidden', borderWidth: 1, borderColor: '#c92125', marginBottom: 16 }}>
+          <DataTable.Header style={{ backgroundColor: '#c92125' }}>
+            <DataTable.Title style={{ flex: 2 }}>
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Descriptions</Text>
+            </DataTable.Title>
+            {PERMISSION_ACTIONS.map(action => (
+              <DataTable.Title key={action.name} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ color: 'white', fontWeight: 'extrabold', textTransform: 'capitalize', textAlign: 'center' }}>
+                  {action.name}
+                </Text>
+              </DataTable.Title>
+            ))}
+          </DataTable.Header>
 
-        {/* Table Body */}
-        <View className="bg-white rounded-b-xl">
           {PERMISSIONS.map((permission) => (
-            <View 
-              key={permission.id}
-              className="flex-row items-center py-4 border-b border-gray-200"
-            >
-              <View className="flex-1 min-w-[32%]">
-                <Text className="text-gray-800 text-base ml-2">{permission.name}</Text>
-              </View>
-              <View className="flex-row justify-between flex-1 min-w-[68%]">
-                {PERMISSION_ACTIONS.map((action) => (
-                  <View key={action.name} className="w-12 items-center">
+            <DataTable.Row key={permission.id}>
+              <DataTable.Cell style={{ flex: 2 }}>
+                <Text style={{ color: '#111827' }}>{permission.name}</Text>
+              </DataTable.Cell>
+              {PERMISSION_ACTIONS.map((action) => {
+                const key = `${permission.id}_${action.name}`;
+                const isChecked = checked[key];
+                return (
+                  <DataTable.Cell
+                    key={action.name}
+                    style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+                  >
                     <TouchableOpacity
-                      className={`w-6 h-6 rounded border ${
-                        false
-                          ? 'bg-green-500 border-green-500' 
-                          : 'border-gray-300'
-                      } items-center justify-center`}
+                      onPress={() =>
+                        setChecked((prev) => ({
+                          ...prev,
+                          [key]: !prev[key],
+                        }))
+                      }
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 6,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isChecked ? '#4ade80' : 'white', // bg-green-400
+                        borderWidth: 1,
+                        borderColor: isChecked ? '#4ade80' : '#d1d5db', // gray-300
+                      }}
                     >
-                      {false && (
-                        <Check size={16} color="white" />
-                      )}
+                      {isChecked ? (
+                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>✓</Text>
+                      ) : null}
                     </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            </View>
+                  </DataTable.Cell>
+                );
+              })}
+            </DataTable.Row>
           ))}
-        </View>
+        </DataTable>
 
         {/* Action Buttons */}
-        <View className="flex-row justify-center space-x-4 mt-8">
+        <View className="flex-row justify-center space-x-4 mt-8 gap-4">
           <TouchableOpacity 
-            className="bg-red-600 px-8 py-3 rounded-full"
+            className="bg-[#c92125] px-8 py-3 rounded-lg"
             onPress={() => {/* Handle save */}}
           >
             <Text className="text-white font-medium">Save</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            className="bg-gray-500 px-8 py-3 rounded-full"
+            className="bg-gray-500 px-8 py-3 rounded-lg"
             onPress={() => router.back()}
           >
             <Text className="text-white font-medium">Cancel</Text>
