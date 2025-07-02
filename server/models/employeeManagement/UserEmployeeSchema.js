@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const crypto = require("crypto");
-const { validatePassword } = require("../../utils/passwordValidation");
+const validatePassword = require("../../utils/passwordValidation");
 
 const UserEmployeeSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
