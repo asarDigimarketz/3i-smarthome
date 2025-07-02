@@ -528,9 +528,9 @@ const Dashboard = () => {
                   <DateRangePicker
                     value={dateRange}
                     onChange={setDateRange}
+                    showMonthAndYearPickers
                     className="w-64"
                     size="lg"
-                    showMonthAndYearPickers
                     radius="lg"
                     classNames={{
                       base: "bg-white/80 backdrop-blur-sm",

@@ -21,6 +21,9 @@ export function StatusDropdown({ onStatusChange }) {
       <DropdownTrigger>
         <Button
           variant="bordered"
+          className="w-full justify-between bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-800"
+          size="md"
+          classNames={{ input: "text-left" }}
           radius="sm"
           endContent={<ChevronDown className="text-gray-600" />}
         >

@@ -128,12 +128,13 @@ function App() {
 
             <div className="flex items-center gap-4">
               <DateRangePicker
-                label="Filter by Date"
                 value={dateRange}
                 onChange={setDateRange}
                 radius="sm"
+                showMonthAndYearPickers
+                size="md"
                 variant="bordered"
-                className="w-60"
+                className="w-50"
                 classNames={{
                   base: "bg-white",
                   inputWrapper: "border-gray-300 hover:border-gray-400",
@@ -144,13 +145,18 @@ function App() {
               <StatusDropdown onStatusChange={handleStatusChange} />
               {userPermissions.hasAddPermission ? (
                 <Link href="/dashboard/proposal/add-proposal">
-                  <Button color="danger" radius="sm" startContent={<Plus />}>
+                  <Button
+                    color="primary"
+                    radius="sm"
+                    startContent={<Plus />}
+                    size="md"
+                  >
                     Add New
                   </Button>
                 </Link>
               ) : (
                 <Button
-                  color="danger"
+                  color="primary"
                   radius="sm"
                   startContent={<Plus />}
                   onPress={handleAddProposal}

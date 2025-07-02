@@ -15,7 +15,6 @@ import {
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
-import { Chip } from "@heroui/chip";
 import { X, FileText, ChevronDown, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -34,7 +33,7 @@ const ProposalDetailsModal = ({
   const [selectedFile, setSelectedFile] = useState(null);
   const [showAmountInput, setShowAmountInput] = useState(false);
   const [newAmount, setNewAmount] = useState("");
-
+  const statusColor = "white"; // Default color for status dropdown
   // Form data state
   const [formData, setFormData] = useState({
     customerName: "",
@@ -213,7 +212,48 @@ const ProposalDetailsModal = ({
     { key: "Scrap", label: "Scrap", color: "default" },
     { key: "Confirmed", label: "Confirmed", color: "success" },
   ];
+  const handleFixAmount = async () => {
+    try {
+      setLoading(true);
 
+      // Update the project amount in the API
+      const response = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalData._id}/field`,
+        {
+          field: "projectAmount",
+          value: formData.projectAmount,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Make status editable by enabling editing mode
+        setIsEditing(true);
+        addToast({
+          title: "Success",
+          description: "Amount fixed and status is now editable",
+          color: "success",
+        });
+        // Refresh parent component if callback provided
+        onUpdate && onUpdate();
+        // Do NOT close the modal here
+      }
+    } catch (error) {
+      console.error("Error fixing amount:", error);
+      addToast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to fix amount",
+        color: "danger",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   // Handle save
   const handleSave = async () => {
     try {
@@ -358,6 +398,8 @@ const ProposalDetailsModal = ({
   };
 
   // Render amount section
+  // Replace your renderAmountSection function with this fixed version:
+
   const renderAmountSection = () => (
     <div className="space-y-2">
       <label className="text-sm font-medium text-gray-700">
@@ -420,6 +462,8 @@ const ProposalDetailsModal = ({
                   );
                   handleAmountSelect(key);
                 }}
+                disabledKeys={["close"]}
+                closeOnSelect={false}
               >
                 {amountOptions.map((amount) => (
                   <DropdownItem key={amount}>{amount}</DropdownItem>
@@ -430,9 +474,20 @@ const ProposalDetailsModal = ({
               size="sm"
               color="primary"
               className="px-3"
-              onPress={handleAddCurrentAmount}
+              onPress={() => setShowAmountInput(true)} // Show input to add new amount
             >
-              Add Current
+              Add
+            </Button>
+            <Button
+              size="sm"
+              color="primary"
+              className="px-3"
+              onPress={() => {
+                handleFixAmount();
+              }}
+              disabled={loading}
+            >
+              {loading ? "Fixing..." : "Fix"}
             </Button>
           </>
         )}
@@ -633,38 +688,28 @@ const ProposalDetailsModal = ({
                 <label className="text-sm font-medium text-gray-700">
                   Status:
                 </label>
-                {isEditing ? (
-                  <Select
-                    selectedKeys={[formData.status]}
-                    className="max-w-xs"
-                    classNames={{
-                      trigger: "border-gray-300",
-                    }}
-                    onSelectionChange={(keys) => {
-                      const selectedKey = Array.from(keys)[0];
+                <Select
+                  selectedKeys={new Set([formData.status])}
+                  variant="bordered"
+                  radius="full"
+                  className="max-w-[160px]"
+                  classNames={{
+                    trigger: "border-gray-300",
+                  }}
+                  onSelectionChange={(keys) => {
+                    const selectedKey = Array.from(keys)[0];
+                    if (statusOptions.some((s) => s.key === selectedKey)) {
                       handleInputChange("status", selectedKey);
-                    }}
-                  >
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status.key} value={status.key}>
-                        <Chip color={status.color} size="sm" variant="flat">
-                          {status.label}
-                        </Chip>
-                      </SelectItem>
-                    ))}
-                  </Select>
-                ) : (
-                  <Chip
-                    color={
-                      statusOptions.find((s) => s.key === formData.status)
-                        ?.color || "default"
                     }
-                    size="sm"
-                    variant="flat"
-                  >
-                    {formData.status}
-                  </Chip>
-                )}
+                  }}
+                  disallowEmptySelection={true}
+                >
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status.key} value={status.key}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </Select>
               </div>
 
               {/* Attachment */}
@@ -719,17 +764,23 @@ const ProposalDetailsModal = ({
               <div className="flex gap-2">
                 <Button
                   color="primary"
-                  onPress={handleEdit}
+                  onPress={handleSave}
                   className="px-6"
+                  disabled={loading}
+                >
+                  save
+                </Button>
+                <Button
+                  onPress={handleEdit}
+                  className="px-6 bg-[#616161] text-white"
                   disabled={loading}
                 >
                   Edit
                 </Button>
                 {formData.status !== "Confirmed" && (
                   <Button
-                    variant="bordered"
                     onPress={handleDelete}
-                    className="px-6 border-red-400 text-red-600 hover:bg-red-50"
+                    className="px-6  text-white hover:bg-red-50 bg-[#999999]"
                     disabled={loading}
                   >
                     Delete
