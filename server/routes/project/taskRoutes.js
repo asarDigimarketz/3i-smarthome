@@ -15,12 +15,16 @@ const router = express.Router();
 const uploadsDir = path.join(__dirname, "../../public/assets/images/tasks");
 const beforeDir = path.join(uploadsDir, "before");
 const afterDir = path.join(uploadsDir, "after");
+const attachementsDir = path.join(uploadsDir, "attachements");
 
 if (!fs.existsSync(beforeDir)) {
   fs.mkdirSync(beforeDir, { recursive: true });
 }
 if (!fs.existsSync(afterDir)) {
   fs.mkdirSync(afterDir, { recursive: true });
+}
+if (!fs.existsSync(attachementsDir)) {
+  fs.mkdirSync(attachementsDir, { recursive: true });
 }
 
 // Configure multer for file uploads - Before Images
@@ -60,14 +64,18 @@ const handleFileUploads = (req, res, next) => {
           cb(null, beforeDir);
         } else if (file.fieldname === "afterAttachments") {
           cb(null, afterDir);
+        } else if (file.fieldname === "attachements") {
+          cb(null, attachementsDir);
         } else {
           cb(new Error("Invalid field name"), false);
         }
       },
       filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        const prefix =
-          file.fieldname === "beforeAttachments" ? "before" : "after";
+        let prefix = "";
+        if (file.fieldname === "beforeAttachments") prefix = "before";
+        else if (file.fieldname === "afterAttachments") prefix = "after";
+        else if (file.fieldname === "attachements") prefix = "attch";
         cb(
           null,
           `task-${prefix}-${uniqueSuffix}${path.extname(file.originalname)}`
@@ -81,6 +89,7 @@ const handleFileUploads = (req, res, next) => {
   upload.fields([
     { name: "beforeAttachments", maxCount: 5 },
     { name: "afterAttachments", maxCount: 5 },
+    { name: "attachements", maxCount: 10 }, // NEW: general attachments
   ])(req, res, (err) => {
     if (err) {
       console.error("File upload error:", err);
@@ -99,7 +108,7 @@ const handleFileUploads = (req, res, next) => {
           mimetype: file.mimetype,
           size: file.size,
           url: `${
-            process.env.API_URL || "http://localhost:5000"
+            process.env.BACKEND_URL || "http://localhost:5000"
           }/assets/images/tasks/before/${file.filename}`,
         };
       });
@@ -114,8 +123,23 @@ const handleFileUploads = (req, res, next) => {
           mimetype: file.mimetype,
           size: file.size,
           url: `${
-            process.env.API_URL || "http://localhost:5000"
+            process.env.BACKEND_URL || "http://localhost:5000"
           }/assets/images/tasks/after/${file.filename}`,
+        };
+      });
+    }
+
+    // Process general attachements
+    if (req.files && req.files.attachements) {
+      req.attachements = req.files.attachements.map((file) => {
+        return {
+          filename: file.filename,
+          originalName: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          url: `${
+            process.env.BACKEND_URL || "http://localhost:5000"
+          }/assets/images/tasks/attachements/${file.filename}`,
         };
       });
     }

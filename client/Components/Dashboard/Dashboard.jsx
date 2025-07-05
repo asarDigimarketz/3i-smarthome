@@ -9,7 +9,6 @@ import {
   DropdownMenu,
   DropdownItem,
 } from "@heroui/dropdown";
-import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -21,14 +20,13 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import ServiceCard from "./ServiceCard.jsx";
 import ActivityItem from "./ActivityItem.jsx";
 import ProjectCard from "./ProjectCard.jsx";
 import { ChevronRight, ChevronDown, ArrowRight, Calendar } from "lucide-react";
-import { parseDate, today, getLocalTimeZone } from "@internationalized/date";
+import { today, getLocalTimeZone } from "@internationalized/date";
 import axios from "axios";
 import { addToast } from "@heroui/toast";
 

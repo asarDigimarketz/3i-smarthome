@@ -100,7 +100,9 @@ const ProposalTable = ({
   };
 
   const handleStartEdit = (e, item, columnKey) => {
-    e.stopPropagation();
+    if (e && typeof e.stopPropagation === "function") {
+      e.stopPropagation();
+    }
     setEditingCell({ row: item._id, column: columnKey });
 
     // Set appropriate edit value based on column type
@@ -309,185 +311,33 @@ const ProposalTable = ({
       case "comment":
         return (
           <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <div className="flex items-center gap-2 min-w-[200px]">
-                <Textarea
-                  size="sm"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  className="flex-1"
-                  onClick={(e) => e.stopPropagation()}
-                  autoFocus
-                />
-                <div className="flex flex-col gap-1">
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    color="primary"
-                    className="min-w-unit-6 w-6 h-6"
-                    onPress={(e) => {
-                      handleSaveEdit(item);
-                    }}
-                  >
-                    <Check className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="bordered"
-                    className="min-w-unit-6 w-6 h-6"
-                    onPress={(e) => handleCancelEdit(e)}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <span className="text-gray-700">
-                  {item[columnKey] || "No comment"}
-                </span>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
-                  onPress={(e) => handleStartEdit(e, item, columnKey)}
-                >
-                  <Edit3 className="w-3 h-3" />
-                </Button>
-              </>
-            )}
+            <span className="text-gray-700">
+              {item[columnKey] || "No comment"}
+            </span>
           </div>
         );
       case "formattedAmount":
         return (
           <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  size="sm"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  className="w-32"
-                  type="number"
-                  onClick={(e) => e.stopPropagation()}
-                  autoFocus
-                />
-                <div className="flex gap-1">
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    color="primary"
-                    className="min-w-unit-6 w-6 h-6"
-                    onPress={(e) => {
-                      handleSaveEdit(item);
-                    }}
-                  >
-                    <Check className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="bordered"
-                    className="min-w-unit-6 w-6 h-6"
-                    onPress={(e) => handleCancelEdit(e)}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <span className="font-semibold text-gray-900">
-                  ₹{item.projectAmount?.toLocaleString("en-IN") || "0"}
-                </span>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
-                  onPress={(e) => handleStartEdit(e, item, "projectAmount")}
-                >
-                  <Edit3 className="w-3 h-3" />
-                </Button>
-              </>
-            )}
+            <span className="font-semibold text-gray-900">
+              ₹{item.projectAmount?.toLocaleString("en-IN") || "0"}
+            </span>
           </div>
         );
       case "status":
-        const isEditingStatus =
-          editingCell.row === item._id && editingCell.column === columnKey;
-        const statusOptions = ["Hot", "Cold", "Warm", "Scrap", "Confirmed"];
-
         return (
           <div className="flex items-center space-x-2">
-            {isEditingStatus ? (
-              <div className="flex items-center gap-2 min-w-[150px]">
-                <Select
-                  size="sm"
-                  selectedKeys={editValue ? [editValue] : []}
-                  onSelectionChange={(keys) => {
-                    const selectedValue = Array.from(keys)[0];
-                    setEditValue(selectedValue);
-                  }}
-                  className="flex-1"
-                  onClick={(e) => e.stopPropagation()}
-                  autoFocus
-                >
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </Select>
-                <div className="flex flex-col gap-1">
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    color="primary"
-                    className="min-w-unit-6 w-6 h-6"
-                    onPress={(e) => {
-                      handleSaveEdit(item);
-                    }}
-                  >
-                    <Check className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="bordered"
-                    className="min-w-unit-6 w-6 h-6"
-                    onPress={(e) => handleCancelEdit(e)}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <span
-                  className="px-3 py-1 rounded-md text-xs font-medium border cursor-pointer"
-                  style={{
-                    color: "#383838",
-                    backgroundColor: getStatusBackgroundColor(item[columnKey]),
-                    borderColor: getStatusColor(item[columnKey]) + "33", // 20% opacity border
-                  }}
-                  onClick={(e) => handleStartEdit(e, item, columnKey)}
-                >
-                  {item[columnKey]}
-                </span>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  className="text-gray-400 hover:text-gray-600 min-w-unit-6 w-6 h-6"
-                  onPress={(e) => handleStartEdit(e, item, columnKey)}
-                >
-                  <Edit3 className="w-3 h-3" />
-                </Button>
-              </>
-            )}
+            <span
+              className="px-3 py-1 rounded-md text-xs font-medium border cursor-pointer"
+              style={{
+                color: "#383838",
+                backgroundColor: getStatusBackgroundColor(item[columnKey]),
+                borderColor: getStatusColor(item[columnKey]) + "33", // 20% opacity border
+              }}
+              onClick={(e) => handleStartEdit(e, item, columnKey)}
+            >
+              {item[columnKey]}
+            </span>
           </div>
         );
       default:

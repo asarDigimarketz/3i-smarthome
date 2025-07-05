@@ -8,7 +8,7 @@ import { Select, SelectItem } from "@heroui/select";
 import Link from "next/link";
 import { StatusSelect } from "./StatusSelect.jsx";
 import { ServicesSelect } from "./ServiceSelect.jsx";
-import { Calendar, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -291,6 +291,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.customerName}
                 onChange={(e) =>
                   handleInputChange("customerName", e.target.value)
@@ -308,6 +311,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.contactNumber}
                 onChange={(e) =>
                   handleInputChange("contactNumber", e.target.value)
@@ -324,6 +330,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 required
@@ -338,9 +347,11 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.date}
                 onChange={(e) => handleInputChange("date", e.target.value)}
-                endContent={<Calendar className="text-gray-400" />}
                 required
               />
             </div>
@@ -355,6 +366,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.addressLine}
                 onChange={(e) =>
                   handleInputChange("addressLine", e.target.value)
@@ -369,6 +383,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.city}
                 onChange={(e) => handleInputChange("city", e.target.value)}
                 required
@@ -381,6 +398,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.district}
                 onChange={(e) => handleInputChange("district", e.target.value)}
                 required
@@ -393,6 +413,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.state}
                 onChange={(e) => handleInputChange("state", e.target.value)}
                 required
@@ -405,6 +428,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.country}
                 onChange={(e) => handleInputChange("country", e.target.value)}
                 required
@@ -417,6 +443,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.pincode}
                 onChange={(e) => handleInputChange("pincode", e.target.value)}
                 required
@@ -430,21 +459,11 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 onChange={(value) => handleInputChange("services", value)}
               />
             </div>
-
             <div>
-              <label className="block text-gray-700 mb-2">
-                Project Description *
-              </label>
-              <Textarea
-                placeholder="Project Description"
-                radius="sm"
-                variant="bordered"
-                className="w-full"
-                value={formData.projectDescription}
-                onChange={(e) =>
-                  handleInputChange("projectDescription", e.target.value)
-                }
-                required
+              <label className="block text-gray-700 mb-2">Status</label>
+              <StatusSelect
+                value={formData.status}
+                onChange={(value) => handleInputChange("status", value)}
               />
             </div>
 
@@ -458,6 +477,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                   radius="sm"
                   variant="bordered"
                   className="w-full"
+                  classNames={{
+                    trigger: "border-[#E0E5F2]  h-[50px]",
+                  }}
                   value={
                     formData.projectAmount
                       ? `₹${parseInt(formData.projectAmount).toLocaleString(
@@ -485,6 +507,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                     variant="bordered"
                     size="sm"
                     className="flex-1"
+                    classNames={{
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
+                    }}
                     value={formData.projectAmount}
                     onChange={(e) =>
                       handleInputChange("projectAmount", e.target.value)
@@ -519,22 +544,19 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                   radius="sm"
                   variant="bordered"
                   className="w-full rounded-r-none"
+                  classNames={{
+                    inputWrapper: " h-[50px] border-[#E0E5F2] ",
+                  }}
                   value={formData.size}
                   onChange={(e) => handleInputChange("size", e.target.value)}
                   required
+                  endContent={
+                    <span className="text-xs text-[#999999] border-[#00000080] border-l-medium px-3">
+                      Sqt
+                    </span>
+                  }
                 />
-                <div className="flex items-center justify-center px-4 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-gray-500">
-                  Sqt
-                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-gray-700 mb-2">Status</label>
-              <StatusSelect
-                value={formData.status}
-                onChange={(value) => handleInputChange("status", value)}
-              />
             </div>
 
             <div>
@@ -544,16 +566,38 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.comment}
                 onChange={(e) => handleInputChange("comment", e.target.value)}
               />
             </div>
-
-            <div className="col-span-1 md:col-span-2">
+            <div>
               <label className="block text-gray-700 mb-2">
-                Project Attachment
+                Project Description *
               </label>
+              <Textarea
+                placeholder="Project Description"
+                radius="sm"
+                variant="bordered"
+                className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
+                value={formData.projectDescription}
+                onChange={(e) =>
+                  handleInputChange("projectDescription", e.target.value)
+                }
+                required
+              />
+            </div>
+
+            <div className="col-span-1 md:col-span-2 grid gap-y-4">
               <div className="flex items-center gap-4">
+                <label className="block text-gray-700 mb-2">
+                  Project Attachment
+                </label>
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
@@ -564,7 +608,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 <label htmlFor="file-upload">
                   <Button
                     as="span"
-                    color="danger"
+                    color="primary"
                     radius="sm"
                     startContent={<Upload />}
                     className="cursor-pointer"
@@ -572,12 +616,12 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                     Upload
                   </Button>
                 </label>
-                <span className="text-gray-500 text-sm">
-                  {selectedFile
-                    ? selectedFile.name
-                    : "*Attach project docs/pdf/jpeg/png"}
-                </span>
               </div>
+              <span className="text-gray-500 text-xs justify-center">
+                {selectedFile
+                  ? selectedFile.name
+                  : "*Attach project docs/pdf/jpeg/png"}
+              </span>
             </div>
           </div>
 
@@ -585,13 +629,17 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
 
           <div className="flex justify-end gap-4">
             <Link href="/dashboard/proposal">
-              <Button variant="bordered" radius="full" className="px-8">
+              <Button
+                variant="bordered"
+                radius="full"
+                className="px-8 text-primary"
+              >
                 Cancel
               </Button>
             </Link>
 
             <Button
-              color="danger"
+              color="primary"
               radius="full"
               className="px-8"
               type="submit"

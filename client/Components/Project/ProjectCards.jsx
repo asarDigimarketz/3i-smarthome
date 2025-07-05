@@ -2,33 +2,59 @@ import { useState, useEffect } from "react";
 import { Card } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Progress } from "@heroui/progress";
+import Link from "next/link";
 import { Phone } from "lucide-react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarGroup } from "@heroui/avatar";
 
-export function ProjectCards() {
+export function ProjectCards({
+  serviceFilter,
+  dateRange,
+  statusFilter,
+  searchValue,
+}) {
   const router = useRouter();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch projects from API
+  // Build query params for backend filtering
+  const buildQueryParams = () => {
+    const params = [];
+    if (searchValue && searchValue.trim() !== "")
+      params.push(`search=${encodeURIComponent(searchValue)}`);
+    if (serviceFilter && serviceFilter !== "All")
+      params.push(`service=${encodeURIComponent(serviceFilter)}`);
+    if (statusFilter) params.push(`status=${encodeURIComponent(statusFilter)}`);
+    if (dateRange && dateRange.start && dateRange.end) {
+      params.push(`startDate=${encodeURIComponent(dateRange.start)}`);
+      params.push(`endDate=${encodeURIComponent(dateRange.end)}`);
+    }
+    // Always add limit=20 as the last param
+    params.push("limit=20");
+    return params.length ? `?${params.join("&")}` : "?limit=20";
+  };
+
+  // Fetch projects from API with filters
   const fetchProjects = async () => {
+    setLoading(true);
     try {
+      const query = buildQueryParams();
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/projects?limit=20`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/projects${query}`,
         {
           headers: {
             "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
           },
         }
       );
-
       if (response.data.success) {
         // Transform backend data to match the UI structure
         const transformedProjects = response.data.data.map(
           (project, index) => ({
             id: project._id,
             customerName: project.customerName,
+            proposalId: project.proposalId || "",
             location:
               project.fullAddress ||
               `${project.address?.addressLine}, ${project.address?.city}`,
@@ -48,6 +74,8 @@ export function ProjectCards() {
               `${project.completedTasks || 0}/${project.totalTasks || 0}`,
             color: getServiceColor(project.services),
             avatars: generateAvatars(project.assignedEmployees),
+            totalTasks: project.totalTasks || 0,
+            completedTasks: project.completedTasks || 0,
           })
         );
 
@@ -78,15 +106,15 @@ export function ProjectCards() {
   const getServiceColor = (service) => {
     switch (service) {
       case "Home Cinema":
-        return "bg-blue-500";
+        return "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]";
       case "Home Automation":
-        return "bg-cyan-500";
+        return "bg-gradient-to-br from-[#026BB7] to-[#5DEAFF]";
       case "Security System":
-        return "bg-teal-500";
+        return "bg-gradient-to-br from-[#014C95] to-[#36B9F6]";
       case "Outdoor Audio Solution":
-        return "bg-purple-500";
+        return "bg-gradient-to-br from-[#DF2795] to-[#EB7AB7]";
       default:
-        return "bg-blue-500";
+        return "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]";
     }
   };
 
@@ -97,10 +125,17 @@ export function ProjectCards() {
         .slice(0, 2)
         .map(
           (emp, index) =>
-            `https://img.heroui.chat/image/avatar?w=40&h=40&u=user${index + 1}`
+            `${
+              emp.avatar ||
+              `https://img.heroui.chat/image/avatar?w=40&h=40&u=user${
+                index + 1
+              }`
+            }`
         );
     }
     return [
+      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user1",
+      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user2",
       "https://img.heroui.chat/image/avatar?w=40&h=40&u=user1",
       "https://img.heroui.chat/image/avatar?w=40&h=40&u=user2",
     ];
@@ -163,7 +198,8 @@ export function ProjectCards() {
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceFilter, dateRange, statusFilter, searchValue]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -177,13 +213,17 @@ export function ProjectCards() {
   };
 
   const getProgressPercent = (progress) => {
-    const [current, total] = progress.split("/").map(Number);
-    return total > 0 ? (current / total) * 100 : 0;
-  };
-
-  // Navigate to task page with project ID
-  const handleProjectClick = (projectId) => {
-    router.push(`/dashboard/task?projectId=${projectId}`);
+    if (!progress) return 0;
+    if (typeof progress === "string" && progress.includes("%")) {
+      // Handle "50%" style
+      return parseFloat(progress.replace("%", "")) || 0;
+    }
+    if (typeof progress === "string" && progress.includes("/")) {
+      // Handle "current/total" style
+      const [current, total] = progress.split("/").map(Number);
+      return total > 0 ? (current / total) * 100 : 0;
+    }
+    return 0;
   };
 
   if (loading) {
@@ -205,65 +245,64 @@ export function ProjectCards() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((project) => (
-        <Card
-          key={project.id}
-          className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => handleProjectClick(project.id)}
-        >
-          <div
-            className={`p-6 ${project.color} bg-gradient-to-br from-opacity-80 to-opacity-100 text-white`}
+        <Link href={`/dashboard/task?projectId=${project.id}`} key={project.id}>
+          {" "}
+          <Card
+            key={project.id}
+            className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
           >
-            <div className="flex justify-between items-start gap-4">
-              <div>
-                <Chip className={getStatusColor(project.status)} size="sm">
-                  {project.status}
-                </Chip>
-                <h3 className="text-2xl font-bold mt-4 flex items-center gap-3">
-                  {project.customerName} <Phone className="w-5 h-5 mt-1" />
-                </h3>
-                <div className="flex items-center gap-1  text-white/80 text-sm w-4/5 mt-4">
-                  <p>{project.location}</p>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 w-1/2">
-                <div className="mt-6">
-                  <div className="text-sm text-white/80">Service</div>
-                  <div className="font-medium">{project.service}</div>
-                </div>
+            <div
+              className={`p-6 ${project.color} bg-gradient-to-br from-opacity-80 to-opacity-100 text-white`}
+            >
+              <div className="flex justify-between items-start gap-4">
                 <div>
-                  <div className="text-sm text-white/80">Amount</div>
-                  <div className="font-medium">{project.amount}</div>
+                  <Chip className={getStatusColor(project.status)} size="sm">
+                    {project.status}
+                  </Chip>
+                  <h3 className="text-2xl font-bold mt-4 flex items-center gap-3">
+                    {project.customerName} <Phone className="w-5 h-5 mt-1" />
+                  </h3>
+                  <div className="flex items-center gap-1  text-white/80 text-sm w-4/5 mt-4">
+                    <p>{project.location}</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm text-white/80">Date</div>
-                  <div className="font-medium">{project.date}</div>
+                <div className="flex flex-col gap-2 w-1/2">
+                  <div className="mt-6">
+                    <div className="text-sm text-white/80">Service</div>
+                    <div className="font-medium">{project.service}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-white/80">Amount</div>
+                    <div className="font-medium">{project.amount}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-white/80">Date</div>
+                    <div className="font-medium">{project.date}</div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div className="p-3">
-            {" "}
-            <Progress
-              value={getProgressPercent(project.progress)}
-              color="danger"
-              className="h-2"
-            />
-          </div>
+            <div className="p-3">
+              {" "}
+              <Progress
+                value={getProgressPercent(project.progress)}
+                color="primary"
+                className="h-2"
+              />
+            </div>
 
-          <div className="p-4 flex justify-between items-center">
-            <div className="flex -space-x-2">
-              {project.avatars.map((avatar, index) => (
-                <img
-                  key={index}
-                  src={avatar}
-                  alt="User avatar"
-                  className="w-8 h-8 rounded-full border-2 border-white"
-                />
-              ))}
+            <div className="p-4 flex justify-between items-center">
+              <AvatarGroup isBordered max={3}>
+                {project.avatars.map((avatar, index) => (
+                  <Avatar key={index} src={avatar} />
+                ))}
+              </AvatarGroup>
+              <div className="text-[#272523] text-lg font-medium">
+                {project.totalTasks || 0} / {project.completedTasks || 0}{" "}
+              </div>
             </div>
-            <div className="text-gray-700 font-medium">{project.progress}</div>
-          </div>
-        </Card>
+          </Card>
+        </Link>
       ))}
     </div>
   );

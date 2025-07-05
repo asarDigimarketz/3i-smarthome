@@ -12,6 +12,7 @@ import axios from "axios";
 import Link from "next/link.js";
 import { ProjectStatusSelect } from "./ProjectStatusSelect.jsx";
 import { ServicesSelect } from "../Proposal/ServiceSelect.jsx";
+import DashboardHeader from "../header/DashboardHeader.jsx";
 
 export function AddProjectPage() {
   const router = useRouter();
@@ -219,9 +220,8 @@ export function AddProjectPage() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-red-600">Add Project</h1>
+        <DashboardHeader title="Add Project" className="mb-4" />
       </div>
-
       <form onSubmit={handleSubmit}>
         <Card className="p-6" shadow="sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -230,6 +230,9 @@ export function AddProjectPage() {
                 Customer Name *
               </label>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="Customer Name"
                 radius="sm"
                 variant="bordered"
@@ -248,6 +251,9 @@ export function AddProjectPage() {
                 Contact Number *
               </label>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="Contact Number"
                 radius="sm"
                 variant="bordered"
@@ -264,6 +270,9 @@ export function AddProjectPage() {
             <div>
               <label className="block text-gray-700 mb-2">Email Id *</label>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="Email Id"
                 type="email"
                 radius="sm"
@@ -279,6 +288,9 @@ export function AddProjectPage() {
             <div>
               <label className="block text-gray-700 mb-2">Date *</label>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="Date"
                 type="date"
                 radius="sm"
@@ -288,7 +300,6 @@ export function AddProjectPage() {
                 onChange={(e) =>
                   handleInputChange("projectDate", e.target.value)
                 }
-                endContent={<Calendar className="text-gray-400" />}
               />
             </div>
 
@@ -298,6 +309,9 @@ export function AddProjectPage() {
 
             <div>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="Address Line"
                 radius="sm"
                 variant="bordered"
@@ -313,6 +327,9 @@ export function AddProjectPage() {
 
             <div>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="City/Town/Village"
                 radius="sm"
                 variant="bordered"
@@ -328,6 +345,9 @@ export function AddProjectPage() {
 
             <div>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="District"
                 radius="sm"
                 variant="bordered"
@@ -343,6 +363,9 @@ export function AddProjectPage() {
 
             <div>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="State"
                 radius="sm"
                 variant="bordered"
@@ -358,6 +381,9 @@ export function AddProjectPage() {
 
             <div>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="Country"
                 radius="sm"
                 variant="bordered"
@@ -371,6 +397,9 @@ export function AddProjectPage() {
 
             <div>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="Pincode"
                 radius="sm"
                 variant="bordered"
@@ -383,17 +412,30 @@ export function AddProjectPage() {
                 errorMessage={errors["address.pincode"]}
               />
             </div>
-
             <div>
-              <label className="block text-gray-700 mb-2">Comment</label>
-              <Textarea
-                placeholder="Comment"
-                radius="sm"
-                variant="bordered"
-                className="w-full"
-                value={formData.comment}
-                onChange={(e) => handleInputChange("comment", e.target.value)}
-              />
+              <label className="block text-gray-700 mb-2">Size *</label>
+              <div className="flex">
+                <Input
+                  classNames={{
+                    inputWrapper: " h-[50px] border-[#E0E5F2]",
+                  }}
+                  placeholder="Size"
+                  radius="sm"
+                  variant="bordered"
+                  className="w-full rounded-r-none"
+                  value={formData.size}
+                  onChange={(e) => handleInputChange("size", e.target.value)}
+                  isInvalid={!!errors.size}
+                  endContent={
+                    <span className="text-xs text-[#999999] border-[#00000080] border-l-medium px-3">
+                      Sqt
+                    </span>
+                  }
+                />
+              </div>
+              {errors.size && (
+                <div className="text-red-500 text-sm mt-1">{errors.size}</div>
+              )}
             </div>
 
             <div>
@@ -408,48 +450,12 @@ export function AddProjectPage() {
 
             <div>
               <label className="block text-gray-700 mb-2">
-                Project Description *
-              </label>
-              <Textarea
-                placeholder="Project Description"
-                radius="sm"
-                variant="bordered"
-                className="w-full"
-                value={formData.projectDescription}
-                onChange={(e) =>
-                  handleInputChange("projectDescription", e.target.value)
-                }
-                isInvalid={!!errors.projectDescription}
-                errorMessage={errors.projectDescription}
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 mb-2">Size *</label>
-              <div className="flex">
-                <Input
-                  placeholder="Size"
-                  radius="sm"
-                  variant="bordered"
-                  className="w-full rounded-r-none"
-                  value={formData.size}
-                  onChange={(e) => handleInputChange("size", e.target.value)}
-                  isInvalid={!!errors.size}
-                />
-                <div className="flex items-center justify-center px-4 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-gray-500">
-                  Sqft
-                </div>
-              </div>
-              {errors.size && (
-                <div className="text-red-500 text-sm mt-1">{errors.size}</div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-gray-700 mb-2">
                 Project Amount *
               </label>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 placeholder="Amount"
                 type="number"
                 min="0"
@@ -481,15 +487,48 @@ export function AddProjectPage() {
                 onChange={(value) => handleInputChange("projectStatus", value)}
               />
             </div>
-
-            <div className="col-span-1 md:col-span-2">
+            <div>
+              <label className="block text-gray-700 mb-2">Comment</label>
+              <Textarea
+                placeholder="Comment"
+                radius="sm"
+                variant="bordered"
+                className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
+                value={formData.comment}
+                onChange={(e) => handleInputChange("comment", e.target.value)}
+              />
+            </div>
+            <div>
               <label className="block text-gray-700 mb-2">
-                Project Attachment
+                Project Description *
               </label>
+              <Textarea
+                placeholder="Project Description"
+                radius="sm"
+                variant="bordered"
+                className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
+                value={formData.projectDescription}
+                onChange={(e) =>
+                  handleInputChange("projectDescription", e.target.value)
+                }
+                isInvalid={!!errors.projectDescription}
+                errorMessage={errors.projectDescription}
+              />
+            </div>
+            <div className="col-span-1 md:col-span-2 grid gap-y-4">
               <div className="flex items-center gap-4">
+                <label className="block text-gray-700 mb-2">
+                  Project Attachment
+                </label>
                 <input
                   type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   onChange={handleFileChange}
                   className="hidden"
                   id="file-upload"
@@ -497,7 +536,7 @@ export function AddProjectPage() {
                 <label htmlFor="file-upload">
                   <Button
                     as="span"
-                    color="danger"
+                    color="primary"
                     radius="sm"
                     startContent={<Upload />}
                     className="cursor-pointer"
@@ -505,16 +544,12 @@ export function AddProjectPage() {
                     Upload
                   </Button>
                 </label>
-                <span className="text-gray-500 text-sm">
-                  *Attach project docs/pdf/jpeg/png (Max 10MB)
-                </span>
               </div>
-              {selectedFile && (
-                <div className="mt-2 text-sm text-gray-600">
-                  Selected: {selectedFile.name} (
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                </div>
-              )}
+              <span className="text-gray-500 text-xs justify-center">
+                {selectedFile
+                  ? selectedFile.name
+                  : "*Attach project docs/pdf/jpeg/png"}
+              </span>
             </div>
           </div>
 
@@ -525,7 +560,7 @@ export function AddProjectPage() {
               <Button
                 variant="bordered"
                 radius="full"
-                className="px-8"
+                className="px-8 text-primary"
                 isDisabled={isLoading}
               >
                 Cancel
@@ -533,7 +568,7 @@ export function AddProjectPage() {
             </Link>
 
             <Button
-              color="danger"
+              color="primary"
               radius="full"
               className="px-8"
               type="submit"

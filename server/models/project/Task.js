@@ -108,6 +108,30 @@ const taskSchema = new mongoose.Schema(
         },
       },
     ],
+    attachements: [
+      {
+        filename: {
+          type: String,
+          trim: true,
+        },
+        originalName: {
+          type: String,
+          trim: true,
+        },
+        mimetype: {
+          type: String,
+          trim: true,
+        },
+        size: {
+          type: Number,
+          min: [0, "File size cannot be negative"],
+        },
+        url: {
+          type: String,
+          trim: true,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

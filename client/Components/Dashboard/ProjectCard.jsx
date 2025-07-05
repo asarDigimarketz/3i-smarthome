@@ -1,5 +1,5 @@
 import { Card, CardBody } from "@heroui/card";
-import { Avatar } from "@heroui/avatar";
+import { Avatar, AvatarGroup } from "@heroui/avatar";
 import { Chip } from "@heroui/chip";
 import Link from "next/link";
 import { Phone } from "lucide-react";
@@ -107,15 +107,18 @@ const ProjectCard = ({
         {/* Team Section */}
         <div className="p-3 pt-0 flex items-center justify-between">
           <div className="flex -space-x-2">
-            {avatars.map((avatar, index) => (
-              <Avatar
-                key={index}
-                src={avatar.src}
-                size="sm"
-                className="border-2 border-white"
-                title={avatar.name}
-              />
-            ))}
+            <AvatarGroup isBordered max={3}>
+              {avatars.map((avatar, index) => (
+                <Avatar
+                  key={index}
+                  src={avatar.src}
+                  size="sm"
+                  className="border-2 border-white"
+                  title={avatar.name}
+                />
+              ))}{" "}
+            </AvatarGroup>
+
             {assignedEmployees && assignedEmployees.length > 2 && (
               <div className="w-8 h-8 rounded-full bg-default-100 border-2 border-white flex items-center justify-center text-xs font-medium text-default-600">
                 +{assignedEmployees.length - 2}

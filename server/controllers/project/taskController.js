@@ -1,5 +1,7 @@
 const Task = require("../../models/project/Task");
 const Project = require("../../models/project/Project");
+const fs = require("fs");
+const path = require("path");
 
 /**
  * Task Controller
@@ -159,6 +161,11 @@ const createTask = async (req, res) => {
       taskData.afterAttachments = req.afterAttachments;
     }
 
+    // Add general attachements if provided (handled by middleware)
+    if (req.attachements && req.attachements.length > 0) {
+      taskData.attachements = req.attachements;
+    }
+
     // Create the task
     const task = await Task.create(taskData);
 
@@ -284,6 +291,26 @@ const deleteTask = async (req, res) => {
 
     // Store project ID before deleting task
     const projectId = task.projectId;
+
+    // Delete associated files
+    const deleteFiles = (attachments, folder) => {
+      if (!attachments) return;
+      attachments.forEach((file) => {
+        if (file && file.filename) {
+          const filePath = path.join(
+            __dirname,
+            `../../public/assets/images/tasks/${folder}/`,
+            file.filename
+          );
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        }
+      });
+    };
+    deleteFiles(task.beforeAttachments, "before");
+    deleteFiles(task.afterAttachments, "after");
+    deleteFiles(task.attachements, "attachements");
 
     // Delete the task
     await task.deleteOne();

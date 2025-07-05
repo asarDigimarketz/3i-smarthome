@@ -20,6 +20,9 @@ export function ProjectStatusSelect({
       radius="sm"
       variant="bordered"
       className="w-full"
+      classNames={{
+        trigger: "border-[#E0E5F2]  h-[50px]",
+      }}
       selectedKeys={value ? [value] : []}
       onSelectionChange={(keys) => {
         const selectedValue = Array.from(keys)[0];

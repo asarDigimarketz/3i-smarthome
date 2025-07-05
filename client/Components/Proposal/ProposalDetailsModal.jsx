@@ -33,7 +33,6 @@ const ProposalDetailsModal = ({
   const [selectedFile, setSelectedFile] = useState(null);
   const [showAmountInput, setShowAmountInput] = useState(false);
   const [newAmount, setNewAmount] = useState("");
-  const statusColor = "white"; // Default color for status dropdown
   // Form data state
   const [formData, setFormData] = useState({
     customerName: "",
@@ -413,11 +412,6 @@ const ProposalDetailsModal = ({
               placeholder="Enter amount"
               value={newAmount}
               onChange={(e) => setNewAmount(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  handleAddAmount();
-                }
-              }}
               variant="bordered"
               className="w-40"
               type="number"
@@ -448,7 +442,7 @@ const ProposalDetailsModal = ({
               <DropdownTrigger>
                 <Button
                   variant="bordered"
-                  className="justify-start min-w-40 border-gray-300"
+                  className="justify-between min-w-40 border-gray-300"
                   endContent={<ChevronDown className="text-gray-400" />}
                 >
                   ₹{formData.projectAmount.toLocaleString("en-IN")}
@@ -510,7 +504,9 @@ const ProposalDetailsModal = ({
           }}
         />
       ) : (
-        <div className="text-gray-900">{formData.comment || "No comment"}</div>
+        <div className="text-black-400 font-medium">
+          {formData.comment || "No comment"}
+        </div>
       )}
     </div>
   );
@@ -519,7 +515,7 @@ const ProposalDetailsModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      size="2xl"
+      size="lg"
       aria-label="Proposal Details"
       placement="center"
       backdrop="blur"
@@ -529,7 +525,7 @@ const ProposalDetailsModal = ({
         backdrop: "bg-black/50 backdrop-blur-sm",
         base: "border-none shadow-2xl",
         header: "border-b-1 border-gray-200",
-        body: "py-6",
+        body: "py-6 !scrollbar-w-0 scrollbar-none overscroll-y-contain", // Hide scrollbar and its width
         footer: "border-t-1 border-gray-200",
       }}
       motionProps={{
@@ -561,9 +557,9 @@ const ProposalDetailsModal = ({
               <h2 className="text-xl font-semibold">Proposal Details</h2>
               <Button
                 isIconOnly
-                variant="light"
+                radius="full"
                 onPress={onClose}
-                className="text-white hover:bg-white/20 min-w-8 w-8 h-8"
+                className="text-primary bg-white hover:bg-gray-100 min-w-8 w-8 h-8 "
                 aria-label="Close modal"
               >
                 <X size={20} />
@@ -596,7 +592,9 @@ const ProposalDetailsModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Date:
                   </label>
-                  <div className="text-gray-900">{formData.date}</div>
+                  <div className="text-gray-900 font-medium">
+                    {formData.date}
+                  </div>
                 </div>
               </div>
 
@@ -615,7 +613,7 @@ const ProposalDetailsModal = ({
                       variant="bordered"
                     />
                   ) : (
-                    <div className="text-gray-900">
+                    <div className="text-black-400 font-medium">
                       {formData.contactNumber}
                     </div>
                   )}
@@ -634,7 +632,9 @@ const ProposalDetailsModal = ({
                       type="email"
                     />
                   ) : (
-                    <div className="text-gray-900">{formData.email}</div>
+                    <div className="text-black-400 font-medium">
+                      {formData.email}
+                    </div>
                   )}
                 </div>
               </div>
@@ -644,7 +644,7 @@ const ProposalDetailsModal = ({
                 <label className="text-sm font-medium text-gray-700">
                   Address:
                 </label>
-                <div className="text-gray-900">
+                <div className="text-black-400 font-medium">
                   {`${formData.address.addressLine}, ${formData.address.city}, ${formData.address.district}, ${formData.address.state}, ${formData.address.country} - ${formData.address.pincode}`}
                 </div>
               </div>
@@ -655,13 +655,15 @@ const ProposalDetailsModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Service:
                   </label>
-                  <div className="text-gray-900">{formData.services}</div>
+                  <div className="text-black-400 font-medium">
+                    {formData.services}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">
                     Description:
                   </label>
-                  <div className="text-gray-900 text-sm">
+                  <div className="text-black-400 font-medium text-sm">
                     {formData.projectDescription}
                   </div>
                 </div>
@@ -672,7 +674,7 @@ const ProposalDetailsModal = ({
                 <label className="text-sm font-medium text-gray-700">
                   Size:
                 </label>
-                <div className="text-gray-900">
+                <div className="text-black-400 font-medium">
                   {formData.size} <span className="text-gray-500">sqt</span>
                 </div>
               </div>
@@ -703,6 +705,7 @@ const ProposalDetailsModal = ({
                     }
                   }}
                   disallowEmptySelection={true}
+                  isDisabled={formData.status === "Confirmed"}
                 >
                   {statusOptions.map((status) => (
                     <SelectItem key={status.key} value={status.key}>

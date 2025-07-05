@@ -4,12 +4,13 @@ import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
 import { useSession } from "next-auth/react";
-import Link from "next/link.js";
+import Link from "next/link";
 import { ProjectStatusDropdown } from "./ProjectStatusDropdown.jsx";
 import ProposalFilters from "../Proposal/ProposalFilters.jsx";
 import { ProjectCards } from "./ProjectCards.jsx";
 import { Plus, Search } from "lucide-react";
 import { DateRangePicker } from "@heroui/date-picker";
+import DashboardHeader from "../header/DashboardHeader.jsx";
 
 export function ProjectsPage() {
   const { data: session } = useSession();
@@ -22,7 +23,11 @@ export function ProjectsPage() {
     hasViewPermission: false,
   });
 
+  // Filter states
   const [dateRange, setDateRange] = useState(null);
+  const [serviceFilter, setServiceFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [searchValue, setSearchValue] = useState("");
 
   // Check user permissions on component mount
   useEffect(() => {
@@ -70,11 +75,19 @@ export function ProjectsPage() {
     }
   };
 
+  // Handlers for filters
+  const handleServiceChange = (service) => setServiceFilter(service);
+  const handleStatusChange = (status) => setStatusFilter(status);
+  const handleDateRangeChange = (range) => setDateRange(range);
+  const handleSearchChange = (e) => setSearchValue(e.target.value);
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-red-600">Projects</h1>
-        <p className="text-gray-500 mt-1">Manage all your projects.</p>
+        <DashboardHeader
+          title="Projects"
+          description="Manage all your projects"
+        />
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -85,23 +98,31 @@ export function ProjectsPage() {
             radius="sm"
             variant="bordered"
             className="w-full"
+            value={searchValue}
+            onChange={handleSearchChange}
           />
         </div>
 
         <div className="flex items-center gap-4">
           <DateRangePicker
-            label="Filter by Date"
             value={dateRange}
-            onChange={setDateRange}
+            onChange={handleDateRangeChange}
             radius="sm"
+            showMonthAndYearPickers
+            size="md"
             variant="bordered"
-            className="w-60"
+            className="w-50"
             classNames={{
-              label: "text-sm font-medium",
-              input: "text-sm",
+              base: "bg-white",
+              inputWrapper: "border-gray-300 hover:border-gray-400",
+              input: "text-gray-700",
+              label: "text-gray-600",
             }}
           />
-          <ProjectStatusDropdown />
+          <ProjectStatusDropdown
+            value={statusFilter}
+            onChange={handleStatusChange}
+          />
 
           {userPermissions.hasAddPermission ? (
             <Link href="/dashboard/projects/add-project">
@@ -123,10 +144,16 @@ export function ProjectsPage() {
       </div>
       <div className="space-y-6 bg-white rounded-xl shadow-lg p-6">
         <div className="bg-brand-light-red rounded-lg mb-6 p-4">
-          <ProposalFilters />
+          <ProposalFilters onServiceChange={handleServiceChange} />
         </div>
 
-        <ProjectCards userPermissions={userPermissions} />
+        <ProjectCards
+          userPermissions={userPermissions}
+          serviceFilter={serviceFilter}
+          dateRange={dateRange}
+          statusFilter={statusFilter}
+          searchValue={searchValue}
+        />
       </div>
     </div>
   );

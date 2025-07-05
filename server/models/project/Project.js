@@ -335,7 +335,7 @@ projectSchema.statics.getProjectsWithFilters = function (
     .sort(sort)
     .skip(skip)
     .limit(parseInt(limit))
-    .populate("assignedEmployees", "firstName lastName email")
+    .populate("assignedEmployees", "firstName lastName email avatar")
     .lean();
 };
 

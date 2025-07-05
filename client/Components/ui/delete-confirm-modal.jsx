@@ -2,7 +2,7 @@ import { Modal, ModalContent, ModalBody, ModalFooter } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { X } from "lucide-react";
 
-export function DeleteConfirmModal({ isOpen, onClose }) {
+export function DeleteConfirmModal({ isOpen, onClose, onDelete, submitting }) {
   return (
     <Modal
       isOpen={isOpen}
@@ -32,7 +32,14 @@ export function DeleteConfirmModal({ isOpen, onClose }) {
         </ModalBody>
 
         <ModalFooter className="flex justify-center gap-4 pb-6">
-          <Button color="danger" radius="sm" className="px-8">
+          <Button
+            color="primary"
+            radius="sm"
+            className="px-8"
+            onPress={onDelete}
+            isLoading={submitting}
+            isDisabled={submitting}
+          >
             Delete
           </Button>
 
@@ -41,6 +48,7 @@ export function DeleteConfirmModal({ isOpen, onClose }) {
             radius="sm"
             className="px-8"
             onPress={onClose}
+            isDisabled={submitting}
           >
             Close
           </Button>

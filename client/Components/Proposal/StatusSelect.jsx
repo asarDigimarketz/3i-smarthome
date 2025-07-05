@@ -16,11 +16,15 @@ export function StatusSelect({ value, onChange }) {
       radius="sm"
       variant="bordered"
       className="w-full"
+      classNames={{
+        trigger: "border-[#E0E5F2]  h-[50px]",
+      }}
       selectedKeys={value ? [value] : []}
       onSelectionChange={(keys) => {
         const selectedValue = Array.from(keys)[0];
         onChange && onChange(selectedValue);
       }}
+      isDisabled={value === "Confirmed"}
     >
       {statusOptions.map((status) => (
         <SelectItem key={status.key} value={status.key}>

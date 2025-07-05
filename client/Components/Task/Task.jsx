@@ -11,6 +11,7 @@ import TaskList from "./TaskList";
 import TaskForm from "./TaskForm";
 import { Plus } from "lucide-react";
 import ProposalFilters from "../Proposal/ProposalFilters";
+import DashboardHeader from "../header/DashboardHeader";
 
 const Task = () => {
   const { data: session } = useSession();
@@ -26,6 +27,7 @@ const Task = () => {
   });
 
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   // Check user permissions on component mount
   useEffect(() => {
@@ -88,6 +90,11 @@ const Task = () => {
     setShowTaskForm(!showTaskForm);
   };
 
+  const handleEditTask = (task) => {
+    setSelectedTask(task);
+    setShowTaskForm(true);
+  };
+
   // Show access denied if no view permission
   if (!userPermissions.hasViewPermission) {
     return (
@@ -107,16 +114,10 @@ const Task = () => {
 
   return (
     <div className="min-h-screen p-8">
-      <Card className="w-full mx-auto">
+      <DashboardHeader title="Task" description="Manage all your Tasks." />
+      <Card className="w-full mx-auto  mt-4">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-red-600 mb-1">
-                Task Management
-              </h1>
-              <p className="text-gray-500 text-sm">Manage all your Tasks.</p>
-            </div>
-
             {!userPermissions.hasAddPermission && (
               <div className="px-3 py-1 bg-warning-100 text-warning-800 rounded-full text-sm">
                 Read Only
@@ -148,11 +149,18 @@ const Task = () => {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <TaskList userPermissions={userPermissions} />
-                {showTaskForm && userPermissions.hasAddPermission && (
+                <TaskList
+                  userPermissions={userPermissions}
+                  onEditTask={handleEditTask}
+                />
+                {showTaskForm && (
                   <TaskForm
-                    onClose={() => setShowTaskForm(false)}
+                    onClose={() => {
+                      setShowTaskForm(false);
+                      setSelectedTask(null);
+                    }}
                     userPermissions={userPermissions}
+                    task={selectedTask}
                   />
                 )}
               </div>
