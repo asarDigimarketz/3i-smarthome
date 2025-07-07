@@ -14,38 +14,47 @@ const ProjectCard = ({
   date,
   address,
   progress,
-  progressPercentage,
+
   color,
   assignedEmployees,
 }) => {
   // Generate avatars from assigned employees or use default
-  const getAvatars = () => {
-    if (assignedEmployees && assignedEmployees.length > 0) {
-      return assignedEmployees.slice(0, 2).map((emp, index) => ({
-        src:
-          emp.avatar ||
-          `https://img.heroui.chat/image/avatar?w=200&h=200&u=${
-            emp._id || index + 1
-          }`,
-        name: emp.firstName
-          ? `${emp.firstName} ${emp.lastName || ""}`
-          : `User ${index + 1}`,
-      }));
+  const generateAvatars = (employees) => {
+    if (employees && employees.length > 0) {
+      return employees
+        .slice(0, 2)
+        .map(
+          (emp, index) =>
+            `${
+              emp.avatar ||
+              `https://img.heroui.chat/image/avatar?w=40&h=40&u=user${
+                index + 1
+              }`
+            }`
+        );
     }
     return [
-      {
-        src: "https://img.heroui.chat/image/avatar?w=200&h=200&u=1",
-        name: "User 1",
-      },
-      {
-        src: "https://img.heroui.chat/image/avatar?w=200&h=200&u=2",
-        name: "User 2",
-      },
+      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user1",
+      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user2",
+      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user1",
+      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user2",
     ];
   };
 
-  const avatars = getAvatars();
-
+  const avatars = generateAvatars(assignedEmployees);
+  const getProgressPercent = (progress) => {
+    if (!progress) return 0;
+    if (typeof progress === "string" && progress.includes("%")) {
+      // Handle "50%" style
+      return parseFloat(progress.replace("%", "")) || 0;
+    }
+    if (typeof progress === "string" && progress.includes("/")) {
+      // Handle "current/total" style
+      const [current, total] = progress.split("/").map(Number);
+      return total > 0 ? (current / total) * 100 : 0;
+    }
+    return 0;
+  };
   return (
     <Card
       as={Link}
@@ -92,42 +101,26 @@ const ProjectCard = ({
         {/* Progress Section */}
         <div className="p-3">
           <Progress
-            value={progressPercentage || 0}
+            value={getProgressPercent(progress)}
             color={
-              progressPercentage === 100
+              progress === 100
                 ? "success"
-                : progressPercentage > 50
+                : progress > 50
                 ? "warning"
-                : "danger"
+                : "primary"
             }
             className="h-2"
           />
         </div>
 
         {/* Team Section */}
-        <div className="p-3 pt-0 flex items-center justify-between">
-          <div className="flex -space-x-2">
-            <AvatarGroup isBordered max={3}>
-              {avatars.map((avatar, index) => (
-                <Avatar
-                  key={index}
-                  src={avatar.src}
-                  size="sm"
-                  className="border-2 border-white"
-                  title={avatar.name}
-                />
-              ))}{" "}
-            </AvatarGroup>
-
-            {assignedEmployees && assignedEmployees.length > 2 && (
-              <div className="w-8 h-8 rounded-full bg-default-100 border-2 border-white flex items-center justify-center text-xs font-medium text-default-600">
-                +{assignedEmployees.length - 2}
-              </div>
-            )}
-          </div>
-          <span className="text-sm font-medium text-default-700">
-            {progress}
-          </span>
+        <div className="p-4 flex justify-between items-center">
+          <AvatarGroup isBordered max={3}>
+            {avatars.map((avatar, index) => (
+              <Avatar key={index} src={avatar} />
+            ))}
+          </AvatarGroup>
+          <div className="text-[#272523] text-lg font-medium">{progress} </div>
         </div>
       </CardBody>
     </Card>

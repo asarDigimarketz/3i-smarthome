@@ -165,28 +165,30 @@ const projectSchema = new mongoose.Schema(
     },
 
     // Project Attachment
-    attachment: {
-      filename: {
-        type: String,
-        trim: true,
+    attachments: [
+      {
+        filename: {
+          type: String,
+          trim: true,
+        },
+        originalName: {
+          type: String,
+          trim: true,
+        },
+        mimetype: {
+          type: String,
+          trim: true,
+        },
+        size: {
+          type: Number,
+          min: [0, "File size cannot be negative"],
+        },
+        url: {
+          type: String,
+          trim: true,
+        },
       },
-      originalName: {
-        type: String,
-        trim: true,
-      },
-      mimetype: {
-        type: String,
-        trim: true,
-      },
-      size: {
-        type: Number,
-        min: [0, "File size cannot be negative"],
-      },
-      url: {
-        type: String,
-        trim: true,
-      },
-    },
+    ],
 
     // Task and Progress Management
     totalTasks: {

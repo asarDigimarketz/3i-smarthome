@@ -239,6 +239,90 @@ const updateTask = async (req, res) => {
       ];
     }
 
+    // Remove attachments if requested
+    const parseRemoveList = (field) => {
+      if (req.body[field]) {
+        try {
+          return JSON.parse(req.body[field]);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+    const removedBefore = parseRemoveList("removedBeforeAttachments");
+    const removedAfter = parseRemoveList("removedAfterAttachments");
+    const removedGeneral = parseRemoveList("removedGeneralAttachments");
+
+    // Remove before attachments, then add new ones
+    let filteredBefore = task.beforeAttachments || [];
+    // Delete files for removed before attachments
+    if (removedBefore.length > 0) {
+      (task.beforeAttachments || []).forEach((att) => {
+        if (removedBefore.includes(att.url) && att.filename) {
+          const filePath = path.join(
+            __dirname,
+            "../../public/assets/images/tasks/before/",
+            att.filename
+          );
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+      });
+      filteredBefore = filteredBefore.filter(
+        (att) => !removedBefore.includes(att.url)
+      );
+    }
+    if (req.beforeAttachments && req.beforeAttachments.length > 0) {
+      filteredBefore = [...filteredBefore, ...req.beforeAttachments];
+    }
+    taskData.beforeAttachments = filteredBefore;
+
+    // Remove after attachments, then add new ones
+    let filteredAfter = task.afterAttachments || [];
+    // Delete files for removed after attachments
+    if (removedAfter.length > 0) {
+      (task.afterAttachments || []).forEach((att) => {
+        if (removedAfter.includes(att.url) && att.filename) {
+          const filePath = path.join(
+            __dirname,
+            "../../public/assets/images/tasks/after/",
+            att.filename
+          );
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+      });
+      filteredAfter = filteredAfter.filter(
+        (att) => !removedAfter.includes(att.url)
+      );
+    }
+    if (req.afterAttachments && req.afterAttachments.length > 0) {
+      filteredAfter = [...filteredAfter, ...req.afterAttachments];
+    }
+    taskData.afterAttachments = filteredAfter;
+
+    // Remove general attachments, then add new ones
+    let filteredGeneral = task.attachements || [];
+    // Delete files for removed general attachments
+    if (removedGeneral.length > 0) {
+      (task.attachements || []).forEach((att) => {
+        if (removedGeneral.includes(att.url) && att.filename) {
+          const filePath = path.join(
+            __dirname,
+            "../../public/assets/images/tasks/attachements/",
+            att.filename
+          );
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+      });
+      filteredGeneral = filteredGeneral.filter(
+        (att) => !removedGeneral.includes(att.url)
+      );
+    }
+    if (req.attachements && req.attachements.length > 0) {
+      filteredGeneral = [...filteredGeneral, ...req.attachements];
+    }
+    taskData.attachements = filteredGeneral;
+
     // Update the task
     task = await Task.findByIdAndUpdate(req.params.id, taskData, {
       new: true,

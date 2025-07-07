@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const Project = require("../../models/project/Project");
 const Proposal = require("../../models/proposal/Proposal");
 const Customer = require("../../models/customer/Customer");
@@ -75,15 +77,15 @@ const createProject = async (req, res) => {
       proposalId: proposalId || null,
     };
 
-    // Add file information if file was uploaded
-    if (req.fileInfo) {
-      projectData.attachment = {
-        filename: req.fileInfo.filename,
-        originalName: req.fileInfo.originalName,
-        mimetype: req.fileInfo.mimetype,
-        size: req.fileInfo.size,
-        url: req.fileInfo.path,
-      };
+    // Add file information if files were uploaded (multiple attachments)
+    if (req.filesInfo && req.filesInfo.length > 0) {
+      projectData.attachments = req.filesInfo.map((file) => ({
+        filename: file.filename,
+        originalName: file.originalName,
+        mimetype: file.mimetype,
+        size: file.size,
+        url: `${process.env.BACKEND_URL}/${file.path}`,
+      }));
     }
 
     // If created from proposal, add proposal date
@@ -343,8 +345,119 @@ const updateProject = async (req, res) => {
       });
     }
 
+    // Parse address if it's a string
+    let updateData = { ...req.body };
+    if (updateData.address && typeof updateData.address === "string") {
+      try {
+        updateData.address = JSON.parse(updateData.address);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid address format",
+        });
+      }
+    }
+
+    // Remove attachments if requested
+    if (req.body.removeAttachments) {
+      try {
+        const removeList = JSON.parse(req.body.removeAttachments);
+        if (Array.isArray(removeList) && project.attachments) {
+          project.attachments.forEach((att) => {
+            if (removeList.includes(att.filename) && att.url) {
+              const filePath = att.url.replace(
+                process.env.BACKEND_URL + "/",
+                ""
+              );
+              const absPath = path.join(__dirname, "../../", filePath);
+              if (fs.existsSync(absPath)) {
+                fs.unlinkSync(absPath);
+              }
+            }
+          });
+          updateData.attachments = project.attachments.filter(
+            (att) => !removeList.includes(att.filename)
+          );
+        }
+      } catch (err) {
+        console.error("Failed to remove attachments:", err);
+      }
+    }
+
+    // 1. If attachments is sent as a JSON string (for full replacement), use as base
+    let baseAttachments = [];
+    if (typeof req.body.attachments === "string") {
+      try {
+        const newAttachments = JSON.parse(req.body.attachments);
+        if (Array.isArray(newAttachments)) {
+          baseAttachments = newAttachments;
+        }
+      } catch (e) {
+        // ignore parse error, fallback to empty array
+      }
+    }
+
+    // 2. Add new files if uploaded (multiple attachments)
+    if (req.filesInfo && req.filesInfo.length > 0) {
+      const newAttachments = req.filesInfo.map((file) => ({
+        filename: file.filename,
+        originalName: file.originalName,
+        mimetype: file.mimetype,
+        size: file.size,
+        url: `${process.env.BACKEND_URL}/${file.path}`,
+      }));
+      baseAttachments = baseAttachments.concat(newAttachments);
+    }
+    updateData.attachments = baseAttachments;
+
+    // 3. Remove attachments from disk if requested (but do not update DB list here)
+    if (req.body.removeAttachments) {
+      try {
+        const removeList = JSON.parse(req.body.removeAttachments);
+        if (Array.isArray(removeList) && project.attachments) {
+          project.attachments.forEach((att) => {
+            if (removeList.includes(att.filename) && att.url) {
+              const filePath = att.url.replace(
+                process.env.BACKEND_URL + "/",
+                ""
+              );
+              const absPath = path.join(__dirname, "../../", filePath);
+              if (fs.existsSync(absPath)) {
+                fs.unlinkSync(absPath);
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Failed to remove attachments:", err);
+      }
+    }
+
+    // Optionally, validate required fields for update (skip if not provided)
+    const requiredFields = [
+      "customerName",
+      "contactNumber",
+      "email",
+      "address",
+      "services",
+      "projectDescription",
+      "projectAmount",
+      "size",
+    ];
+    for (const field of requiredFields) {
+      if (
+        field in updateData &&
+        (!updateData[field] || updateData[field] === "")
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: `Field '${field}' is required`,
+        });
+      }
+    }
+
     // Update project
-    project = await Project.findByIdAndUpdate(req.params.id, req.body, {
+    project = await Project.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -363,7 +476,6 @@ const updateProject = async (req, res) => {
         error: messages.join(". "),
       });
     }
-
     console.error("Update project error:", error);
     res.status(500).json({
       success: false,

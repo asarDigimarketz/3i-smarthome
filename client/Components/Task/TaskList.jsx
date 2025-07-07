@@ -7,7 +7,7 @@ import axios from "axios";
 import { addToast } from "@heroui/toast";
 import { useSearchParams } from "next/navigation";
 
-const TaskList = ({ userPermissions, onEditTask }) => {
+const TaskList = ({ userPermissions, onEditTask, refreshKey }) => {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const [tasks, setTasks] = useState([]);
@@ -53,7 +53,7 @@ const TaskList = ({ userPermissions, onEditTask }) => {
     };
 
     fetchTasks();
-  }, [projectId]);
+  }, [projectId, refreshKey]);
 
   if (loading) {
     return (
@@ -206,18 +206,18 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
   const formattedEndDate = formatDate(endDate);
 
   return (
-    <Card className="mb-6  bg-[#fff] border border-[#D1D1D1] rounded-xl shadow-none">
-      <div className="flex items-start justify-between ">
-        <div className="flex items-center justify-start p-2">
-          <div className="items-start "> {getStatusIcon()}</div>
+    <Card className="mb-4 sm:mb-6 bg-[#fff] border border-[#D1D1D1] rounded-xl shadow-none w-full">
+      <div className="flex flex-col sm:flex-row items-start justify-between ">
+        <div className="flex items-center justify-start p-2 w-full sm:w-auto">
+          <div className="items-start"> {getStatusIcon()}</div>
           <div className="items-start mt-2">
             <h4
-              className="font-[400] text-lg text-[#616161] mb-1"
+              className="font-[400] text-base sm:text-lg text-[#616161] mb-1"
               style={{ letterSpacing: 0 }}
             >
               {title}
             </h4>
-            <div className="text-[#616161] text-sm ">
+            <div className="text-[#616161] text-xs sm:text-sm ">
               Assignee:{" "}
               <span className="font-[700] text-[#616161]">
                 {assignedTo?.name || "Unassigned"}
@@ -225,8 +225,7 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
             </div>
           </div>
         </div>
-
-        <div className="p-6">
+        <div className="p-4 sm:p-6 flex flex-col items-end w-full sm:w-auto">
           {getStatusBadge()}{" "}
           <div className="grid justify-end text-xs text-[#616161] mb-2 mt-3">
             <span>Start Date : {formattedStartDate}</span>
@@ -235,13 +234,17 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
         </div>
       </div>
       {comment && (
-        <div className="text-[#616161] text-sm mb-5 px-6">Note : {comment}</div>
+        <div className="text-[#616161] text-xs sm:text-sm mb-3 sm:mb-5 px-2 sm:px-6">
+          Note : {comment}
+        </div>
       )}
-      <div className="text-[#616161] text-sm mb-2 px-6">Attachment : </div>
-      <div className="flex gap-6 mb-4 px-6">
+      <div className="text-[#616161] text-xs sm:text-sm mb-2 px-2 sm:px-6">
+        Attachment :{" "}
+      </div>
+      <div className="flex flex-col sm:flex-row gap-4 mb-4 px-2 sm:px-6">
         {/* Before attachments */}
-        <div className="flex-1 border border-[#EDEDED] rounded-lg p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2 min-h-[48px]">
+        <div className="flex-1 border border-[#EDEDED] rounded-lg p-2 sm:p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between mb-2 sm:mb-0">
+          <div className="flex items-center gap-2 mb-2 min-h-[48px] flex-wrap">
             {beforeAttachments.map((attachment, index) => (
               <div
                 key={index}
@@ -265,8 +268,8 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
           </p>
         </div>
         {/* After attachments */}
-        <div className="flex-1 border border-[#EDEDED] rounded-lg p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2 min-h-[48px]">
+        <div className="flex-1 border border-[#EDEDED] rounded-lg p-2 sm:p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between">
+          <div className="flex items-center gap-2 mb-2 min-h-[48px] flex-wrap">
             {afterAttachments.map((attachment, index) => (
               <div
                 key={index}
@@ -292,7 +295,7 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
       </div>
       {/* General attachments (PDF, etc.) */}
       {attachements && attachements.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2 px-6 ">
+        <div className="flex flex-wrap gap-2 mt-2 px-2 sm:px-6 ">
           {attachements.map((attachment, idx) => (
             <a
               key={idx}
@@ -307,8 +310,8 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
             </a>
           ))}
         </div>
-      )}{" "}
-      <div className="p-4 flex justify-end ">
+      )}
+      <div className="p-2 sm:p-4 flex justify-end ">
         <Button
           className="bg-[#EAEAEA] rounded-lg p-2"
           size="xs"

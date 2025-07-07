@@ -51,22 +51,23 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// Change multer to accept multiple files
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB per file
   },
   fileFilter: fileFilter,
 });
 
-// File upload middleware
+// File upload middleware for multiple attachments
 const handleFileUpload = (req, res, next) => {
-  upload.single("attachment")(req, res, (err) => {
+  upload.array("attachments", 10)(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       if (err.code === "LIMIT_FILE_SIZE") {
         return res.status(400).json({
           success: false,
-          message: "File too large. Maximum size is 10MB.",
+          message: "File too large. Maximum size is 10MB per file.",
         });
       }
       return res.status(400).json({
@@ -80,15 +81,15 @@ const handleFileUpload = (req, res, next) => {
       });
     }
 
-    // Add file info to request if file was uploaded
-    if (req.file) {
-      req.fileInfo = {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path,
-      };
+    // Add files info to request if files were uploaded
+    if (req.files && req.files.length > 0) {
+      req.filesInfo = req.files.map((file) => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: file.path,
+      }));
     }
 
     next();

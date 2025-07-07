@@ -28,6 +28,7 @@ const Task = () => {
 
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [taskListRefreshKey, setTaskListRefreshKey] = useState(0);
 
   // Check user permissions on component mount
   useEffect(() => {
@@ -95,6 +96,8 @@ const Task = () => {
     setShowTaskForm(true);
   };
 
+  const refreshTasks = () => setTaskListRefreshKey((k) => k + 1);
+
   // Show access denied if no view permission
   if (!userPermissions.hasViewPermission) {
     return (
@@ -113,11 +116,11 @@ const Task = () => {
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-2 sm:p-4 md:p-8 bg-[#F8F9FB]">
       <DashboardHeader title="Task" description="Manage all your Tasks." />
-      <Card className="w-full mx-auto  mt-4">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+      <Card className="w-full mx-auto mt-4 shadow-md">
+        <div className="p-2 sm:p-4 md:p-8">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
             {!userPermissions.hasAddPermission && (
               <div className="px-3 py-1 bg-warning-100 text-warning-800 rounded-full text-sm">
                 Read Only
@@ -125,43 +128,49 @@ const Task = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between mb-4 md:mb-8 gap-2 md:gap-0">
             <ProposalFilters />
           </div>
 
-          <div className="flex gap-6">
-            <div className="w-1/3">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-8">
+            <div className="w-full md:w-1/3 mb-4 md:mb-0">
               <ProjectDetails userPermissions={userPermissions} />
             </div>
-            <Divider className="my-2" orientation="vertical" />
-            <div className="w-2/3 bg-white border-1 border-gray-200 p-4 rounded-lg shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Task</h2>
+            <Divider className="my-2 md:my-0" orientation="vertical" />
+            <div className="w-full md:w-2/3 bg-white border-1 border-gray-200 p-2 sm:p-4 md:p-8 rounded-lg shadow-sm overflow-x-auto">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                <h2 className="text-lg sm:text-xl font-semibold">Task</h2>
                 {userPermissions.hasAddPermission && (
                   <Button
                     color="primary"
                     onPress={handleAddTask}
                     startContent={<Plus />}
-                    className="rounded-lg"
+                    className="rounded-lg w-full sm:w-auto min-h-[44px] text-base px-6"
+                    style={{ minWidth: 120 }}
                   >
                     Add Task
                   </Button>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-4">
                 <TaskList
                   userPermissions={userPermissions}
                   onEditTask={handleEditTask}
+                  refreshKey={taskListRefreshKey}
                 />
                 {showTaskForm && (
-                  <TaskForm
-                    onClose={() => {
-                      setShowTaskForm(false);
-                      setSelectedTask(null);
-                    }}
-                    userPermissions={userPermissions}
-                    task={selectedTask}
-                  />
+                  <div className="w-full">
+                    <TaskForm
+                      onClose={() => {
+                        setShowTaskForm(false);
+                        setSelectedTask(null);
+                        refreshTasks();
+                      }}
+                      userPermissions={userPermissions}
+                      task={selectedTask}
+                      refreshTasks={refreshTasks}
+                    />
+                  </div>
                 )}
               </div>
             </div>

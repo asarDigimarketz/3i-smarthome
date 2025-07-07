@@ -20,7 +20,18 @@ const PORT = process.env.PORT || 5000;
 // Middleware setup
 // 1. Request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} [${req.method}] ${req.originalUrl}`);
+  // Save original send method
+  const originalSend = res.send;
+  res.send = function (body) {
+    // After response is sent, log status code, method, and url
+    console.log(
+      `${new Date().toISOString()} [${req.method}] ${res.statusCode} ${
+        req.originalUrl
+      }`
+    );
+    // Call original send
+    return originalSend.call(this, body);
+  };
   next();
 });
 

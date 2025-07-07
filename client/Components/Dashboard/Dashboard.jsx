@@ -238,6 +238,7 @@ const Dashboard = () => {
             }`,
           progress: `${project.completedTasks || 0}/${project.totalTasks || 0}`,
           color: getServiceColor(project.services),
+          assignedEmployees: project.assignedEmployees || [],
         }));
         setRecentProjects(transformedProjects);
       }
@@ -953,6 +954,7 @@ const Dashboard = () => {
                 address={project.address}
                 progress={project.progress}
                 color={project.color}
+                assignedEmployees={project.assignedEmployees}
                 userPermissions={userPermissions.projects}
               />
             ))}

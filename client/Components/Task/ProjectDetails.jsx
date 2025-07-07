@@ -2,12 +2,13 @@
 import { useEffect, useState } from "react";
 import { Card } from "@heroui/card";
 import { Divider } from "@heroui/divider";
-import { Calendar, ChevronDown, Edit, File } from "lucide-react";
+import { Calendar, ChevronDown, Edit, File, Download } from "lucide-react";
 import axios from "axios";
 import { addToast } from "@heroui/toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectItem } from "@heroui/select";
 import { Button } from "@heroui/button";
+import Link from "next/link";
 
 const ProjectDetails = () => {
   const router = useRouter();
@@ -114,6 +115,13 @@ const ProjectDetails = () => {
           projects.map((proj) => (
             <SelectItem key={proj._id} value={proj._id}>
               {proj.customerName} - {proj.services}
+              {proj.projectAmount
+                ? ` (${new Intl.NumberFormat("en-IN", {
+                    style: "currency",
+                    currency: "INR",
+                    maximumFractionDigits: 0,
+                  }).format(proj.projectAmount)})`
+                : ""}
             </SelectItem>
           ))
         ) : (
@@ -173,22 +181,24 @@ const ProjectDetails = () => {
   return (
     <div className="w-full">
       {renderProjectSelector()}
-      <Card className="bg-[#F9E6E78A] p-4">
-        <div className="p-4">
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-semibold items-center align-middle">
+      <Card className="bg-[#F9E6E78A] p-2 sm:p-4">
+        <div className="p-2 sm:p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+            <div className="flex flex-col gap-1 sm:gap-3">
+              <h3 className="font-semibold text-base sm:text-lg items-center align-middle">
                 {project.customerName}
               </h3>
-              <p className="text-sm text-gray-500 items-center align-middle mt-1">
+              <p className="text-xs sm:text-sm text-gray-500 items-center align-middle mt-1">
                 {project.contactNumber}
               </p>
             </div>
-            <ChevronDown className="text-gray-400" />
+            <ChevronDown className="text-gray-400 hidden sm:block" />
           </div>
-          <p className="text-lg font-semibold mb-4">{formattedAmount}</p>
+          <p className="text-base sm:text-lg font-semibold mb-4">
+            {formattedAmount}
+          </p>
           <Divider className="my-2" />
-          <div className="space-y-2 grid grid-cols-1  md:grid-cols-2 gap-4">
+          <div className="space-y-2 grid grid-cols-1 xl:grid-cols-2 gap-4">
             <DetailItem
               label="Address"
               value={project.fullAddress || "Not specified"}
@@ -219,19 +229,55 @@ const ProjectDetails = () => {
               value={formattedAmount || "Not specified"}
             />
 
-            {project.attachment && project.attachment.url && (
-              <DetailItem
-                label="Attachment"
-                value={
-                  <div className="flex items-center text-blue-600">
-                    <File className="mr-1" />
-                    <span>
-                      {project.attachment.originalName || "Attachment"}
-                    </span>
-                  </div>
-                }
-              />
-            )}
+            {/* Attachments (multiple, with preview UI) */}
+            {Array.isArray(project.attachments) &&
+              project.attachments.length > 0 && (
+                <DetailItem
+                  label={
+                    project.attachments.length > 1
+                      ? "Attachments"
+                      : "Attachment"
+                  }
+                  value={
+                    <div className="flex flex-col gap-2">
+                      {project.attachments.map((att, idx) => (
+                        <div
+                          key={att._id || att.url || idx}
+                          className="flex flex-col sm:flex-row items-center bg-[#E3F2FD] border border-gray-200 rounded px-3 py-2 gap-2 sm:gap-3 shadow-sm w-full max-w-full"
+                        >
+                          <File className="text-blue-500 w-5 h-5" />
+                          <span
+                            className="truncate max-w-[120px] sm:max-w-xs font-medium"
+                            title={att.originalName || "Attachment"}
+                          >
+                            {att.originalName || "Attachment"}
+                          </span>
+                          <a
+                            href={
+                              att.url && att.url.startsWith("http")
+                                ? att.url
+                                : `/${att.url}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={att.originalName || true}
+                            className="ml-auto"
+                          >
+                            <Button
+                              size="xs"
+                              isIconOnly
+                              color="primary"
+                              variant="flat"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  }
+                />
+              )}
 
             <DetailItem
               label="Date"
@@ -251,10 +297,14 @@ const ProjectDetails = () => {
           </div>
         </div>
 
-        <div className="p-4 flex justify-end ">
-          <Button className="bg-[#EAEAEA] rounded-lg p-2" size="xs">
-            <Edit className="text-[#6E6E6E] w-4 h-4 " />
-          </Button>
+        <div className="p-2 sm:p-4 flex justify-end ">
+          <Link
+            href={`/dashboard/projects/add-project?projectId=${project._id}`}
+          >
+            <Button className="bg-[#EAEAEA] rounded-lg p-2" size="xs">
+              <Edit className="text-[#6E6E6E] w-4 h-4 " />
+            </Button>
+          </Link>
         </div>
       </Card>
     </div>

@@ -1,13 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Card } from "@heroui/card";
-import { ChevronDown, Calendar, Upload } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import { Textarea } from "@heroui/input";
 import { Divider } from "@heroui/divider";
 import { addToast } from "@heroui/toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import Link from "next/link.js";
 import { ProjectStatusSelect } from "./ProjectStatusSelect.jsx";
@@ -16,9 +16,12 @@ import DashboardHeader from "../header/DashboardHeader.jsx";
 
 export function AddProjectPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-
+  // Use arrays for attachments
+  const [selectedFiles, setSelectedFiles] = useState([]); // new files
+  const [removedAttachments, setRemovedAttachments] = useState([]); // removed existing files
   const [formData, setFormData] = useState({
     customerName: "",
     contactNumber: "",
@@ -38,9 +41,56 @@ export function AddProjectPage() {
     comment: "",
     projectStatus: "new",
     projectDate: new Date().toISOString().split("T")[0],
+    attachments: [], // for existing attachments (edit mode)
   });
-
   const [errors, setErrors] = useState({});
+
+  // Fetch project data if editing
+  useEffect(() => {
+    if (projectId) {
+      setIsLoading(true);
+      axios
+        .get(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`, {
+          headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY },
+        })
+        .then((res) => {
+          if (res.data.success && res.data.data) {
+            const p = res.data.data;
+            setFormData({
+              customerName: p.customerName || "",
+              contactNumber: p.contactNumber || "",
+              email: p.email || "",
+              address: p.address || {
+                addressLine: "",
+                city: "",
+                district: "",
+                state: "",
+                country: "India",
+                pincode: "",
+              },
+              services: p.services || "",
+              projectDescription: p.projectDescription || "",
+              size: p.size || "",
+              projectAmount: p.projectAmount || "",
+              comment: p.comment || "",
+              projectStatus: p.projectStatus || "new",
+              projectDate:
+                p.projectDate &&
+                new Date(p.projectDate).toISOString().split("T")[0],
+              attachments: Array.isArray(p.attachments) ? p.attachments : [],
+            });
+          }
+        })
+        .catch(() => {
+          addToast({
+            title: "Error",
+            description: "Failed to load project for editing",
+            color: "danger",
+          });
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [projectId]);
 
   const handleInputChange = (field, value) => {
     if (field.includes(".")) {
@@ -65,39 +115,59 @@ export function AddProjectPage() {
     }
   };
 
+  // File input handler for multiple files
   const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      // Validate file type
-      const allowedTypes = [
-        "application/pdf",
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ];
+    const files = Array.from(event.target.files);
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const maxSize = 10 * 1024 * 1024;
+    const validFiles = files.filter((file) => {
       if (!allowedTypes.includes(file.type)) {
         addToast({
           title: "Invalid file type",
-          description: "Please select a PDF, JPEG, PNG, DOC, or DOCX file",
+          description: `File ${file.name} is not a supported type`,
           color: "danger",
         });
-        return;
+        return false;
       }
-
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > maxSize) {
         addToast({
           title: "File too large",
-          description: "File size must be less than 10MB",
+          description: `File ${file.name} exceeds 10MB limit`,
           color: "danger",
         });
-        return;
+        return false;
       }
+      return true;
+    });
+    setSelectedFiles((prev) => [...prev, ...validFiles]);
+    // Reset input value so same file can be re-added if removed
+    event.target.value = null;
+  };
 
-      setSelectedFile(file);
-    }
+  // Remove a new file before upload
+  const handleRemoveSelectedFile = (index) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Remove an existing attachment (edit mode)
+  const handleRemoveExistingAttachment = (index) => {
+    setRemovedAttachments((prev) => [...prev, formData.attachments[index]]);
+    setFormData((prev) => {
+      const newAttachments = Array.isArray(prev.attachments)
+        ? prev.attachments.filter((_, i) => i !== index)
+        : [];
+      return {
+        ...prev,
+        attachments: newAttachments,
+      };
+    });
   };
 
   const validateForm = () => {
@@ -169,47 +239,76 @@ export function AddProjectPage() {
       Object.keys(formData).forEach((key) => {
         if (key === "address") {
           submitData.append(key, JSON.stringify(formData[key]));
-        } else {
+        } else if (key !== "attachments") {
           submitData.append(key, formData[key]);
         }
       });
 
-      // Append file if selected
-      if (selectedFile) {
-        submitData.append("attachment", selectedFile);
+      // Always send the current attachments (remaining after removal) as JSON
+      if (formData.attachments.length > 0) {
+        submitData.append("attachments", JSON.stringify(formData.attachments));
+      }
+      // Append new files
+      selectedFiles.forEach((file) => {
+        submitData.append("attachments", file);
+      });
+      // If all attachments are removed and no new files, send empty attachments array
+      if (formData.attachments.length === 0 && selectedFiles.length === 0) {
+        submitData.append("attachments", "[]");
+      }
+      // Send removed attachment IDs/URLs for backend cleanup
+      if (removedAttachments.length > 0) {
+        submitData.append(
+          "removedAttachments",
+          JSON.stringify(removedAttachments.map((a) => a._id || a.url))
+        );
       }
 
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/projects`,
-        submitData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      let response;
+      if (projectId) {
+        response = await axios.put(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`,
+          submitData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            },
+          }
+        );
+      } else {
+        response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/projects`,
+          submitData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            },
+          }
+        );
+      }
 
       if (response.data.success) {
         addToast({
           title: "Success",
-          description: "Project created successfully",
+          description: projectId
+            ? "Project updated successfully"
+            : "Project created successfully",
           color: "success",
         });
 
         router.push("/dashboard/projects");
       } else {
-        throw new Error(response.data.message || "Failed to create project");
+        throw new Error(response.data.message || "Failed to save project");
       }
     } catch (error) {
-      console.error("Create project error:", error);
-
       addToast({
         title: "Error",
         description:
           error.response?.data?.message ||
           error.message ||
-          "Failed to create project",
+          "Failed to save project",
         color: "danger",
       });
     } finally {
@@ -220,7 +319,10 @@ export function AddProjectPage() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <DashboardHeader title="Add Project" className="mb-4" />
+        <DashboardHeader
+          title={projectId ? "Edit Project" : "Add Project"}
+          className="mb-4"
+        />
       </div>
       <form onSubmit={handleSubmit}>
         <Card className="p-6" shadow="sm">
@@ -524,11 +626,12 @@ export function AddProjectPage() {
             <div className="col-span-1 md:col-span-2 grid gap-y-4">
               <div className="flex items-center gap-4">
                 <label className="block text-gray-700 mb-2">
-                  Project Attachment
+                  Project Attachments
                 </label>
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  multiple
                   onChange={handleFileChange}
                   className="hidden"
                   id="file-upload"
@@ -545,11 +648,67 @@ export function AddProjectPage() {
                   </Button>
                 </label>
               </div>
-              <span className="text-gray-500 text-xs justify-center">
-                {selectedFile
-                  ? selectedFile.name
-                  : "*Attach project docs/pdf/jpeg/png"}
-              </span>
+              {/* List all attachments (existing and new) */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {/* Existing attachments (edit mode) */}
+                {Array.isArray(formData.attachments) &&
+                  formData.attachments.map((att, idx) => (
+                    <div
+                      key={att._id || att.url}
+                      className="flex items-center bg-gray-100 rounded px-2 py-1"
+                    >
+                      <a
+                        href={
+                          att.url.startsWith("http") ? att.url : `/${att.url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline max-w-xs truncate"
+                        download={att.originalName || true}
+                        title={att.originalName || "Attachment"}
+                      >
+                        {att.originalName || "Attachment"}
+                      </a>
+                      <Button
+                        type="button"
+                        isIconOnly
+                        color="primary"
+                        className="ml-2"
+                        onPress={() => handleRemoveExistingAttachment(idx)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                {/* New files (not yet uploaded) */}
+                {selectedFiles.map((file, idx) => (
+                  <div
+                    key={file.name + idx}
+                    className="flex items-center bg-gray-100 rounded px-2 py-1"
+                  >
+                    <span className="truncate max-w-xs" title={file.name}>
+                      {file.name}
+                    </span>
+                    <Button
+                      type="button"
+                      size="xs"
+                      color="primary"
+                      variant="light"
+                      className="ml-2"
+                      onPress={() => handleRemoveSelectedFile(idx)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                {(!Array.isArray(formData.attachments) ||
+                  formData.attachments.length === 0) &&
+                  selectedFiles.length === 0 && (
+                    <span className="text-gray-500 text-xs">
+                      *Attach project docs/pdf/jpeg/png
+                    </span>
+                  )}
+              </div>
             </div>
           </div>
 

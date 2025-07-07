@@ -11,7 +11,7 @@ import { addToast } from "@heroui/toast";
 import { useSearchParams } from "next/navigation";
 import { DeleteConfirmModal } from "../ui/delete-confirm-modal";
 
-const TaskForm = ({ onClose, userPermissions, task }) => {
+const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const [employees, setEmployees] = useState([]);
@@ -29,6 +29,11 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Track removed attachments
+  const [removedBefore, setRemovedBefore] = useState([]);
+  const [removedAfter, setRemovedAfter] = useState([]);
+  const [removedGeneral, setRemovedGeneral] = useState([]);
 
   // Fetch employees for assignment dropdown
   useEffect(() => {
@@ -151,16 +156,22 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
   const removeAttachment = (type, index) => {
     if (type === "before") {
       const newAttachments = [...beforeAttachments];
+      const removed = newAttachments[index];
+      if (removed.existing) setRemovedBefore((prev) => [...prev, removed]);
       URL.revokeObjectURL(newAttachments[index].preview);
       newAttachments.splice(index, 1);
       setBeforeAttachments(newAttachments);
     } else if (type === "after") {
       const newAttachments = [...afterAttachments];
+      const removed = newAttachments[index];
+      if (removed.existing) setRemovedAfter((prev) => [...prev, removed]);
       URL.revokeObjectURL(newAttachments[index].preview);
       newAttachments.splice(index, 1);
       setAfterAttachments(newAttachments);
     } else if (type === "general") {
       const newAttachments = [...attachments];
+      const removed = newAttachments[index];
+      if (removed.existing) setRemovedGeneral((prev) => [...prev, removed]);
       URL.revokeObjectURL(newAttachments[index].preview);
       newAttachments.splice(index, 1);
       setAttachments(newAttachments);
@@ -205,6 +216,25 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
       attachments.forEach((a) => {
         if (!a.existing) formDataObj.append("attachements", a.file);
       });
+      // Send removed attachments info
+      if (removedBefore.length > 0) {
+        formDataObj.append(
+          "removedBeforeAttachments",
+          JSON.stringify(removedBefore.map((a) => a.url))
+        );
+      }
+      if (removedAfter.length > 0) {
+        formDataObj.append(
+          "removedAfterAttachments",
+          JSON.stringify(removedAfter.map((a) => a.url))
+        );
+      }
+      if (removedGeneral.length > 0) {
+        formDataObj.append(
+          "removedGeneralAttachments",
+          JSON.stringify(removedGeneral.map((a) => a.url))
+        );
+      }
       let response;
       if (task && task._id) {
         response = await axios.put(
@@ -238,6 +268,7 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
               : "Task created successfully",
           color: "success",
         });
+        if (refreshTasks) refreshTasks();
         onClose();
       } else {
         addToast({
@@ -308,9 +339,9 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
   };
 
   return (
-    <Card className="bg-white p-4">
+    <Card className="bg-white p-2 sm:p-4">
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <Input
             label="Task Title"
             placeholder="Enter task name"
@@ -318,11 +349,11 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
             value={formData.title}
             onChange={handleChange}
             isRequired
-            className=" rounded-lg border-gray-200 "
+            className="rounded-lg border-gray-200 w-full"
             classNames={{
-              inputWrapper: "bg-[#EEEEEE] h-[100px] ",
+              inputWrapper: "bg-[#EEEEEE] h-[48px] md:h-[100px]",
               label: "top-4",
-              input: "h-[100px] ",
+              input: "h-[48px] md:h-[100px]",
             }}
           />
           <Textarea
@@ -331,14 +362,14 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
             name="comment"
             value={formData.comment}
             onChange={handleChange}
-            className="rounded-lg border-gray-200"
+            className="rounded-lg border-gray-200 w-full"
             classNames={{
               inputWrapper: "bg-[#EEEEEE] ",
             }}
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <Input
               type="date"
@@ -348,7 +379,7 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
               value={formData.startDate}
               onChange={handleChange}
               isRequired
-              className="rounded-lg border-gray-200"
+              className="rounded-lg border-gray-200 w-full"
               classNames={{
                 inputWrapper: "bg-[#EEEEEE] ",
               }}
@@ -362,7 +393,7 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
               name="endDate"
               value={formData.endDate}
               onChange={handleChange}
-              className="rounded-lg border-gray-200"
+              className="rounded-lg border-gray-200 w-full"
               classNames={{
                 inputWrapper: "bg-[#EEEEEE] ",
               }}
@@ -370,7 +401,7 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <Select
             label={formData.assignedTo ? "" : "Assign To"}
             placeholder="Select assignee"
@@ -382,7 +413,7 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
             onSelectionChange={(keys) =>
               handleSelectChange("assignedTo")(Array.from(keys)[0])
             }
-            className="rounded-lg border-gray-200"
+            className="rounded-lg border-gray-200 w-full"
             classNames={{
               base: "max-w-xs",
               trigger: "bg-[#EEEEEE] h-12",
@@ -433,7 +464,7 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
             onSelectionChange={(keys) =>
               handleSelectChange("status")(Array.from(keys)[0])
             }
-            className="rounded-lg border-gray-200 "
+            className="rounded-lg border-gray-200 w-full"
             classNames={{
               trigger: "bg-[#EEEEEE] ",
             }}
@@ -447,10 +478,10 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
         {/* Attachments section */}
         <div className="mb-4">
           <p className="text-sm text-gray-500 mb-2">Attachment:</p>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             {/* Before attachments box */}
-            <div className="flex-1 border border-[#EDEDED] rounded-lg p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between">
-              <div className="flex items-center gap-2 mb-2 min-h-[48px]">
+            <div className="flex-1 border border-[#EDEDED] rounded-lg p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between mb-2 sm:mb-0">
+              <div className="flex items-center gap-2 mb-2 min-h-[48px] flex-wrap">
                 {beforeAttachments.map((attachment, index) => (
                   <div key={index} className="relative">
                     <div className="w-12 h-12 bg-[#222] border border-[#EDEDED] rounded-full overflow-hidden flex items-center justify-center">
@@ -491,7 +522,7 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
             </div>
             {/* After attachments box */}
             <div className="flex-1 border border-[#EDEDED] rounded-lg p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between">
-              <div className="flex items-center gap-2 mb-2 min-h-[48px]">
+              <div className="flex items-center gap-2 mb-2 min-h-[48px] flex-wrap">
                 {afterAttachments.map((attachment, index) => (
                   <div key={index} className="relative">
                     <div className="w-12 h-12 bg-[#EDEDED] border border-[#EDEDED] rounded-full overflow-hidden flex items-center justify-center">
@@ -585,28 +616,10 @@ const TaskForm = ({ onClose, userPermissions, task }) => {
           )}
         </div>
 
-        <div className="flex justify-end">
-          {/* <Button
-            color="primary"
-            variant="light"
-            as="span"
-            className="cursor-pointer"
-            onPress={() => document.getElementById("fileInput").click()}
-          >
-            + Add Attachment
-            <input
-              id="fileInput"
-              type="file"
-              multiple
-              accept="image/jpeg,image/png,application/pdf"
-              className="hidden"
-              onChange={(e) => handleFileChange("before", e)}
-            />
-          </Button> */}
-
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
           <Button
             color="success"
-            className="mr-2 text-white"
+            className="mr-0 sm:mr-2 text-white"
             type="submit"
             isLoading={submitting}
             isDisabled={submitting || !projectId}
