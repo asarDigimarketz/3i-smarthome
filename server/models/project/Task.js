@@ -51,11 +51,13 @@ const taskSchema = new mongoose.Schema(
       default: "new",
     },
 
-    // Assigned Employee
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Employee",
-    },
+    // Assigned Employees (now supports multiple assignees)
+    assignedTo: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Employee",
+      },
+    ],
 
     // Attachments - Before images/files
     beforeAttachments: [

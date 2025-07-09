@@ -55,5 +55,11 @@
 .adminLayout .mainContent header {
   flex-shrink: 0;
   margin: 0;
-  padding: 1rem 1.5rem;
+  height: 70px;
+  min-height: 70px;;
+  max-height: 70px;;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
 }

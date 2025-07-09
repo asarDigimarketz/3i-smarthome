@@ -406,12 +406,14 @@ const ProposalTable = ({
             "text-sm",
             "py-4",
             "px-6",
-            "border-b-3",
             "first:pl-6",
             "last:pr-6",
-
+            "whitespace-nowrap",
             "transition-colors",
             "duration-200",
+            "text-primary-600",
+            "bg-gray-50",
+            "!rounded-none", // Force remove any border radius
           ],
           tr: [
             "group",
@@ -443,7 +445,6 @@ const ProposalTable = ({
               style={{
                 backgroundColor: getHeaderBackgroundColor(),
                 color: getHeaderTextColor(),
-                borderColor: "#E5E7EB",
               }}
             >
               {column.label}

@@ -8,6 +8,7 @@ import { Select, SelectItem } from "@heroui/select";
 import Link from "next/link";
 import { StatusSelect } from "./StatusSelect.jsx";
 import { ServicesSelect } from "./ServiceSelect.jsx";
+import DashboaardHeader from "../header/DashboardHeader.jsx";
 import { Upload } from "lucide-react";
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -272,11 +273,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-red-600">
-          {isEdit ? "Edit Proposal" : "Add Proposal"}
-        </h1>
+        <DashboaardHeader title={isEdit ? "Edit Proposal" : "Add Proposal"} />
       </div>
 
       <Card className="p-6" shadow="sm">

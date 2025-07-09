@@ -317,7 +317,7 @@ export function AddProjectPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div>
       <div className="mb-6">
         <DashboardHeader
           title={projectId ? "Edit Project" : "Add Project"}

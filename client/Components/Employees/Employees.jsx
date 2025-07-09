@@ -16,6 +16,7 @@ import EmployeeCard from "./EmployeeCard.jsx";
 import { ChevronDown, Plus, Search } from "lucide-react";
 import { EmployeeModal } from "./EmployeeModal";
 import DashboardHeader from "../header/DashboardHeader.jsx";
+import { Card } from "@heroui/card";
 
 const Employees = () => {
   const { data: session } = useSession();
@@ -196,17 +197,6 @@ const Employees = () => {
         title="Employee Management"
         description="Manage employees List"
       />
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {userPermissions.hasAddPermission && (
-          <Button
-            color="primary"
-            startContent={<Plus />}
-            onPress={handleAddEmployee}
-          >
-            Add Employee
-          </Button>
-        )}
-      </div>
 
       {/* Filters and Search */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -221,7 +211,13 @@ const Employees = () => {
         <div className="flex gap-2 ml-auto">
           <Dropdown>
             <DropdownTrigger>
-              <Button variant="flat" endContent={<ChevronDown width={16} />}>
+              <Button
+                variant="bordered"
+                radius="sm"
+                className="w-full justify-between bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-800"
+                size="lg"
+                endContent={<ChevronDown width={16} />}
+              >
                 Status
               </Button>
             </DropdownTrigger>
@@ -240,62 +236,75 @@ const Employees = () => {
             </DropdownMenu>
           </Dropdown>
         </div>
-      </div>
-
-      {/* Employee Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading ? (
-          // Show loading skeletons
-          Array.from({ length: 6 }).map((_, index) => (
-            <EmployeeSkeleton key={index} />
-          ))
-        ) : paginatedEmployees.length > 0 ? (
-          paginatedEmployees.map((employee) => (
-            <EmployeeCard
-              key={`${employee.id}-${employee.name}`}
-              id={employee.id}
-              name={employee.name}
-              role={employee.role}
-              department={employee.department}
-              status={employee.status}
-              email={employee.email}
-              phone={employee.phone}
-              avatar={employee.avatar}
-              userPermissions={userPermissions}
-              onEmployeeUpdate={fetchEmployees}
-            />
-          ))
-        ) : (
-          // Empty state
-          <div className="col-span-full flex flex-col items-center justify-center py-12">
-            <div className="text-center">
-              <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                <Plus className="w-12 h-12 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No employees found
-              </h3>
-              <p className="text-gray-500 mb-4">
-                {searchQuery || statusFilter !== "all"
-                  ? "No employees match your current filters."
-                  : "Get started by adding your first employee."}
-              </p>
-              {!searchQuery &&
-                statusFilter === "all" &&
-                userPermissions.hasAddPermission && (
-                  <Button
-                    color="primary"
-                    startContent={<Plus />}
-                    onPress={handleAddEmployee}
-                  >
-                    Add First Employee
-                  </Button>
-                )}
-            </div>
-          </div>
+        {userPermissions.hasAddPermission && (
+          <Button
+            color="primary"
+            radius="sm"
+            className="w-full sm:w-auto"
+            size="lg"
+            startContent={<Plus />}
+            onPress={handleAddEmployee}
+          >
+            Add Employee
+          </Button>
         )}
       </div>
 
+      {/* Employee Cards */}
+      <Card className="bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading ? (
+            // Show loading skeletons
+            Array.from({ length: 6 }).map((_, index) => (
+              <EmployeeSkeleton key={index} />
+            ))
+          ) : paginatedEmployees.length > 0 ? (
+            paginatedEmployees.map((employee) => (
+              <EmployeeCard
+                key={`${employee.id}-${employee.name}`}
+                id={employee.id}
+                name={employee.name}
+                role={employee.role}
+                department={employee.department}
+                status={employee.status}
+                email={employee.email}
+                phone={employee.phone}
+                avatar={employee.avatar}
+                userPermissions={userPermissions}
+                onEmployeeUpdate={fetchEmployees}
+              />
+            ))
+          ) : (
+            // Empty state
+            <div className="col-span-full flex flex-col items-center justify-center py-12">
+              <div className="text-center">
+                <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Plus className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No employees found
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  {searchQuery || statusFilter !== "all"
+                    ? "No employees match your current filters."
+                    : "Get started by adding your first employee."}
+                </p>
+                {!searchQuery &&
+                  statusFilter === "all" &&
+                  userPermissions.hasAddPermission && (
+                    <Button
+                      color="primary"
+                      startContent={<Plus />}
+                      onPress={handleAddEmployee}
+                    >
+                      Add First Employee
+                    </Button>
+                  )}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
       {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div className="flex justify-center">

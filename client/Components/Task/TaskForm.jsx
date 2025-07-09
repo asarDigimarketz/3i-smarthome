@@ -20,7 +20,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
     comment: "",
     startDate: "",
     endDate: "",
-    assignedTo: "",
+    assignedTo: [], // now an array for multiple assignees
     status: "new",
   });
   const [beforeAttachments, setBeforeAttachments] = useState([]);
@@ -79,7 +79,11 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
         comment: task.comment || "",
         startDate: task.startDate ? task.startDate.slice(0, 10) : "",
         endDate: task.endDate ? task.endDate.slice(0, 10) : "",
-        assignedTo: task.assignedTo?._id || "",
+        assignedTo: Array.isArray(task.assignedTo)
+          ? task.assignedTo.map((emp) => emp._id)
+          : task.assignedTo?._id
+          ? [task.assignedTo._id]
+          : [],
         status: task.status || "new",
       });
       // Existing attachments (show as non-removable for now)
@@ -116,7 +120,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
         comment: "",
         startDate: "",
         endDate: "",
-        assignedTo: "",
+        assignedTo: [],
         status: "new",
       });
       setBeforeAttachments([]);
@@ -204,7 +208,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
       formDataObj.append("comment", formData.comment || "");
       formDataObj.append("startDate", formData.startDate);
       formDataObj.append("endDate", formData.endDate || "");
-      formDataObj.append("assignedTo", formData.assignedTo || "");
+      formDataObj.append("assignedTo", JSON.stringify(formData.assignedTo)); // send all assignedTo values
       formDataObj.append("status", formData.status || "new");
       // Only append new files
       beforeAttachments.forEach((a) => {
@@ -403,15 +407,12 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <Select
-            label={formData.assignedTo ? "" : "Assign To"}
-            placeholder="Select assignee"
-            selectedKeys={
-              formData.assignedTo
-                ? new Set([String(formData.assignedTo)])
-                : new Set()
-            }
+            label={formData.assignedTo.length ? "" : "Assign To"}
+            placeholder="Select assignees"
+            selectionMode="multiple"
+            selectedKeys={new Set(formData.assignedTo)}
             onSelectionChange={(keys) =>
-              handleSelectChange("assignedTo")(Array.from(keys)[0])
+              handleSelectChange("assignedTo")([...keys])
             }
             className="rounded-lg border-gray-200 w-full"
             classNames={{
@@ -419,6 +420,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
               trigger: "bg-[#EEEEEE] h-12",
             }}
             items={employees}
+            isMultiline
             renderValue={(items) => {
               return items.map((item) => (
                 <div key={item.key} className="flex items-center gap-2">

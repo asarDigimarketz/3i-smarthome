@@ -116,7 +116,7 @@ const Task = () => {
   }
 
   return (
-    <div className="min-h-screen p-2 sm:p-4 md:p-8 bg-[#F8F9FB]">
+    <div className="min-h-screen  bg-[#F8F9FB]">
       <DashboardHeader title="Task" description="Manage all your Tasks." />
       <Card className="w-full mx-auto mt-4 shadow-md">
         <div className="p-2 sm:p-4 md:p-8">

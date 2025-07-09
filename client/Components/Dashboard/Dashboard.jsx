@@ -233,8 +233,10 @@ const Dashboard = () => {
           }),
           address:
             project.fullAddress ||
-            `${project.address?.addressLine || ""}, ${
+            `${project.address?.addressLine || ""} , ${
               project.address?.city || ""
+            } , ${project.address?.district || ""} - ${
+              project.address?.pincode || ""
             }`,
           progress: `${project.completedTasks || 0}/${project.totalTasks || 0}`,
           color: getServiceColor(project.services),

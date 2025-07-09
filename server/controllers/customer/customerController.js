@@ -73,7 +73,15 @@ const getCustomers = async (req, res) => {
 const getCustomer = async (req, res) => {
   try {
     const customer = await Customer.findById(req.params.id)
-      .populate("projects", "projectStatus services projectAmount projectDate")
+      .populate({
+        path: "projects",
+        select:
+          "projectStatus services address projectAmount projectDate progress assignedEmployees completedTasks totalTasks",
+        populate: {
+          path: "assignedEmployees",
+          select: "firstName lastName email avatar",
+        },
+      })
       .lean();
 
     if (!customer) {

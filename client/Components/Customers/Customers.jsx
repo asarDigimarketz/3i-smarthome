@@ -23,7 +23,16 @@ import { useSession } from "next-auth/react";
 import axios from "axios";
 
 import Link from "next/link";
-import { ChevronDown, Home, Plus, Search, Shield, Tv } from "lucide-react";
+import {
+  ChevronDown,
+  Plus,
+  Search,
+  Cctv,
+  Speaker,
+  Tv2,
+  HouseWifi,
+} from "lucide-react";
+import DashboardHeader from "../header/DashboardHeader";
 
 const Customers = () => {
   const { data: session } = useSession();
@@ -158,11 +167,13 @@ const Customers = () => {
   const getServiceIcon = (service) => {
     switch (service) {
       case "Home Cinema":
-        return <Tv className="text-blue-500" width={18} />;
+        return <Tv2 className="text-[#5500FF]" width={18} />;
       case "Security System":
-        return <Shield className="text-red-500" width={18} />;
+        return <Cctv className="text-[#0068AD]" width={18} />;
       case "Home Automation":
-        return <Home className="text-teal-500" width={18} />;
+        return <HouseWifi className="text-[#00A8D6]" width={18} />;
+      case "Outdoor Audio Solution":
+        return <Speaker className="text-[#DB0A89]" width={18} />;
       default:
         return null;
     }
@@ -178,14 +189,15 @@ const Customers = () => {
       return;
     }
   };
+  const handleDateRangeChange = (range) => setDateRange(range);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-primary">Customers</h1>
-          <p className="text-default-500">Manage Your Customer Details</p>
-        </div>
+        <DashboardHeader
+          title="Customers"
+          description="View and manage your customers"
+        />
 
         {userPermissions.hasAddPermission && (
           <Link href="/dashboard/customers/add-customer">
@@ -212,12 +224,13 @@ const Customers = () => {
 
         <div className="flex gap-2 ml-auto">
           <DateRangePicker
-            label="Filter by Date"
             value={dateRange}
-            onChange={setDateRange}
+            onChange={handleDateRangeChange}
             radius="sm"
+            showMonthAndYearPickers
+            size="md"
             variant="bordered"
-            className="w-60"
+            className="w-50"
             classNames={{
               base: "bg-white",
               inputWrapper: "border-gray-300 hover:border-gray-400",
@@ -227,7 +240,13 @@ const Customers = () => {
           />
           <Dropdown>
             <DropdownTrigger>
-              <Button variant="flat" endContent={<ChevronDown width={16} />}>
+              <Button
+                variant="bordered"
+                radius="sm"
+                className="w-full justify-between bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-800"
+                size="md"
+                endContent={<ChevronDown width={16} />}
+              >
                 Services
               </Button>
             </DropdownTrigger>
@@ -244,6 +263,9 @@ const Customers = () => {
               <DropdownItem key="Home Cinema">Home Cinema</DropdownItem>
               <DropdownItem key="Home Automation">Home Automation</DropdownItem>
               <DropdownItem key="Security System">Security System</DropdownItem>
+              <DropdownItem key="Outdoor Audio Solution">
+                Outdoor Audio Solution
+              </DropdownItem>
             </DropdownMenu>
           </Dropdown>
         </div>
@@ -251,14 +273,45 @@ const Customers = () => {
 
       {/* Customers Table */}
       {session ? (
-        <Card>
+        <Card className="bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
           <CardBody className="p-0">
             <Table
               aria-label="Customers table"
               removeWrapper
               classNames={{
-                th: "bg-red-50 text-default-700",
-                td: "py-4",
+                base: "w-full bg-white shadow-sm rounded-lg overflow-hidden",
+                wrapper: "overflow-x-auto",
+                table: "w-full",
+                thead: "[&>tr]:first:shadow-none ",
+                th: [
+                  "font-medium",
+                  "text-sm",
+                  "py-4",
+                  "px-6",
+                  "first:pl-6",
+                  "last:pr-6",
+                  "transition-colors",
+                  "duration-200",
+                  "text-[#C92125]",
+                  "bg-[#BF3F421A]",
+                  "!rounded-none", // Force remove any border radius
+                ],
+                tr: [
+                  "group",
+                  "border-b",
+                  "border-gray-200",
+                  "transition-colors",
+                  "hover:opacity-90",
+                ],
+                td: [
+                  "px-6",
+                  "py-4",
+                  "first:pl-6",
+                  "last:pr-6",
+                  "border-b-0",
+                  "text-sm",
+                  "bg-[#F4F4F454]",
+                ],
               }}
             >
               <TableHeader>

@@ -6,12 +6,21 @@ import { Edit, Circle, File, Check } from "lucide-react";
 import axios from "axios";
 import { addToast } from "@heroui/toast";
 import { useSearchParams } from "next/navigation";
+import TaskForm from "./TaskForm"; // Adjust the import path as needed
+import { Tooltip } from "@heroui/tooltip";
+import { Loader } from "lucide-react";
 
-const TaskList = ({ userPermissions, onEditTask, refreshKey }) => {
+const TaskList = ({ userPermissions, refreshKey, serviceFilter }) => {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editRefreshKey, setEditRefreshKey] = useState(0);
+
+  useEffect(() => {
+    setEditingTaskId(null); // Reset edit mode on project/filter change
+  }, [projectId, serviceFilter, refreshKey]);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -53,43 +62,29 @@ const TaskList = ({ userPermissions, onEditTask, refreshKey }) => {
     };
 
     fetchTasks();
-  }, [projectId, refreshKey]);
+  }, [projectId, refreshKey, editRefreshKey]);
+
+  // Filter tasks by service
+  const filteredTasks =
+    serviceFilter && serviceFilter !== "All"
+      ? tasks.filter(
+          (task) =>
+            task.projectService === serviceFilter ||
+            (task.project && task.project.service === serviceFilter)
+        )
+      : tasks;
 
   if (loading) {
     return (
-      <>
-        {[...Array(3)].map((_, index) => (
-          <Card key={index} className="mb-4">
-            <div className="p-4">
-              <div className="animate-pulse">
-                <div className="flex items-center mb-2">
-                  <div className="w-6 h-6 bg-gray-200 rounded-full mr-3"></div>
-                  <div className="flex-1">
-                    <div className="h-5 bg-gray-200 rounded mb-2 w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </div>
-                <div className="ml-9">
-                  <div className="h-4 bg-gray-200 rounded mb-2 w-full"></div>
-                  <div className="flex space-x-2 mb-2">
-                    <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                    <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </>
+      <div className="flex flex-col gap-4 items-center justify-center py-8">
+        <Loader className="animate-spin text-gray-400 w-8 h-8 mb-2" />
+        <span className="text-gray-400">Loading tasks...</span>
+      </div>
     );
   }
 
   // If no project is selected or no tasks found
-  if (!projectId || tasks.length === 0) {
+  if (!projectId || filteredTasks.length === 0) {
     return (
       <div className="mb-4">
         {!projectId ? (
@@ -114,14 +109,26 @@ const TaskList = ({ userPermissions, onEditTask, refreshKey }) => {
   // Render tasks
   return (
     <>
-      {tasks.map((task) => (
-        <TaskItem
-          key={task._id}
-          task={task}
-          userPermissions={userPermissions}
-          onEditTask={onEditTask}
-        />
-      ))}
+      {filteredTasks.map((task) =>
+        editingTaskId === task._id ? (
+          <TaskForm
+            key={task._id}
+            task={task}
+            userPermissions={userPermissions}
+            onClose={() => {
+              setEditingTaskId(null);
+              setEditRefreshKey((k) => k + 1);
+            }}
+          />
+        ) : (
+          <TaskItem
+            key={task._id}
+            task={task}
+            userPermissions={userPermissions}
+            onEditTask={() => setEditingTaskId(task._id)}
+          />
+        )
+      )}
     </>
   );
 };
@@ -206,26 +213,33 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
   const formattedEndDate = formatDate(endDate);
 
   return (
-    <Card className="mb-4 sm:mb-6 bg-[#fff] border border-[#D1D1D1] rounded-xl shadow-none w-full">
-      <div className="flex flex-col sm:flex-row items-start justify-between ">
-        <div className="flex items-center justify-start p-2 w-full sm:w-auto">
+    <Card className="mb-4 sm:mb-6 bg-[#fff] border border-[#D1D1D1] rounded-xl shadow-none w-full transition-shadow hover:shadow-lg focus-within:shadow-lg group relative pb-10">
+      <div className="flex flex-col sm:flex-row items-start justify-between px-4">
+        <div className="flex items-center justify-start py-2 w-full sm:w-auto">
           <div className="items-start"> {getStatusIcon()}</div>
           <div className="items-start mt-2">
             <h4
-              className="font-[400] text-base sm:text-lg text-[#616161] mb-1"
+              className="font-[400] text-base sm:text-lg text-[#616161] mb-1 truncate max-w-[200px] sm:max-w-[300px]"
               style={{ letterSpacing: 0 }}
+              title={title}
             >
               {title}
             </h4>
             <div className="text-[#616161] text-xs sm:text-sm ">
               Assignee:{" "}
-              <span className="font-[700] text-[#616161]">
-                {assignedTo?.name || "Unassigned"}
+              <span className="font-[700] text-[#616161] flex flex-wrap gap-2">
+                {Array.isArray(assignedTo) && assignedTo.length > 0
+                  ? assignedTo.map((emp) => (
+                      <span key={emp._id} className="flex items-center gap-1">
+                        {emp.firstName} {emp.lastName}
+                      </span>
+                    ))
+                  : "Unassigned"}
               </span>
             </div>
           </div>
         </div>
-        <div className="p-4 sm:p-6 flex flex-col items-end w-full sm:w-auto">
+        <div className="py-4 flex flex-col items-end w-full sm:w-auto">
           {getStatusBadge()}{" "}
           <div className="grid justify-end text-xs text-[#616161] mb-2 mt-3">
             <span>Start Date : {formattedStartDate}</span>
@@ -233,15 +247,18 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
           </div>
         </div>
       </div>
-      {comment && (
-        <div className="text-[#616161] text-xs sm:text-sm mb-3 sm:mb-5 px-2 sm:px-6">
-          Note : {comment}
-        </div>
-      )}
-      <div className="text-[#616161] text-xs sm:text-sm mb-2 px-2 sm:px-6">
+
+      <div
+        className="text-[#616161] text-xs sm:text-sm mb-3 sm:mb-5 px-4 truncate max-w-full"
+        title={comment}
+      >
+        Note : {comment}
+      </div>
+
+      <div className="text-[#616161] text-xs sm:text-sm mb-2 px-4">
         Attachment :{" "}
       </div>
-      <div className="flex flex-col sm:flex-row gap-4 mb-4 px-2 sm:px-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-4 px-4">
         {/* Before attachments */}
         <div className="flex-1 border border-[#EDEDED] rounded-lg p-2 sm:p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between mb-2 sm:mb-0">
           <div className="flex items-center gap-2 mb-2 min-h-[48px] flex-wrap">
@@ -311,14 +328,17 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
           ))}
         </div>
       )}
-      <div className="p-2 sm:p-4 flex justify-end ">
-        <Button
-          className="bg-[#EAEAEA] rounded-lg p-2"
-          size="xs"
-          onPress={() => onEditTask(task)}
-        >
-          <Edit className="text-[#6E6E6E] w-4 h-4 " />
-        </Button>
+      <div className="absolute bottom-3 right-4 z-10">
+        <Tooltip content="Edit Task" placement="top">
+          <Button
+            className="bg-[#EAEAEA] rounded-lg p-2 group-hover:bg-[#f5f5f5] focus:bg-[#f5f5f5] "
+            size="xs"
+            onPress={onEditTask}
+            tabIndex={0}
+          >
+            <Edit className="text-[#6E6E6E] w-4 h-4 " />
+          </Button>
+        </Tooltip>
       </div>
     </Card>
   );

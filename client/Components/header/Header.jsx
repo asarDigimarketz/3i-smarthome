@@ -1,5 +1,5 @@
 "use client";
-import { Bell, ChevronDown, User, LogOut, Settings } from "lucide-react";
+import { ChevronDown, User, LogOut, Settings, Bell } from "lucide-react";
 import { Button } from "@heroui/button";
 import {
   Dropdown,
@@ -9,6 +9,7 @@ import {
 } from "@heroui/dropdown";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Badge } from "@heroui/badge";
 
 const Header = () => {
   const { data: session } = useSession();
@@ -47,18 +48,23 @@ const Header = () => {
       {/* Right Side - Notifications and User */}
       <div className="flex items-center space-x-2 md:space-x-4 mr-3">
         {/* Notification Bell */}
-        <Button
-          isIconOnly
-          variant="light"
-          size="lg"
-          className="relative text-white hover:bg-white/10 transition-colors "
-          aria-label="Notifications"
+        <Badge
+          className="bg-white text-primary"
+          content="5+"
+          shape="circle"
+          size="sm"
         >
-          <Bell className="h-4 w-4 md:h-5 md:w-5" />
-          <span className="absolute -top-[2px] -right-1 h-4 w-4 md:h-5 md:w-5 bg-white rounded-full flex items-center justify-center p-2">
-            <span className="text-xs text-primary font-medium">3</span>
-          </span>
-        </Button>
+          <Button
+            isIconOnly
+            aria-label="more than 99 notifications"
+            radius="full"
+            variant="light"
+            className="text-white hover:bg-white/10"
+            size="lg"
+          >
+            <Bell size={24} />
+          </Button>
+        </Badge>
 
         {/* User Dropdown */}
         <Dropdown placement="bottom-end">

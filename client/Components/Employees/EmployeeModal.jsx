@@ -471,12 +471,12 @@ export const EmployeeModal = ({
     <Modal
       isOpen={isOpen}
       onOpenChange={onOpenChange}
-      size="2xl"
+      size="xl"
       scrollBehavior="inside"
       hideCloseButton
       classNames={{
-        base: "max-w-2xl",
-        header: "bg-red-600 text-white p-4",
+        base: "max-w-xl mx-auto rounded-xl",
+        header: "bg-primary-600 text-white p-4 rounded-t-xl",
         body: "px-6 py-4",
         footer: "px-6 pb-6",
       }}
@@ -492,7 +492,7 @@ export const EmployeeModal = ({
                 isIconOnly
                 variant="light"
                 onPress={onClose}
-                className="text-white hover:bg-red-700"
+                className="text-primary-600 bg-white rounded-full hover:bg-white hover:text-primary-700 transition-colors"
               >
                 <X size={20} />
               </Button>
@@ -532,6 +532,7 @@ export const EmployeeModal = ({
                   <Input
                     label="First Name"
                     placeholder="First Name"
+                    variant="bordered"
                     value={formData.firstName}
                     onChange={(e) =>
                       handleInputChange("firstName", e.target.value)
@@ -546,6 +547,7 @@ export const EmployeeModal = ({
                   <Input
                     label="Last Name"
                     placeholder="Last Name"
+                    variant="bordered"
                     value={formData.lastName}
                     onChange={(e) =>
                       handleInputChange("lastName", e.target.value)
@@ -560,6 +562,7 @@ export const EmployeeModal = ({
                   <Input
                     label="Mobile Number"
                     placeholder="Mobile Number"
+                    variant="bordered"
                     value={formData.mobileNo}
                     onChange={(e) =>
                       handleInputChange("mobileNo", e.target.value)
@@ -574,6 +577,7 @@ export const EmployeeModal = ({
                   <Input
                     label="Email ID"
                     placeholder="Email ID"
+                    variant="bordered"
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
@@ -587,6 +591,7 @@ export const EmployeeModal = ({
                   <Select
                     label="Gender"
                     placeholder="Select gender"
+                    variant="bordered"
                     selectedKeys={formData.gender ? [formData.gender] : []}
                     onSelectionChange={(keys) => {
                       const selectedKey = Array.from(keys)[0];
@@ -605,6 +610,7 @@ export const EmployeeModal = ({
                   </Select>
                   <DatePicker
                     label="Date of Birth"
+                    variant="bordered"
                     value={formData.dateOfBirth}
                     onChange={(date) => handleInputChange("dateOfBirth", date)}
                     isInvalid={!!errors.dateOfBirth}
@@ -618,6 +624,7 @@ export const EmployeeModal = ({
                   <Input
                     label="Address Line"
                     placeholder="Address Line"
+                    variant="bordered"
                     value={formData.address.addressLine}
                     onChange={(e) =>
                       handleAddressChange("addressLine", e.target.value)
@@ -632,6 +639,7 @@ export const EmployeeModal = ({
                   <Input
                     label="City"
                     placeholder="City"
+                    variant="bordered"
                     value={formData.address.city}
                     onChange={(e) =>
                       handleAddressChange("city", e.target.value)
@@ -646,6 +654,7 @@ export const EmployeeModal = ({
                   <Input
                     label="District"
                     placeholder="District"
+                    variant="bordered"
                     value={formData.address.district}
                     onChange={(e) =>
                       handleAddressChange("district", e.target.value)
@@ -659,6 +668,7 @@ export const EmployeeModal = ({
                     label="State"
                     placeholder="State"
                     value={formData.address.state}
+                    variant="bordered"
                     onChange={(e) =>
                       handleAddressChange("state", e.target.value)
                     }
@@ -673,6 +683,7 @@ export const EmployeeModal = ({
                     label="Country"
                     placeholder="Country"
                     value={formData.address.country}
+                    variant="bordered"
                     onChange={(e) =>
                       handleAddressChange("country", e.target.value)
                     }
@@ -687,6 +698,7 @@ export const EmployeeModal = ({
                     label="Pincode"
                     placeholder="Pincode"
                     value={formData.address.pincode}
+                    variant="bordered"
                     onChange={(e) =>
                       handleAddressChange("pincode", e.target.value)
                     }
@@ -700,6 +712,7 @@ export const EmployeeModal = ({
                   <Select
                     label="Department"
                     placeholder="Select department"
+                    variant="bordered"
                     selectedKeys={
                       formData.department ? [formData.department] : []
                     }
@@ -723,6 +736,7 @@ export const EmployeeModal = ({
                   <Select
                     label="Role"
                     placeholder="Select role"
+                    variant="bordered"
                     selectedKeys={formData.role ? [formData.role] : []}
                     onSelectionChange={(keys) => {
                       const selectedKey = Array.from(keys)[0];
@@ -743,6 +757,7 @@ export const EmployeeModal = ({
                   </Select>
                   <DatePicker
                     label="Date of Hiring"
+                    variant="bordered"
                     value={formData.dateOfHiring}
                     onChange={(date) => handleInputChange("dateOfHiring", date)}
                     isInvalid={!!errors.dateOfHiring}
@@ -756,6 +771,7 @@ export const EmployeeModal = ({
                   <Select
                     label="Status"
                     placeholder="Select status"
+                    variant="bordered"
                     selectedKeys={[formData.status]}
                     onSelectionChange={(keys) => {
                       const selectedKey = Array.from(keys)[0];
@@ -774,6 +790,7 @@ export const EmployeeModal = ({
                 <Textarea
                   label="Notes"
                   placeholder="Additional notes about the employee"
+                  variant="bordered"
                   value={formData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
                   classNames={{

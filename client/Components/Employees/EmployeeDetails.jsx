@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardBody } from "@heroui/card";
+import { Divider } from "@heroui/divider";
 import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Skeleton } from "@heroui/skeleton";
@@ -10,6 +11,7 @@ import { ArrowLeft, Edit, File, Mail, Phone } from "lucide-react";
 import ProjectCard from "../Dashboard/ProjectCard.jsx";
 import { useState, useEffect } from "react";
 import { EmployeeModal } from "./EmployeeModal";
+import { Pagination } from "@heroui/pagination";
 
 const EmployeeDetail = () => {
   const router = useRouter();
@@ -19,21 +21,9 @@ const EmployeeDetail = () => {
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Mock projects data - you can replace this with actual API call
-  const mockProjects = [
-    {
-      id: "1",
-      customer: "Vinoth R",
-      status: "InProgress",
-      service: "Home Cinema",
-      amount: "₹30,00,000",
-      date: "26/05/2025",
-      address: "123/ss colony, Thirunager, Madurai-625018",
-      progress: "1/3",
-      color: "bg-blue-500",
-    },
-  ];
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 6;
 
   // Fetch employee data from API
   const fetchEmployeeData = async () => {
@@ -41,6 +31,7 @@ const EmployeeDetail = () => {
 
     try {
       setLoading(true);
+      // 1. Fetch employee details
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement/${employeeId}`,
         {
@@ -55,42 +46,97 @@ const EmployeeDetail = () => {
       }
 
       const data = await response.json();
-      if (data.success) {
-        // Transform backend data to match frontend format
-        const emp = data.employee;
-        const transformedEmployee = {
-          id: emp.employeeId,
-          name: `${emp.firstName} ${emp.lastName}`,
-          role: emp.role?.role || "N/A",
-          department: emp.department?.name || "N/A",
-          dateOfBirth: emp.dateOfBirth
-            ? new Date(emp.dateOfBirth).toLocaleDateString("en-GB")
-            : "N/A",
-          dateOfJoining: emp.dateOfHiring
-            ? new Date(emp.dateOfHiring).toLocaleDateString("en-GB")
-            : "N/A",
-          phone: emp.mobileNo || "N/A",
-          email: emp.email || "N/A",
-          note: emp.notes || "No notes available",
-          avatar:
-            emp.avatar ||
-            `https://img.heroui.chat/image/avatar?w=200&h=200&u=${Math.floor(
-              Math.random() * 10
-            )}`,
-          attachments: emp.documents || [],
-          status: emp.status,
-          stats: {
-            completed: 20, // Mock data
-            ongoing: 1, // Mock data
-            projects: 2, // Mock data
-          },
-          projects: mockProjects,
-          originalData: emp,
-        };
-        setEmployeeData(transformedEmployee);
-      } else {
+      if (!data.success)
         throw new Error(data.message || "Failed to fetch employee data");
+      const emp = data.employee;
+
+      // 2. Fetch projects assigned to this employee
+      let projects = [];
+      let completed = 0;
+      let ongoing = 0;
+      if (emp && emp._id) {
+        const projectsRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/projects?assignedEmployee=${emp._id}`,
+          {
+            headers: {
+              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            },
+          }
+        );
+        if (projectsRes.ok) {
+          const projectsData = await projectsRes.json();
+          if (projectsData.success && Array.isArray(projectsData.data)) {
+            projects = projectsData.data.map((proj) => {
+              // Determine status for stats
+              const status = proj.projectStatus || "";
+              if (
+                ["complete", "completed", "done"].includes(status.toLowerCase())
+              )
+                completed++;
+              else if (
+                ["inprogress", "in-progress", "ongoing"].includes(
+                  status.toLowerCase()
+                )
+              )
+                ongoing++;
+              return {
+                id: proj._id || proj.id,
+                customer:
+                  proj.customerName || emp.firstName + " " + emp.lastName,
+                status: proj.projectStatus || "N/A",
+                service: proj.services || "N/A",
+                amount: proj.projectAmount
+                  ? `₹${proj.projectAmount.toLocaleString("en-IN")}`
+                  : "N/A",
+                date: proj.projectDate
+                  ? new Date(proj.projectDate).toLocaleDateString("en-GB")
+                  : "N/A",
+                address:
+                  proj.fullAddress ||
+                  `${proj.address?.addressLine || ""} , ${
+                    proj.address?.city || ""
+                  } , ${proj.address?.district || ""} - ${
+                    proj.address?.pincode || ""
+                  }`,
+                progress: `${proj.completedTasks || 0}/${proj.totalTasks || 0}`,
+                color: getServiceColor(proj.services),
+                assignedEmployees: proj.assignedEmployees || [],
+              };
+            });
+          }
+        }
       }
+
+      const transformedEmployee = {
+        id: emp.employeeId,
+        name: `${emp.firstName} ${emp.lastName}`,
+        role: emp.role?.role || "N/A",
+        department: emp.department?.name || "N/A",
+        dateOfBirth: emp.dateOfBirth
+          ? new Date(emp.dateOfBirth).toLocaleDateString("en-GB")
+          : "N/A",
+        dateOfJoining: emp.dateOfHiring
+          ? new Date(emp.dateOfHiring).toLocaleDateString("en-GB")
+          : "N/A",
+        phone: emp.mobileNo || "N/A",
+        email: emp.email || "N/A",
+        note: emp.notes || "No notes available",
+        avatar:
+          emp.avatar ||
+          `https://img.heroui.chat/image/avatar?w=200&h=200&u=${Math.floor(
+            Math.random() * 10
+          )}`,
+        attachments: emp.documents || [],
+        status: emp.status,
+        stats: {
+          completed: completed,
+          ongoing: ongoing,
+          projects: projects.length,
+        },
+        projects: projects,
+        originalData: emp,
+      };
+      setEmployeeData(transformedEmployee);
     } catch (error) {
       console.error("Error fetching employee:", error);
       addToast({
@@ -106,6 +152,20 @@ const EmployeeDetail = () => {
   useEffect(() => {
     fetchEmployeeData();
   }, [employeeId]);
+  const getServiceColor = (service) => {
+    switch (service) {
+      case "Home Cinema":
+        return "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]";
+      case "Home Automation":
+        return "bg-gradient-to-br from-[#026BB7] to-[#5DEAFF]";
+      case "Security System":
+        return "bg-gradient-to-br from-[#014C95] to-[#36B9F6]";
+      case "Outdoor Audio Solution":
+        return "bg-gradient-to-br from-[#DF2795] to-[#EB7AB7]";
+      default:
+        return "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]";
+    }
+  };
 
   const handleModalClose = (shouldRefresh = false) => {
     setIsModalOpen(false);
@@ -211,129 +271,214 @@ const EmployeeDetail = () => {
       </div>
 
       {/* Employee Profile */}
-      <Card className="border border-default-200">
+      <Card className="bg-white rounded-xl shadow-lg">
         <CardBody className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Left Column - Avatar and Role */}
-            <div className="flex flex-col items-center text-center">
-              <Avatar
-                src={employeeData.avatar}
-                className="w-32 h-32"
-                alt={employeeData.name}
-              />
-              <h2 className="text-xl font-bold mt-4">{employeeData.name}</h2>
-              <p className="text-default-500">{employeeData.role}</p>
-              <div
-                className={`mt-2 px-3 py-1 rounded-full text-sm font-medium ${
-                  employeeData.status === "active"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                }`}
-              >
-                {employeeData.status === "active" ? "Active" : "Inactive"}
-              </div>
-            </div>
-
-            {/* Middle Column - Employee Details */}
-            <div className="space-y-4 md:col-span-2">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <div>
-                  <p className="text-default-500">Employee ID</p>
-                  <p className="font-medium">{employeeData.id}</p>
+          <div className="bg-[#F8F8F8] rounded-xl mb-6">
+            <div className="p-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Left Column - Avatar and Role */}
+                <div className="flex flex-col items-center text-center md:w-1/4">
+                  <Avatar
+                    src={employeeData.avatar}
+                    className="w-32 h-32"
+                    alt={employeeData.name}
+                  />
+                  <h2 className="text-xl font-bold mt-4">
+                    {employeeData.name}
+                  </h2>
+                  <p className="text-default-500">{employeeData.role}</p>
+                  <div
+                    className={`mt-2 px-3 py-1 rounded-full text-sm font-medium ${
+                      employeeData.status === "active"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {employeeData.status === "active" ? "Active" : "Inactive"}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-default-500">Department</p>
-                  <p className="font-medium">{employeeData.department}</p>
+                {/* Divider between Avatar/Role and Details */}
+                <div className="hidden md:flex justify-center items-stretch">
+                  <Divider
+                    orientation="vertical"
+                    className="h-full mx-4 bg-[#E4E4E4] w-[2px]"
+                  />
                 </div>
-                <div>
-                  <p className="text-default-500">Date of Birth</p>
-                  <p className="font-medium">{employeeData.dateOfBirth}</p>
-                </div>
-                <div>
-                  <p className="text-default-500">Date of Joining</p>
-                  <p className="font-medium">{employeeData.dateOfJoining}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <Phone className="text-primary" width={20} />
-                <span>{employeeData.phone}</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Mail className="text-primary" width={20} />
-                <span>{employeeData.email}</span>
-              </div>
-
-              <div>
-                <p className="text-default-500">Notes</p>
-                <p>{employeeData.note}</p>
-              </div>
-
-              {employeeData.attachments &&
-                employeeData.attachments.length > 0 && (
-                  <div>
-                    <p className="text-default-500">Documents</p>
-                    <div className="space-y-1 mt-1">
-                      {employeeData.attachments.map((attachment, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <File className="text-primary" width={16} />
-                          <span className="text-sm">Document {index + 1}</span>
-                        </div>
-                      ))}
+                {/* Middle Column - Employee Details */}
+                <div className="flex-1 space-y-4 md:w-2/5">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                      <p className="text-default-500">Employee ID</p>
+                      <p className="font-medium">{employeeData.id}</p>
+                    </div>
+                    <div>
+                      <p className="text-default-500">Department</p>
+                      <p className="font-medium">{employeeData.department}</p>
+                    </div>
+                    <div>
+                      <p className="text-default-500">Date of Birth</p>
+                      <p className="font-medium">{employeeData.dateOfBirth}</p>
+                    </div>
+                    <div>
+                      <p className="text-default-500">Date of Joining</p>
+                      <p className="font-medium">
+                        {employeeData.dateOfJoining}
+                      </p>
                     </div>
                   </div>
-                )}
+
+                  <div className="flex flex-col md:flex-row gap-4 pt-2">
+                    <div className="flex items-center gap-2 w-[50%]">
+                      <Phone className="text-primary" width={20} />
+                      <span>{employeeData.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="text-primary" width={20} />
+                      <span>{employeeData.email}</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Divider between Details and Notes/Documents */}
+                <div className="hidden md:flex justify-center items-stretch">
+                  <Divider
+                    orientation="vertical"
+                    className="h-full mx-4 bg-[#E4E4E4] w-[2px]"
+                  />
+                </div>
+                {/* Right Column - Notes and Documents */}
+                <div className="flex-1 space-y-4 md:w-1/3">
+                  <div>
+                    <p className="text-default-500">Notes</p>
+                    <p>{employeeData.note}</p>
+                  </div>
+                  {employeeData.attachments &&
+                    employeeData.attachments.length > 0 && (
+                      <div>
+                        <p className="text-default-500">Attachements</p>
+                        <div className="space-y-1 mt-1">
+                          {employeeData.attachments.map((attachment, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2"
+                            >
+                              <File className="text-primary" width={16} />
+                              <span className="text-sm">
+                                Document {index + 1}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Stats */}
+          <div className="bg-[#C005091A] rounded-xl border-none mb-6">
+            <div className="p-6">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div
+                  className={`cursor-pointer`}
+                  onClick={() => setProjectFilter("completed")}
+                >
+                  <p className="text-default-500">Completed</p>
+                  <p className="text-2xl font-bold">
+                    {employeeData.stats.completed}
+                  </p>
+                </div>
+                <div
+                  className={`cursor-pointer`}
+                  onClick={() => setProjectFilter("ongoing")}
+                >
+                  <p className="text-default-500">Ongoing</p>
+                  <p className="text-2xl font-bold">
+                    {employeeData.stats.ongoing}
+                  </p>
+                </div>
+                <div
+                  className={`cursor-pointer`}
+                  onClick={() => setProjectFilter("all")}
+                >
+                  <p className="text-default-500">Projects</p>
+                  <p className="text-2xl font-bold">
+                    {employeeData.stats.projects}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Projects */}
+          <div>
+            <h2 className="text-xl font-bold mb-4">Projects</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {employeeData.projects
+                .filter((project) => {
+                  if (projectFilter === "all") return true;
+                  if (projectFilter === "completed") {
+                    return ["complete", "completed", "done"].includes(
+                      (project.status || "").toLowerCase()
+                    );
+                  }
+                  if (projectFilter === "ongoing") {
+                    return ["inprogress", "in-progress", "ongoing"].includes(
+                      (project.status || "").toLowerCase()
+                    );
+                  }
+                  return true;
+                })
+                .slice((page - 1) * pageSize, page * pageSize)
+                .map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    id={project.id}
+                    customer={project.customer}
+                    status={project.status}
+                    service={project.service}
+                    amount={project.amount}
+                    date={project.date}
+                    address={project.address}
+                    progress={project.progress}
+                    color={project.color}
+                    assignedEmployees={project.assignedEmployees}
+                  />
+                ))}
+            </div>
+            {/* Pagination */}
+            <div className="flex justify-center mt-8">
+              <Pagination
+                total={
+                  Math.ceil(
+                    employeeData.projects.filter((project) => {
+                      if (projectFilter === "all") return true;
+                      if (projectFilter === "completed") {
+                        return ["complete", "completed", "done"].includes(
+                          (project.status || "").toLowerCase()
+                        );
+                      }
+                      if (projectFilter === "ongoing") {
+                        return [
+                          "inprogress",
+                          "in-progress",
+                          "ongoing",
+                        ].includes((project.status || "").toLowerCase());
+                      }
+                      return true;
+                    }).length / pageSize
+                  ) || 1
+                }
+                page={page}
+                onChange={setPage}
+                showControls
+                color="primary"
+                size="lg"
+                className="mt-4"
+              />
             </div>
           </div>
         </CardBody>
       </Card>
-
-      {/* Stats */}
-      <Card className="bg-red-50 border-none">
-        <CardBody className="p-6">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-default-500">Completed</p>
-              <p className="text-2xl font-bold">
-                {employeeData.stats.completed}
-              </p>
-            </div>
-            <div>
-              <p className="text-default-500">Ongoing</p>
-              <p className="text-2xl font-bold">{employeeData.stats.ongoing}</p>
-            </div>
-            <div>
-              <p className="text-default-500">Projects</p>
-              <p className="text-2xl font-bold">
-                {employeeData.stats.projects}
-              </p>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Projects */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">Projects</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {employeeData.projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              id={project.id}
-              customer={project.customer}
-              status={project.status}
-              service={project.service}
-              amount={project.amount}
-              date={project.date}
-              address={project.address}
-              progress={project.progress}
-              color={project.color}
-            />
-          ))}
-        </div>
-      </div>
-
       <EmployeeModal
         isOpen={isModalOpen}
         onOpenChange={handleModalClose}

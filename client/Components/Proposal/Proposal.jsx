@@ -105,7 +105,7 @@ function App() {
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <div className="flex-1">
-        <div className="p-6 space-y-6">
+        <div className=" space-y-6">
           {/* Page Header */}
           <DashboardHeader
             title="Proposal"

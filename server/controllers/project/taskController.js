@@ -143,8 +143,34 @@ const createTask = async (req, res) => {
     };
 
     // Only add assignedTo if it's not empty
-    if (assignedTo && assignedTo.trim() !== "") {
-      taskData.assignedTo = assignedTo;
+    if (assignedTo && assignedTo.length > 0) {
+      let assignedArr = assignedTo;
+      if (typeof assignedTo === "string") {
+        try {
+          assignedArr = JSON.parse(assignedTo);
+        } catch {
+          assignedArr = [assignedTo];
+        }
+      }
+      // Handle double-stringified array (e.g., [ '["id1","id2"]' ])
+      while (
+        Array.isArray(assignedArr) &&
+        assignedArr.length === 1 &&
+        typeof assignedArr[0] === "string" &&
+        assignedArr[0].startsWith("[")
+      ) {
+        try {
+          assignedArr = JSON.parse(assignedArr[0]);
+        } catch {
+          break;
+        }
+      }
+      // Ensure assignedArr is a flat array of strings
+      if (Array.isArray(assignedArr)) {
+        taskData.assignedTo = assignedArr.flat().filter(Boolean);
+      } else {
+        taskData.assignedTo = [assignedArr];
+      }
     }
 
     // Add end date if provided and not empty
@@ -222,7 +248,37 @@ const updateTask = async (req, res) => {
     if (startDate) taskData.startDate = new Date(startDate);
     if (endDate) taskData.endDate = new Date(endDate);
     if (status) taskData.status = status;
-    if (assignedTo) taskData.assignedTo = assignedTo;
+
+    // Robustly parse assignedTo for all possible cases (array, stringified array, double-stringified array)
+    if (assignedTo && assignedTo.length > 0) {
+      let assignedArr = assignedTo;
+      if (typeof assignedTo === "string") {
+        try {
+          assignedArr = JSON.parse(assignedTo);
+        } catch {
+          assignedArr = [assignedTo];
+        }
+      }
+      // Handle double-stringified array (e.g., [ '["id1","id2"]' ])
+      while (
+        Array.isArray(assignedArr) &&
+        assignedArr.length === 1 &&
+        typeof assignedArr[0] === "string" &&
+        assignedArr[0].startsWith("[")
+      ) {
+        try {
+          assignedArr = JSON.parse(assignedArr[0]);
+        } catch {
+          break;
+        }
+      }
+      // Ensure assignedArr is a flat array of strings
+      if (Array.isArray(assignedArr)) {
+        taskData.assignedTo = assignedArr.flat().filter(Boolean);
+      } else {
+        taskData.assignedTo = [assignedArr];
+      }
+    }
 
     // Add file attachments if provided (handled by middleware)
     if (req.beforeAttachments && req.beforeAttachments.length > 0) {
@@ -441,8 +497,10 @@ const updateProjectTaskCounts = async (projectId) => {
     // Get unique assigned employees from all tasks
     const assignedEmployeeIds = new Set();
     tasks.forEach((task) => {
-      if (task.assignedTo && task.assignedTo._id) {
-        assignedEmployeeIds.add(task.assignedTo._id.toString());
+      if (Array.isArray(task.assignedTo)) {
+        task.assignedTo.forEach((emp) => {
+          if (emp && emp._id) assignedEmployeeIds.add(emp._id.toString());
+        });
       }
     });
 

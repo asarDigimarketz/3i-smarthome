@@ -1,22 +1,35 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Card } from "@heroui/card";
-import { Chip } from "@heroui/chip";
 import { Progress } from "@heroui/progress";
-import Link from "next/link";
 import { Phone } from "lucide-react";
 import axios from "axios";
-import { useRouter } from "next/navigation";
 import { Avatar, AvatarGroup } from "@heroui/avatar";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/dropdown";
+import { Button } from "@heroui/button";
+import { addToast } from "@heroui/toast";
+import { ChevronDown, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export function ProjectCards({
   serviceFilter,
   dateRange,
   statusFilter,
   searchValue,
+  page = 1,
+  setTotalPages,
 }) {
-  const router = useRouter();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusLoading, setStatusLoading] = useState({});
+  const [projectStatuses, setProjectStatuses] = useState({});
+  const router = useRouter();
 
   // Build query params for backend filtering
   const buildQueryParams = () => {
@@ -30,9 +43,9 @@ export function ProjectCards({
       params.push(`startDate=${encodeURIComponent(dateRange.start)}`);
       params.push(`endDate=${encodeURIComponent(dateRange.end)}`);
     }
-    // Always add limit=20 as the last param
-    params.push("limit=20");
-    return params.length ? `?${params.join("&")}` : "?limit=20";
+    params.push(`page=${page}`);
+    params.push("limit=12");
+    return params.length ? `?${params.join("&")}` : "?limit=12";
   };
 
   // Fetch projects from API with filters
@@ -57,7 +70,9 @@ export function ProjectCards({
             proposalId: project.proposalId || "",
             location:
               project.fullAddress ||
-              `${project.address?.addressLine}, ${project.address?.city}`,
+              `${project.address?.addressLine}, ${project.address?.city} ${
+                project.address?.district || ""
+              } - ${project.address?.pincode || ""}`,
             service: project.services,
             amount: new Intl.NumberFormat("en-IN", {
               style: "currency",
@@ -80,6 +95,9 @@ export function ProjectCards({
         );
 
         setProjects(transformedProjects);
+        if (setTotalPages && response.data.pagination) {
+          setTotalPages(response.data.pagination.total || 1);
+        }
       }
     } catch (error) {
       console.error("Fetch projects error:", error);
@@ -199,18 +217,7 @@ export function ProjectCards({
   useEffect(() => {
     fetchProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serviceFilter, dateRange, statusFilter, searchValue]);
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "InProgress":
-        return "bg-blue-100 text-blue-600";
-      case "Completed":
-        return "bg-green-100 text-green-600";
-      default:
-        return "bg-gray-100 text-gray-600";
-    }
-  };
+  }, [serviceFilter, dateRange, statusFilter, searchValue, page]);
 
   const getProgressPercent = (progress) => {
     if (!progress) return 0;
@@ -224,6 +231,45 @@ export function ProjectCards({
       return total > 0 ? (current / total) * 100 : 0;
     }
     return 0;
+  };
+
+  const statusOptions = [
+    { label: "New", value: "new" },
+    { label: "In Progress", value: "in-progress" },
+    { label: "Completed", value: "completed" },
+    { label: "Done", value: "done" },
+    { label: "Cancelled", value: "cancelled" },
+  ];
+
+  const handleStatusChange = async (projectId, newStatus) => {
+    setStatusLoading((prev) => ({ ...prev, [projectId]: true }));
+    try {
+      const res = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/field`,
+        { field: "projectStatus", value: newStatus },
+        { headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY } }
+      );
+      if (res.data.success) {
+        setProjectStatuses((prev) => ({ ...prev, [projectId]: newStatus }));
+        // Optionally show success toast
+        addToast({
+          title: "Success",
+          description: "Project status updated successfully",
+          status: "success",
+          color: "success",
+        });
+      }
+    } catch (err) {
+      // Optionally show error toast
+      addToast({
+        title: "Error",
+        description: "Failed to update project status",
+        status: "error",
+        color: "error",
+      });
+    } finally {
+      setStatusLoading((prev) => ({ ...prev, [projectId]: false }));
+    }
   };
 
   if (loading) {
@@ -245,20 +291,64 @@ export function ProjectCards({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((project) => (
-        <Link href={`/dashboard/task?projectId=${project.id}`} key={project.id}>
-          {" "}
-          <Card
-            key={project.id}
-            className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-          >
+        <div
+          key={project.id}
+          className="cursor-pointer"
+          onClick={() => router.push(`/dashboard/task?projectId=${project.id}`)}
+        >
+          <Card className="overflow-hidden hover:shadow-lg transition-shadow">
             <div
               className={`p-6 ${project.color} bg-gradient-to-br from-opacity-80 to-opacity-100 text-white`}
             >
               <div className="flex justify-between items-start gap-4">
                 <div>
-                  <Chip className={getStatusColor(project.status)} size="sm">
-                    {project.status}
-                  </Chip>
+                  <Dropdown radius="sm" placement="bottom-start">
+                    <DropdownTrigger>
+                      <Button
+                        className={`px-3 py-1 rounded-sm border border-white/10 text-white text-sm font-medium bg-opacity-80 bg-white/20 hover:bg-white/20`}
+                        disabled={statusLoading[project.id]}
+                        type="button"
+                        variant="faded"
+                        size="sm"
+                        endContent={<ChevronDown className="w-4 h-4" />}
+                        onClick={(e) => {
+                          if (e.stopPropagation) e.stopPropagation();
+                        }}
+                      >
+                        {statusLoading[project.id]
+                          ? "Updating..."
+                          : statusOptions.find(
+                              (opt) =>
+                                opt.value ===
+                                (projectStatuses[project.id] ||
+                                  project.status.toLowerCase())
+                            )?.label || project.status}
+                      </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu
+                      aria-label="Project Status"
+                      className="w-48 rounded-sm mt-1"
+                      radius="sm"
+                    >
+                      {statusOptions.map((opt) => (
+                        <DropdownItem
+                          key={opt.value}
+                          onClick={(e) => {
+                            if (e.stopPropagation) e.stopPropagation();
+                            handleStatusChange(project.id, opt.value);
+                          }}
+                          endContent={
+                            (projectStatuses[project.id] ||
+                              project.status.toLowerCase()) === opt.value ? (
+                              <Check className="w-4 h-4" />
+                            ) : null
+                          }
+                        >
+                          {opt.label}
+                        </DropdownItem>
+                      ))}
+                    </DropdownMenu>
+                  </Dropdown>
                   <h3 className="text-2xl font-bold mt-4 flex items-center gap-3">
                     {project.customerName} <Phone className="w-5 h-5 mt-1" />
                   </h3>
@@ -292,17 +382,17 @@ export function ProjectCards({
             </div>
 
             <div className="p-4 flex justify-between items-center">
-              <AvatarGroup isBordered max={3}>
+              <AvatarGroup isBordered max={8}>
                 {project.avatars.map((avatar, index) => (
                   <Avatar key={index} src={avatar} />
                 ))}
               </AvatarGroup>
               <div className="text-[#272523] text-lg font-medium">
-                {project.totalTasks || 0} / {project.completedTasks || 0}{" "}
+                {project.completedTasks || 0} / {project.totalTasks || 0}{" "}
               </div>
             </div>
           </Card>
-        </Link>
+        </div>
       ))}
     </div>
   );

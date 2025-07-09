@@ -11,6 +11,7 @@ import { ProjectCards } from "./ProjectCards.jsx";
 import { Plus, Search } from "lucide-react";
 import { DateRangePicker } from "@heroui/date-picker";
 import DashboardHeader from "../header/DashboardHeader.jsx";
+import { Pagination } from "@heroui/pagination";
 
 export function ProjectsPage() {
   const { data: session } = useSession();
@@ -28,6 +29,10 @@ export function ProjectsPage() {
   const [serviceFilter, setServiceFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("");
   const [searchValue, setSearchValue] = useState("");
+
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Check user permissions on component mount
   useEffect(() => {
@@ -82,7 +87,7 @@ export function ProjectsPage() {
   const handleSearchChange = (e) => setSearchValue(e.target.value);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div>
       <div className="mb-6">
         <DashboardHeader
           title="Projects"
@@ -146,14 +151,24 @@ export function ProjectsPage() {
         <div className="bg-brand-light-red rounded-lg mb-6 p-4">
           <ProposalFilters onServiceChange={handleServiceChange} />
         </div>
-
         <ProjectCards
           userPermissions={userPermissions}
           serviceFilter={serviceFilter}
           dateRange={dateRange}
           statusFilter={statusFilter}
           searchValue={searchValue}
+          page={page}
+          setTotalPages={setTotalPages}
         />
+        <div className="flex justify-center mt-6">
+          <Pagination
+            total={totalPages}
+            page={page}
+            onChange={setPage}
+            showControls
+            radius="sm"
+          />
+        </div>
       </div>
     </div>
   );

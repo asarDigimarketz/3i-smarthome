@@ -181,7 +181,7 @@ const ProjectDetails = () => {
   return (
     <div className="w-full">
       {renderProjectSelector()}
-      <Card className="bg-[#F9E6E78A] p-2 sm:p-4">
+      <div className="bg-[#F9E6E78A] p-2 sm:p-4 rounded-md">
         <div className="p-2 sm:p-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
             <div className="flex flex-col gap-1 sm:gap-3">
@@ -306,7 +306,7 @@ const ProjectDetails = () => {
             </Button>
           </Link>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };
