@@ -9,8 +9,9 @@ import Link from "next/link";
 import { StatusSelect } from "./StatusSelect.jsx";
 import { ServicesSelect } from "./ServiceSelect.jsx";
 import DashboaardHeader from "../header/DashboardHeader.jsx";
-import { Upload } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { addToast } from "@heroui/toast";
@@ -18,7 +19,8 @@ import { addToast } from "@heroui/toast";
 export function AddProposalPage({ isEdit = false, proposalId = null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]); // For new uploads (multiple)
+  const [removedAttachments, setRemovedAttachments] = useState([]); // For removing existing attachments (edit mode)
   const [amountOptions, setAmountOptions] = useState([]);
   const [formData, setFormData] = useState({
     customerName: "",
@@ -37,7 +39,150 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     status: "Warm",
     comment: "",
     date: new Date().toISOString().split("T")[0],
+    attachments: [],
   });
+
+  // Autocomplete states for customer search
+  const [customerOptions, setCustomerOptions] = useState([]);
+  const [emailInput, setEmailInput] = useState("");
+  const [contactInput, setContactInput] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounce function for API calls
+  const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  // Fetch customers by email or contact (suggest by either field, deduplicate, prioritize exact matches)
+  const fetchCustomers = async (search) => {
+    if (!search || search.length < 2) {
+      setCustomerOptions([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await axios.get(
+        `${
+          process.env.NEXT_PUBLIC_API_URL
+        }/api/customers?search=${encodeURIComponent(search)}`,
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+          },
+        }
+      );
+
+      let customers = response.data.data?.customers || [];
+
+      // Filter for matches in either field
+      let filtered = customers.filter(
+        (c) =>
+          (c.email && c.email.toLowerCase().includes(search.toLowerCase())) ||
+          (c.contactNumber && c.contactNumber.includes(search))
+      );
+
+      // Prioritize exact matches
+      filtered = [
+        ...filtered.filter(
+          (c) =>
+            c.email?.toLowerCase() === search.toLowerCase() ||
+            c.contactNumber === search
+        ),
+        ...filtered.filter(
+          (c) =>
+            c.email?.toLowerCase() !== search.toLowerCase() &&
+            c.contactNumber !== search
+        ),
+      ];
+
+      // Deduplicate by _id
+      const seen = new Set();
+      filtered = filtered.filter((c) => {
+        if (seen.has(c._id)) return false;
+        seen.add(c._id);
+        return true;
+      });
+
+      setCustomerOptions(filtered);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      setCustomerOptions([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced version of fetchCustomers
+  const debouncedFetchCustomers = debounce(fetchCustomers, 300);
+
+  // When a customer is selected, autofill the form
+  const autofillCustomer = (customer) => {
+    if (!customer) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      customerName: customer.customerName || "",
+      contactNumber: customer.contactNumber || "",
+      email: customer.email || "",
+      addressLine: customer.address?.addressLine || "",
+      city: customer.address?.city || "",
+      district: customer.address?.district || "",
+      state: customer.address?.state || "",
+      country: customer.address?.country || "",
+      pincode: customer.address?.pincode || "",
+    }));
+
+    // Update input values
+    setEmailInput(customer.email || "");
+    setContactInput(customer.contactNumber || "");
+  };
+
+  // Handle customer selection from autocomplete
+  const handleCustomerSelection = (key) => {
+    if (!key) {
+      setSelectedCustomer(null);
+      return;
+    }
+
+    const customer = customerOptions.find((c) => c._id === key);
+    if (customer) {
+      setSelectedCustomer(customer);
+      autofillCustomer(customer);
+    }
+  };
+
+  // Handle manual input changes
+  const handleEmailInputChange = (value) => {
+    setEmailInput(value);
+    setFormData((prev) => ({ ...prev, email: value }));
+
+    // Clear selection if input doesn't match selected customer
+    if (selectedCustomer && selectedCustomer.email !== value) {
+      setSelectedCustomer(null);
+    }
+
+    // Search for customers
+    debouncedFetchCustomers(value);
+  };
+
+  const handleContactInputChange = (value) => {
+    setContactInput(value);
+    setFormData((prev) => ({ ...prev, contactNumber: value }));
+
+    // Clear selection if input doesn't match selected customer
+    if (selectedCustomer && selectedCustomer.contactNumber !== value) {
+      setSelectedCustomer(null);
+    }
+
+    // Search for customers
+    debouncedFetchCustomers(value);
+  };
 
   // Fetch proposal data for edit mode
   useEffect(() => {
@@ -57,10 +202,10 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
           },
         }
       );
-
       if (response.data.success) {
         const proposal = response.data.data.proposal;
-        setFormData({
+        setFormData((prev) => ({
+          ...prev,
           customerName: proposal.customerName || "",
           contactNumber: proposal.contactNumber || "",
           email: proposal.email || "",
@@ -79,7 +224,14 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
           date: proposal.date
             ? new Date(proposal.date).toISOString().split("T")[0]
             : "",
-        });
+          attachments: Array.isArray(proposal.attachments)
+            ? proposal.attachments
+            : [],
+        }));
+
+        // Update input values for edit mode
+        setEmailInput(proposal.email || "");
+        setContactInput(proposal.contactNumber || "");
 
         if (proposal.amountOptions) {
           setAmountOptions(proposal.amountOptions);
@@ -105,40 +257,60 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     }));
   };
 
-  // Handle file selection
+  // Handle file selection (multiple)
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      const allowedTypes = [
-        "application/pdf",
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ];
+    const files = Array.from(e.target.files);
+    // Validate each file
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const maxSize = 10 * 1024 * 1024;
+    const validFiles = files.filter((file) => {
       if (!allowedTypes.includes(file.type)) {
         addToast({
           title: "Invalid File Type",
-          description: "Please select a valid file (PDF, JPEG, PNG, DOC, DOCX)",
+          description: `File ${file.name} is not a supported type`,
           color: "danger",
         });
-        return;
+        return false;
       }
-
-      // Validate file size (10MB)
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > maxSize) {
         addToast({
           title: "File Too Large",
-          description: "File size must be less than 10MB",
+          description: `File ${file.name} exceeds 10MB limit`,
           color: "danger",
         });
-        return;
+        return false;
       }
+      return true;
+    });
+    setSelectedFiles((prev) => [...prev, ...validFiles]);
+    e.target.value = null;
+  };
 
-      setSelectedFile(file);
-    }
+  // Remove a new file before upload
+  const handleRemoveSelectedFile = (index) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Remove an existing attachment (edit mode)
+  const handleRemoveExistingAttachment = (index) => {
+    if (!formData.attachments || !formData.attachments[index]) return;
+    setRemovedAttachments((prev) => [...prev, formData.attachments[index]]);
+    setFormData((prev) => {
+      const newAttachments = Array.isArray(prev.attachments)
+        ? prev.attachments.filter((_, i) => i !== index)
+        : [];
+      return {
+        ...prev,
+        attachments: newAttachments,
+      };
+    });
   };
 
   // Handle form submission
@@ -218,9 +390,23 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
         : [...amountOptions, currentAmountFormatted];
       submitData.append("amountOptions", JSON.stringify(updatedAmountOptions));
 
-      // Add file if selected
-      if (selectedFile) {
-        submitData.append("attachment", selectedFile);
+      // Add files if selected (use correct field name)
+      if (selectedFiles.length > 0) {
+        selectedFiles.forEach((file) => {
+          submitData.append("attachments", file);
+        });
+      }
+
+      // Add removed attachments for edit mode (send as filenames, not objects, and filter out nulls)
+      if (isEdit && removedAttachments.length > 0) {
+        const filenames = removedAttachments
+          .map(
+            (att) => att && (att.filename || (att._doc && att._doc.filename))
+          )
+          .filter(Boolean); // Remove null/undefined
+        if (filenames.length > 0) {
+          submitData.append("removeAttachments", JSON.stringify(filenames));
+        }
       }
 
       // Make API call
@@ -273,7 +459,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
   };
 
   return (
-    <div className="container">
+    <div className="">
       <div className="mb-6">
         <DashboaardHeader title={isEdit ? "Edit Proposal" : "Add Proposal"} />
       </div>
@@ -305,37 +491,95 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               <label className="block text-gray-700 mb-2">
                 Contact Number *
               </label>
-              <Input
-                placeholder="Contact Number"
-                radius="sm"
-                variant="bordered"
+              <Autocomplete
+                label=""
+                placeholder="Enter contact number"
+                inputValue={contactInput}
+                onInputChange={handleContactInputChange}
+                selectedKey={selectedCustomer?._id}
+                onSelectionChange={handleCustomerSelection}
+                items={customerOptions}
+                allowsCustomValue
+                isRequired
+                fullWidth
                 className="w-full"
                 classNames={{
-                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                  base: "w-full",
+                  listboxWrapper: "max-h-[200px]",
+                  selectorButton: "text-default-500",
                 }}
-                value={formData.contactNumber}
-                onChange={(e) =>
-                  handleInputChange("contactNumber", e.target.value)
-                }
-                required
-              />
+                inputProps={{
+                  classNames: {
+                    inputWrapper: "h-[50px] border-[#E0E5F2]",
+                  },
+                }}
+                size="lg"
+                radius="sm"
+                variant="bordered"
+                isLoading={isSearching}
+                menuTrigger="input"
+              >
+                {(item) => (
+                  <AutocompleteItem
+                    key={item._id}
+                    textValue={item.contactNumber}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-small font-medium">
+                        {item.contactNumber}
+                      </span>
+                      <span className="text-tiny text-default-400">
+                        {item.customerName} • {item.email}
+                      </span>
+                    </div>
+                  </AutocompleteItem>
+                )}
+              </Autocomplete>
             </div>
 
             <div>
               <label className="block text-gray-700 mb-2">Email Id *</label>
-              <Input
-                placeholder="Email Id"
-                type="email"
-                radius="sm"
-                variant="bordered"
+              <Autocomplete
+                label=""
+                placeholder="Enter email address"
+                inputValue={emailInput}
+                onInputChange={handleEmailInputChange}
+                selectedKey={selectedCustomer?._id}
+                onSelectionChange={handleCustomerSelection}
+                items={customerOptions}
+                allowsCustomValue
+                isRequired
+                fullWidth
                 className="w-full"
                 classNames={{
-                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                  base: "w-full",
+                  listboxWrapper: "max-h-[200px]",
+                  selectorButton: "text-default-500",
                 }}
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                required
-              />
+                inputProps={{
+                  classNames: {
+                    inputWrapper: "h-[50px] border-[#E0E5F2]",
+                  },
+                }}
+                size="lg"
+                radius="sm"
+                variant="bordered"
+                isLoading={isSearching}
+                menuTrigger="input"
+              >
+                {(item) => (
+                  <AutocompleteItem key={item._id} textValue={item.email}>
+                    <div className="flex flex-col">
+                      <span className="text-small font-medium">
+                        {item.email}
+                      </span>
+                      <span className="text-tiny text-default-400">
+                        {item.customerName} • {item.contactNumber}
+                      </span>
+                    </div>
+                  </AutocompleteItem>
+                )}
+              </Autocomplete>
             </div>
 
             <div>
@@ -456,6 +700,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               <ServicesSelect
                 value={formData.services}
                 onChange={(value) => handleInputChange("services", value)}
+                aria-label="Select service"
               />
             </div>
             <div>
@@ -463,6 +708,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               <StatusSelect
                 value={formData.status}
                 onChange={(value) => handleInputChange("status", value)}
+                aria-label="Select status"
               />
             </div>
 
@@ -473,6 +719,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               <div className="space-y-2">
                 <Select
                   placeholder="Select or enter amount"
+                  aria-label="Select project amount"
                   radius="sm"
                   variant="bordered"
                   className="w-full"
@@ -595,11 +842,13 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
             <div className="col-span-1 md:col-span-2 grid gap-y-4">
               <div className="flex items-center gap-4">
                 <label className="block text-gray-700 mb-2">
-                  Project Attachment
+                  Project Attachments
                 </label>
                 <input
                   type="file"
+                  name="attachments"
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  multiple
                   onChange={handleFileChange}
                   className="hidden"
                   id="file-upload"
@@ -616,11 +865,69 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                   </Button>
                 </label>
               </div>
-              <span className="text-gray-500 text-xs justify-center">
-                {selectedFile
-                  ? selectedFile.name
-                  : "*Attach project docs/pdf/jpeg/png"}
-              </span>
+              {/* List all attachments (existing and new) */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {/* Existing attachments (edit mode) */}
+                {Array.isArray(formData.attachments) &&
+                  formData.attachments.map((att, idx) => (
+                    <div
+                      key={att._id || att.url || att.filename}
+                      className="flex items-center bg-gray-100 rounded px-2 py-1"
+                    >
+                      <a
+                        href={
+                          att.url && att.url.startsWith("http")
+                            ? att.url
+                            : att.attachmentUrl || `/${att.url || att.filename}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline max-w-xs truncate"
+                        download={att.originalName || true}
+                        title={att.originalName || "Attachment"}
+                      >
+                        {att.originalName || att.filename || "Attachment"}
+                      </a>
+                      <Button
+                        type="button"
+                        isIconOnly
+                        color="primary"
+                        className="ml-2"
+                        onPress={() => handleRemoveExistingAttachment(idx)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                {/* New files (not yet uploaded) */}
+                {selectedFiles.map((file, idx) => (
+                  <div
+                    key={file.name + idx}
+                    className="flex items-center bg-gray-100 rounded px-2 py-1"
+                  >
+                    <span className="truncate max-w-xs" title={file.name}>
+                      {file.name}
+                    </span>
+                    <Button
+                      type="button"
+                      size="xs"
+                      color="primary"
+                      variant="light"
+                      className="ml-2"
+                      onPress={() => handleRemoveSelectedFile(idx)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                {(!Array.isArray(formData.attachments) ||
+                  formData.attachments.length === 0) &&
+                  selectedFiles.length === 0 && (
+                    <span className="text-gray-500 text-xs">
+                      *Attach project docs/pdf/jpeg/png
+                    </span>
+                  )}
+              </div>
             </div>
           </div>
 

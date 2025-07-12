@@ -103,9 +103,9 @@ function App() {
   };
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
-      <div className="flex-1">
-        <div className=" space-y-6">
+    <div className="flex bg-gray-50 min-h-screen overflow-x-auto">
+      <div className="flex-1 min-w-0">
+        <div className="space-y-6">
           {/* Page Header */}
           <DashboardHeader
             title="Proposal"
@@ -135,6 +135,7 @@ function App() {
                 size="md"
                 variant="bordered"
                 className="w-50"
+                aria-label="Proposal date range"
                 classNames={{
                   base: "bg-white",
                   inputWrapper: "border-gray-300 hover:border-gray-400",
@@ -168,17 +169,19 @@ function App() {
           </div>
 
           {/* Components with box shadow */}
-          <div className="space-y-6 bg-white rounded-xl shadow-lg p-6">
+          <div className="space-y-6 bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
             <div className="">
               <ProposalFilters onServiceChange={handleServiceChange} />
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-x-auto">
               <ProposalTable
                 searchQuery={debouncedSearchQuery}
                 statusFilter={statusFilter}
                 dateRange={dateRange}
                 serviceFilter={serviceFilter}
                 userPermissions={userPermissions}
+                page={currentPage}
+                setTotalPages={setTotalPages}
               />
             </div>
             <div className="flex justify-end mt-6">

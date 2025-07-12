@@ -19,7 +19,7 @@ export default function ClientProviders({
           toastOffset={16}
           toastProps={{
             variant: "flat",
-            radius: "lg",
+            radius: "sm",
             timeout: 2000,
             shouldShowTimeoutProgress: true,
             // classNames: {

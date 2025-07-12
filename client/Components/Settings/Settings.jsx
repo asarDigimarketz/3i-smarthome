@@ -6,8 +6,10 @@ import General from "./General/General";
 import EmailConfiguration from "./EmailConfiguration/EmailConfiguration";
 import UserManagement from "./RolesResponsiblity/RolesResponsiblity.jsx";
 import axios from "axios";
+import DashboardHeader from "../header/DashboardHeader.jsx";
+import React from "react";
 
-export default function HotelManagementInterface() {
+export default function SettingsInterface() {
   const [selectedTab, setSelectedTab] = useState("general");
 
   const [hotelData, setHotelData] = useState(null);
@@ -54,27 +56,31 @@ export default function HotelManagementInterface() {
     { key: "general", title: "General" },
     { key: "email", title: "Email Configuration" },
     { key: "user-management", title: "User Management" },
+    { key: "firebase", title: "Firebase Notification" }, // Added tab
   ];
 
   return (
-    <section
-      aria-label="Hotel Management Settings"
-      className="max-w-[1440px] mx-auto"
-    >
+    <section aria-label="3i smart home Settings" className="">
+      <div className="px-4 lg:px-6 pt-6 pb-2 mb-6">
+        <DashboardHeader
+          title="Settings"
+          description="Configure your system preferences"
+        />
+      </div>
       <nav
         aria-label="Settings Navigation"
         className="bg-primary rounded-lg overflow-x-auto shadow-sm mx-4 lg:mx-6 mb-2"
       >
-        <div className="min-w-max lg:max-w-[70rem] mx-auto">
+        <div className=" mx-auto">
           <div className="flex flex-nowrap">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setSelectedTab(tab.key)}
                 className={cn(
-                  "px-4 lg:px-6 py-3 lg:py-4 text-sm font-medium transition-colors whitespace-nowrap",
+                  "px-4 lg:px-10 py-3 lg:py-4 text-sm font-medium transition-colors whitespace-nowrap",
                   selectedTab === tab.key
-                    ? "bg-white text-primary font-[700] rounded-t-lg mt-3"
+                    ? "bg-white text-primary font-[700] rounded-md m-[2px]"
                     : "text-white hover:bg-primary"
                 )}
               >
@@ -97,6 +103,18 @@ export default function HotelManagementInterface() {
           )}
           {selectedTab === "email" && <EmailConfiguration />}
           {selectedTab === "user-management" && <UserManagement />}
+          {selectedTab === "firebase" && (
+            <React.Suspense
+              fallback={<div>Loading Firebase Notification Setup...</div>}
+            >
+              {typeof window !== "undefined" &&
+                (require("./FirebaseNotificationSetup.jsx").default
+                  ? React.createElement(
+                      require("./FirebaseNotificationSetup.jsx").default
+                    )
+                  : null)}
+            </React.Suspense>
+          )}
         </div>
       </div>
     </section>

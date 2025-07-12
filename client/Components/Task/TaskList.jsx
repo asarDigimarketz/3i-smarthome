@@ -213,7 +213,7 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
   const formattedEndDate = formatDate(endDate);
 
   return (
-    <Card className="mb-4 sm:mb-6 bg-[#fff] border border-[#D1D1D1] rounded-xl shadow-none w-full transition-shadow hover:shadow-lg focus-within:shadow-lg group relative pb-10">
+    <Card className="mb-4 sm:mb-6 bg-[#fff] border border-[#D1D1D1] rounded-md shadow-none w-full transition-shadow hover:shadow-lg focus-within:shadow-lg group relative pb-10">
       <div className="flex flex-col sm:flex-row items-start justify-between px-4">
         <div className="flex items-center justify-start py-2 w-full sm:w-auto">
           <div className="items-start"> {getStatusIcon()}</div>

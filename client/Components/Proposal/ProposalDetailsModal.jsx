@@ -438,7 +438,7 @@ const ProposalDetailsModal = ({
           </div>
         ) : (
           <>
-            <Dropdown>
+            <Dropdown radius="md">
               <DropdownTrigger>
                 <Button
                   variant="bordered"
@@ -504,7 +504,7 @@ const ProposalDetailsModal = ({
           }}
         />
       ) : (
-        <div className="text-black-400 font-medium">
+        <div className="text-black font-[500]">
           {formData.comment || "No comment"}
         </div>
       )}
@@ -583,7 +583,7 @@ const ProposalDetailsModal = ({
                       variant="bordered"
                     />
                   ) : (
-                    <div className="text-gray-900 font-medium">
+                    <div className="text-black font-[500]">
                       {formData.customerName}
                     </div>
                   )}
@@ -592,9 +592,7 @@ const ProposalDetailsModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Date:
                   </label>
-                  <div className="text-gray-900 font-medium">
-                    {formData.date}
-                  </div>
+                  <div className="text-black font-[500]">{formData.date}</div>
                 </div>
               </div>
 
@@ -613,7 +611,7 @@ const ProposalDetailsModal = ({
                       variant="bordered"
                     />
                   ) : (
-                    <div className="text-black-400 font-medium">
+                    <div className="text-black font-[500]">
                       {formData.contactNumber}
                     </div>
                   )}
@@ -632,7 +630,7 @@ const ProposalDetailsModal = ({
                       type="email"
                     />
                   ) : (
-                    <div className="text-black-400 font-medium">
+                    <div className="text-black font-[500]">
                       {formData.email}
                     </div>
                   )}
@@ -644,7 +642,7 @@ const ProposalDetailsModal = ({
                 <label className="text-sm font-medium text-gray-700">
                   Address:
                 </label>
-                <div className="text-black-400 font-medium">
+                <div className="text-black font-[500]">
                   {`${formData.address.addressLine}, ${formData.address.city}, ${formData.address.district}, ${formData.address.state}, ${formData.address.country} - ${formData.address.pincode}`}
                 </div>
               </div>
@@ -655,7 +653,7 @@ const ProposalDetailsModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Service:
                   </label>
-                  <div className="text-black-400 font-medium">
+                  <div className="text-black font-[500]">
                     {formData.services}
                   </div>
                 </div>
@@ -663,7 +661,7 @@ const ProposalDetailsModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Description:
                   </label>
-                  <div className="text-black-400 font-medium text-sm">
+                  <div className="text-black font-[500] text-sm">
                     {formData.projectDescription}
                   </div>
                 </div>
@@ -674,7 +672,7 @@ const ProposalDetailsModal = ({
                 <label className="text-sm font-medium text-gray-700">
                   Size:
                 </label>
-                <div className="text-black-400 font-medium">
+                <div className="text-black font-[500]">
                   {formData.size} <span className="text-gray-500">sqt</span>
                 </div>
               </div>
@@ -693,8 +691,9 @@ const ProposalDetailsModal = ({
                 <Select
                   selectedKeys={new Set([formData.status])}
                   variant="bordered"
-                  radius="full"
+                  radius="md"
                   className="max-w-[160px]"
+                  aria-label="Proposal status"
                   classNames={{
                     trigger: "border-gray-300",
                   }}
@@ -770,6 +769,7 @@ const ProposalDetailsModal = ({
                   onPress={handleSave}
                   className="px-6"
                   disabled={loading}
+                  radius="md"
                 >
                   save
                 </Button>
@@ -777,6 +777,7 @@ const ProposalDetailsModal = ({
                   onPress={handleEdit}
                   className="px-6 bg-[#616161] text-white"
                   disabled={loading}
+                  radius="md"
                 >
                   Edit
                 </Button>
@@ -785,6 +786,7 @@ const ProposalDetailsModal = ({
                     onPress={handleDelete}
                     className="px-6  text-white hover:bg-red-50 bg-[#999999]"
                     disabled={loading}
+                    radius="md"
                   >
                     Delete
                   </Button>

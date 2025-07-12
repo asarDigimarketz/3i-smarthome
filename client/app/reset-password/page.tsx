@@ -1,45 +1,72 @@
-"use client";
+"use client"
 
-import { useState, useEffect, Suspense } from "react";
-import { Input } from "@heroui/input";
-import { Button } from "@heroui/button";
-import { useRouter, useSearchParams } from "next/navigation";
-import { addToast } from "@heroui/toast";
-import { CheckCircle, Lock, Eye, EyeOff } from "lucide-react";
-import Link from "next/link";
-import { validatePassword } from "../../utils/passwordValidation";
-import { getGeneralDetails } from "@/lib/GeneralDetails";
-import Image from "next/image";
+import type React from "react"
+
+import { useState, useEffect, Suspense } from "react"
+import { Input } from "@heroui/input"
+import { Button } from "@heroui/button"
+import { useRouter, useSearchParams } from "next/navigation"
+import { addToast } from "@heroui/toast"
+import { CheckCircle, Lock, Eye, EyeOff, Shield, User } from "lucide-react"
+import Link from "next/link"
+import { validatePassword } from "../../utils/passwordValidation"
+import { getGeneralDetails } from "@/lib/GeneralDetails"
+import Image from "next/image"
 
 const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
   <div className="flex items-center gap-1.5">
-    <div
-      className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${
-        met ? "bg-green-400" : "bg-red-400"
-      }`}
-    />
-    <span
-      className={`transition-colors duration-200 ${
-        met ? "text-green-400" : "text-red-400"
-      }`}
-    >
-      {text}
-    </span>
+    <div className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${met ? "bg-green-400" : "bg-red-400"}`} />
+    <span className={`transition-colors duration-200 ${met ? "text-green-400" : "text-red-400"}`}>{text}</span>
   </div>
-);
+)
+
+const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
+  <div className="fixed inset-0 backdrop-blur-xl bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-purple-900/95 flex flex-col items-center justify-center z-50">
+    <div className="relative w-40 h-40 mb-8">
+      {/* Animated tech rings */}
+      <div className="absolute inset-0 border-2 border-blue-400/60 rounded-full animate-pulse"></div>
+      <div className="absolute inset-4 border-2 border-purple-400/40 rounded-full animate-spin-slow"></div>
+      <div className="absolute inset-8 border-2 border-cyan-400/30 rounded-full animate-spin-reverse"></div>
+
+      {/* Glowing center */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full animate-pulse flex items-center justify-center">
+          {hotelLogo ? (
+            <div className="relative w-10 h-10">
+              <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain" />
+            </div>
+          ) : (
+            <Lock className="w-8 h-8 text-white" />
+          )}
+        </div>
+      </div>
+    </div>
+
+    <h3 className="text-3xl font-bold text-white mb-3 animate-fade-in bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+      Resetting Password
+    </h3>
+    <p className="text-gray-300 text-center max-w-md animate-fade-in-delay text-lg">
+      Securing your account with new credentials...
+    </p>
+
+    <div className="w-80 h-2 bg-slate-800/50 rounded-full mt-8 overflow-hidden backdrop-blur-sm">
+      <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 rounded-full animate-progress-infinite"></div>
+    </div>
+  </div>
+)
 
 const ResetPasswordContent = () => {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  const [hotelLogo, setHotelLogo] = useState<string | null>(null);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
+  const [hotelLogo, setHotelLogo] = useState<string | null>(null)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const token = searchParams.get("token")
 
   useEffect(() => {
     if (!token) {
@@ -47,39 +74,39 @@ const ResetPasswordContent = () => {
         title: "Error",
         description: "Invalid reset link. Please request a new one.",
         color: "danger",
-      });
-      router.push("/forgot-password");
+      })
+      router.push("/forgot-password")
     }
-  }, [token, router]);
+  }, [token, router])
 
   useEffect(() => {
     async function fetchHotelDetails() {
-      const generalData = await getGeneralDetails();
+      const generalData = await getGeneralDetails()
       if (generalData?.logo) {
-        setHotelLogo(generalData.logo);
+        setHotelLogo(generalData.logo)
       }
     }
-    fetchHotelDetails();
-  }, []);
+    fetchHotelDetails()
+  }, [])
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value;
-    setPassword(newPassword);
-    const { errors } = validatePassword(newPassword);
-    setPasswordErrors(errors);
-  };
+    const newPassword = e.target.value
+    setPassword(newPassword)
+    const { errors } = validatePassword(newPassword)
+    setPasswordErrors(errors)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
-    const { isValid } = validatePassword(password);
+    const { isValid } = validatePassword(password)
     if (!isValid) {
       addToast({
         title: "Invalid Password",
         description: "Please ensure your password meets all requirements",
         color: "danger",
-      });
-      return;
+      })
+      return
     }
 
     if (password !== confirmPassword) {
@@ -87,288 +114,305 @@ const ResetPasswordContent = () => {
         title: "Error",
         description: "Passwords do not match.",
         color: "danger",
-      });
-      return;
+      })
+      return
     }
-    setLoading(true);
+    setLoading(true)
 
     try {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword: password }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
       if (response.ok) {
-        setIsSubmitted(true);
+        setIsSubmitted(true)
         addToast({
           title: "Success",
           description: "Your password has been reset successfully.",
           color: "success",
-        });
-        setTimeout(() => router.push("/login"), 3000);
+        })
+        setTimeout(() => router.push("/login"), 3000)
       } else {
         addToast({
           title: "Error",
           description: data.error || "An error occurred. Please try again.",
           color: "danger",
-        });
+        })
       }
     } catch {
       addToast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         color: "danger",
-      });
+      })
     }
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
-  if (!token) return null;
+  if (!token) return null
 
-  return (
-    <div className="flex min-h-screen bg-black">
-      {/* Left Section */}
-      <div className="relative hidden w-1/2 p-8 lg:block">
-        <div className="h-full w-full overflow-hidden rounded-[40px] bg-gradient-to-b from-hotel-primary via-hotel-primary/80 to-black">
-          <div className="flex h-full flex-col items-center justify-center px-8 text-center text-white">
-            {hotelLogo && (
-              <div className="absolute top-12 left-1/2 -translate-x-1/2">
-                <div className="relative w-28 h-28">
-                  <Image
-                    src={hotelLogo}
-                    alt="Hotel Logo"
-                    fill
-                    sizes="(max-width: 768px) 96px, 112px"
-                    priority
-                    className="object-contain drop-shadow-2xl filter brightness-0 invert opacity-90"
-                  />
-                </div>
-              </div>
-            )}
-            <div className="mb-8">
-              <h1 className="text-2xl font-semibold">Hotel Management</h1>
-            </div>
-            <h2 className="mb-6 text-4xl font-bold">Reset Your Password</h2>
-            <p className="mb-12 text-lg">
-              Follow these steps to secure your account.
-            </p>
+  if (isSubmitted) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+        </div>
 
-            <div className="w-full max-w-sm space-y-4">
-              <div className="rounded-lg bg-white/10 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-4">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black">
-                    1
-                  </span>
-                  <span className="text-lg">Enter new password</span>
-                </div>
+        <div className="flex w-full items-center justify-center p-6 relative z-10">
+          <div className="w-full max-w-md">
+            <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl text-center">
+              <div className="mb-8 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg">
+                <CheckCircle className="h-10 w-10 text-white" />
               </div>
-              <div className="rounded-lg bg-white/5 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-4">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white">
-                    2
-                  </span>
-                  <span className="text-lg">Confirm password</span>
-                </div>
-              </div>
-              <div className="rounded-lg bg-white/5 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-4">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white">
-                    3
-                  </span>
-                  <span className="text-lg">Access your account</span>
-                </div>
-              </div>
+              <h2 className="mb-4 text-3xl font-bold text-white">Password Reset Successful</h2>
+              <p className="mb-8 text-gray-300">
+                Your password has been reset successfully. You will be redirected to the login page shortly.
+              </p>
+              <Link
+                href="/login"
+                className="inline-block h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 
+                  hover:from-blue-600 hover:to-purple-700 text-white font-semibold 
+                  rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all 
+                  duration-200 flex items-center justify-center"
+              >
+                Return to Login
+              </Link>
             </div>
           </div>
         </div>
       </div>
+    )
+  }
 
-      {/* Right Section */}
-      <div className="flex w-full items-center justify-center bg-black p-6 lg:w-1/2">
-        <div className="w-full max-w-md rounded-[40px] p-12">
-          <div className="mx-auto max-w-sm">
-            {isSubmitted ? (
-              <div className="text-center">
-                <div className="mb-8 mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500">
-                  <CheckCircle className="h-8 w-8 text-white" />
+  return (
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 relative overflow-hidden">
+      {loading && <LoadingOverlay hotelLogo={hotelLogo} />}
+
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+      </div>
+
+      {/* Left Section - Password Reset Features */}
+      <div className="relative hidden w-1/2 p-8 lg:flex flex-col justify-center">
+        <div className="max-w-lg mx-auto">
+          <div className="text-center mb-12">
+            {hotelLogo && (
+              <div className="mb-8 flex justify-center">
+                <div className="relative w-24 h-24 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-2xl p-4 backdrop-blur-sm border border-white/10">
+                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-2" />
                 </div>
-                <h2 className="mb-2 text-3xl font-bold text-white">
-                  Password Reset Successful
-                </h2>
-                <p className="mb-8 text-gray-400">
-                  Your password has been reset successfully. You will be
-                  redirected to the login page shortly.
-                </p>
-                <Link
-                  href="/login"
-                  className="inline-block rounded-lg bg-white px-6 py-3 text-sm font-medium text-black hover:bg-gray-100 transition-colors"
-                >
-                  Return to Login
-                </Link>
               </div>
-            ) : (
-              <>
-                <h2 className="mb-2 text-3xl font-bold text-white">
-                  Reset Password
-                </h2>
-                <p className="mb-8 text-gray-400">
-                  Enter your new password below to reset your account.
-                </p>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-4">
-                    {/* New Password Input */}
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="password"
-                        className="text-sm font-medium text-gray-200"
-                      >
-                        New Password
-                      </label>
-                      <div className="relative flex items-center">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5 pointer-events-none" />
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={handlePasswordChange}
-                          className={`h-12 w-full pl-10 pr-12 bg-gray-900/50 border ${
-                            passwordErrors.length > 0
-                              ? "border-red-500"
-                              : "border-gray-800"
-                          } text-white placeholder:text-gray-500 focus:border-hotel-primary focus:ring-2 focus:ring-hotel-primary/20 rounded-lg transition-all duration-200`}
-                          placeholder="Enter new password"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 focus:outline-none focus:text-gray-300 transition-colors"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-5 w-5" />
-                          ) : (
-                            <Eye className="h-5 w-5" />
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Password Requirements List */}
-                      <div className="mt-2">
-                        {password && (
-                          <div className="text-xs space-y-1.5">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                              <RequirementItem
-                                met={password.length >= 8}
-                                text="8+ characters"
-                              />
-                              <RequirementItem
-                                met={/[A-Z]/.test(password)}
-                                text="Uppercase letter"
-                              />
-                              <RequirementItem
-                                met={/[a-z]/.test(password)}
-                                text="Lowercase letter"
-                              />
-                              <RequirementItem
-                                met={/\d/.test(password)}
-                                text="Number"
-                              />
-                              <RequirementItem
-                                met={/[@$!%*?&]/.test(password)}
-                                text="Special character"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Confirm Password Input */}
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="confirmPassword"
-                        className="text-sm font-medium text-gray-200"
-                      >
-                        Confirm Password
-                      </label>
-                      <div className="relative flex items-center">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5 pointer-events-none" />
-                        <Input
-                          id="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="h-12 w-full pl-10 pr-12 bg-gray-900/50 border border-gray-800 text-white placeholder:text-gray-500 focus:border-hotel-primary focus:ring-2 focus:ring-hotel-primary/20 rounded-lg transition-all duration-200"
-                          placeholder="Confirm new password"
-                          required
-                          minLength={6}
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 focus:outline-none focus:text-gray-300 transition-colors"
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="h-5 w-5" />
-                          ) : (
-                            <Eye className="h-5 w-5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="h-12 w-full bg-gradient-to-r from-hotel-primary to-hotel-primary/80 hover:from-hotel-primary/90 hover:to-hotel-primary text-white font-medium rounded-lg shadow-lg hover:shadow-hotel-primary/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <div className="flex items-center justify-center">
-                        <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin mr-2" />
-                        Resetting Password...
-                      </div>
-                    ) : (
-                      "Reset Password"
-                    )}
-                  </Button>
-
-                  <p className="text-center text-sm text-gray-400">
-                    Remember your password?{" "}
-                    <Link
-                      href="/login"
-                      className="text-hotel-primary hover:text-hotel-primary/80 font-medium transition-colors hover:underline"
-                    >
-                      Back to Login
-                    </Link>
-                  </p>
-                </form>
-              </>
             )}
+            <h1 className="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Hotel Management
+            </h1>
+            <p className="text-xl text-gray-300 mb-8">Secure Your Account</p>
+          </div>
+
+          <div className="space-y-6">
+            {[
+              {
+                icon: <Lock className="w-6 h-6" />,
+                title: "New Password",
+                description: "Create a strong, secure password",
+                gradient: "from-blue-500 to-cyan-500",
+              },
+              {
+                icon: <Shield className="w-6 h-6" />,
+                title: "Enhanced Security",
+                description: "Advanced password validation",
+                gradient: "from-purple-500 to-pink-500",
+              },
+              {
+                icon: <User className="w-6 h-6" />,
+                title: "Account Access",
+                description: "Regain access to your dashboard",
+                gradient: "from-green-500 to-emerald-500",
+              },
+            ].map((feature, index) => (
+              <div
+                key={index}
+                className="group relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 hover:bg-white/10 transition-all duration-300 hover:transform hover:scale-105"
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center text-white shadow-lg`}
+                  >
+                    {feature.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">{feature.title}</h3>
+                    <p className="text-gray-300 text-sm">{feature.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Section - Reset Password Form */}
+      <div className="flex w-full items-center justify-center p-6 lg:w-1/2 relative">
+        <div className="w-full max-w-md">
+          <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
+            {/* Mobile logo */}
+            {hotelLogo && (
+              <div className="mb-8 flex justify-center lg:hidden">
+                <div className="relative w-20 h-20 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
+                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-1" />
+                </div>
+              </div>
+            )}
+
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-white mb-2">Reset Password</h2>
+              <p className="text-gray-300">Enter your new password below to reset your account</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* New Password Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-200">New Password</label>
+                <div className="relative">
+                  <Input
+                    placeholder="Enter new password"
+                    type={showPassword ? "text" : "password"}
+                    variant="bordered"
+                    radius="lg"
+                    size="lg"
+                    startContent={<Lock className="text-blue-400" />}
+                    endContent={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-blue-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-blue-400/20"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    }
+                    isRequired
+                    value={password}
+                    onChange={handlePasswordChange}
+                    classNames={{
+                      inputWrapper: `bg-transparent ${
+                        passwordErrors.length > 0 ? "border-red-500/40" : "border-blue-400/40"
+                      } focus:border-blue-500 h-[50px]`,
+                      input: "text-white placeholder:text-blue-100",
+                    }}
+                    className="mb-4"
+                  />
+                </div>
+
+                {/* Password Requirements List */}
+                <div className="mt-2">
+                  {password && (
+                    <div className="text-xs space-y-1.5">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <RequirementItem met={password.length >= 8} text="8+ characters" />
+                        <RequirementItem met={/[A-Z]/.test(password)} text="Uppercase letter" />
+                        <RequirementItem met={/[a-z]/.test(password)} text="Lowercase letter" />
+                        <RequirementItem met={/\d/.test(password)} text="Number" />
+                        <RequirementItem met={/[@$!%*?&]/.test(password)} text="Special character" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Confirm Password Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-200">Confirm Password</label>
+                <div className="relative">
+                  <Input
+                    placeholder="Confirm new password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    variant="bordered"
+                    radius="lg"
+                    size="lg"
+                    startContent={<Lock className="text-blue-400" />}
+                    endContent={
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="text-blue-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-blue-400/20"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    }
+                    isRequired
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    classNames={{
+                      inputWrapper: "bg-transparent border-blue-400/40 focus:border-blue-500 h-[50px]",
+                      input: "text-white placeholder:text-blue-100",
+                    }}
+                    className="mb-4"
+                  />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                className="h-12 w-full bg-gradient-to-r from-blue-500 to-purple-600 
+                  hover:from-blue-600 hover:to-purple-700 text-white font-semibold 
+                  rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all 
+                  duration-200 disabled:opacity-50 disabled:cursor-not-allowed border-0"
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                    Resetting Password...
+                  </div>
+                ) : (
+                  "Reset Password"
+                )}
+              </Button>
+
+              <div className="mt-8 text-center">
+                <p className="text-gray-400 text-sm mb-4">
+                  Remember your password?{" "}
+                  <Link
+                    href="/login"
+                    className="text-blue-400 hover:text-blue-300 font-medium transition-colors hover:underline decoration-2 underline-offset-4"
+                  >
+                    Back to Login
+                  </Link>
+                </p>
+                <p className="text-gray-400 text-xs">Secured by advanced encryption</p>
+              </div>
+            </form>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 // Update the loading state to match the theme
 export default function ResetPassword() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-black">
-          <div className="w-8 h-8 border-t-2 border-hotel-primary rounded-full animate-spin"></div>
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900">
+          <div className="relative">
+            <div className="w-12 h-12 border-4 border-blue-400/30 rounded-full animate-spin border-t-blue-400"></div>
+            <div className="absolute inset-0 w-12 h-12 border-4 border-purple-400/30 rounded-full animate-spin-reverse border-t-purple-400"></div>
+          </div>
         </div>
       }
     >
       <ResetPasswordContent />
     </Suspense>
-  );
+  )
 }
-

@@ -103,6 +103,7 @@ const ProjectDetails = () => {
   const renderProjectSelector = () => (
     <div className="mb-4">
       <Select
+        radius="md"
         key={projectId || "no-project"}
         label="Select Project"
         placeholder="Choose a project"
@@ -113,7 +114,20 @@ const ProjectDetails = () => {
       >
         {projects && projects.length > 0 ? (
           projects.map((proj) => (
-            <SelectItem key={proj._id} value={proj._id}>
+            <SelectItem
+              key={proj._id}
+              value={proj._id}
+              radius="md"
+              textValue={`${proj.customerName} - ${proj.services}${
+                proj.projectAmount
+                  ? ` (${new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                      maximumFractionDigits: 0,
+                    }).format(proj.projectAmount)})`
+                  : ""
+              }`}
+            >
               {proj.customerName} - {proj.services}
               {proj.projectAmount
                 ? ` (${new Intl.NumberFormat("en-IN", {
@@ -159,7 +173,7 @@ const ProjectDetails = () => {
     return (
       <div className="w-full">
         {renderProjectSelector()}
-        <Card className="bg-white">
+        <Card className="bg-white rounded-md">
           <div className="p-4 text-center">
             <h3 className="font-semibold">No Project Selected</h3>
             <p className="text-sm text-gray-500">

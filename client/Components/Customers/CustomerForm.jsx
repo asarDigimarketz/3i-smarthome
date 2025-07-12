@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { addToast } from "@heroui/toast";
+import DashboardHeader from "../header/DashboardHeader";
 
 export function CustomerForm({ isEdit = false, customerId = null }) {
   const router = useRouter();
@@ -334,11 +335,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="py-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-red-600">
-          {isEdit ? "Edit Customer" : "Add Customer"}
-        </h1>
+        <DashboardHeader title={isEdit ? "Edit Customer" : "Add Customer"} />
       </div>
 
       <Card className="p-6" shadow="sm">
@@ -354,6 +353,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.customerName}
                 onChange={(e) =>
                   handleInputChange("customerName", e.target.value)
@@ -374,6 +376,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.contactNumber}
                 onChange={(e) =>
                   handleInputChange("contactNumber", e.target.value)
@@ -403,6 +408,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 isInvalid={!!errors.email}
@@ -429,6 +437,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  trigger: "border-[#E0E5F2]  h-[50px]",
+                }}
                 selectedKeys={[formData.status]}
                 onSelectionChange={(keys) => {
                   const selected = Array.from(keys)[0];
@@ -459,6 +470,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.addressLine}
                 onChange={(e) =>
                   handleInputChange("addressLine", e.target.value)
@@ -476,6 +490,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.city}
                 onChange={(e) => handleInputChange("city", e.target.value)}
                 isInvalid={!!errors.city}
@@ -491,6 +508,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.district}
                 onChange={(e) => handleInputChange("district", e.target.value)}
                 isInvalid={!!errors.district}
@@ -506,6 +526,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.state}
                 onChange={(e) => handleInputChange("state", e.target.value)}
                 isInvalid={!!errors.state}
@@ -521,6 +544,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.country}
                 onChange={(e) => handleInputChange("country", e.target.value)}
                 isInvalid={!!errors.country}
@@ -536,6 +562,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 value={formData.pincode}
                 onChange={(e) => handleInputChange("pincode", e.target.value)}
                 isInvalid={!!errors.pincode}
@@ -552,6 +581,9 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                 radius="sm"
                 variant="bordered"
                 className="w-full"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 rows={4}
                 value={formData.notes}
                 onChange={(e) => handleInputChange("notes", e.target.value)}

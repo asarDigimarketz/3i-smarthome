@@ -492,7 +492,7 @@ const Dashboard = () => {
                   <DropdownTrigger size="lg" className="w-64">
                     <Button
                       variant="flat"
-                      radius="lg"
+                      radius="md"
                       startContent={
                         <Calendar className="text-gray-400" size={16} />
                       }
@@ -823,14 +823,16 @@ const Dashboard = () => {
                   Latest project updates and system activities
                 </p>
               </div>
-              <Button
-                isIconOnly
-                variant="light"
-                size="lg"
-                className="hover:bg-primary/10 text-primary transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </Button>
+              <Link href="/dashboard/notifications">
+                <Button
+                  isIconOnly
+                  variant="light"
+                  size="lg"
+                  className="hover:bg-primary/10 text-primary transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+              </Link>
             </div>
 
             {loading ? (
@@ -895,7 +897,7 @@ const Dashboard = () => {
               View All
             </Button>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 ">
             {(recentProjects.length > 0
               ? recentProjects
               : [

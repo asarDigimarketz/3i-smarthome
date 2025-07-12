@@ -343,7 +343,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
   };
 
   return (
-    <Card className="bg-white p-2 sm:p-4">
+    <Card className="bg-white p-2 sm:p-4 rounded-md">
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <Input
@@ -351,6 +351,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             placeholder="Enter task name"
             name="title"
             value={formData.title}
+            radius="md"
             onChange={handleChange}
             isRequired
             className="rounded-lg border-gray-200 w-full"
@@ -362,6 +363,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
           />
           <Textarea
             label="Comment"
+            radius="md"
             placeholder="Enter comment"
             name="comment"
             value={formData.comment}
@@ -378,6 +380,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             <Input
               type="date"
               label="Start Date"
+              radius="md"
               placeholder="Select start date"
               name="startDate"
               value={formData.startDate}
@@ -394,6 +397,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
               type="date"
               label="End Date"
               placeholder="Select end date"
+              radius="md"
               name="endDate"
               value={formData.endDate}
               onChange={handleChange}
@@ -410,7 +414,14 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             label={formData.assignedTo.length ? "" : "Assign To"}
             placeholder="Select assignees"
             selectionMode="multiple"
-            selectedKeys={new Set(formData.assignedTo)}
+            selectedKeys={
+              new Set(
+                formData.assignedTo.filter((id) =>
+                  employees.some((emp) => String(emp._id) === String(id))
+                )
+              )
+            }
+            radius="md"
             onSelectionChange={(keys) =>
               handleSelectChange("assignedTo")([...keys])
             }
@@ -421,6 +432,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             }}
             items={employees}
             isMultiline
+            aria-label="Assign task to employees"
             renderValue={(items) => {
               return items.map((item) => (
                 <div key={item.key} className="flex items-center gap-2">
@@ -463,6 +475,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             label="Status"
             placeholder="Select status"
             selectedKeys={[formData.status]}
+            radius="md"
             onSelectionChange={(keys) =>
               handleSelectChange("status")(Array.from(keys)[0])
             }
@@ -482,7 +495,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
           <p className="text-sm text-gray-500 mb-2">Attachment:</p>
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Before attachments box */}
-            <div className="flex-1 border border-[#EDEDED] rounded-lg p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between mb-2 sm:mb-0">
+            <div className="flex-1 border border-[#EDEDED] rounded-md p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between mb-2 sm:mb-0">
               <div className="flex items-center gap-2 mb-2 min-h-[48px] flex-wrap">
                 {beforeAttachments.map((attachment, index) => (
                   <div key={index} className="relative">
@@ -523,7 +536,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
               </p>
             </div>
             {/* After attachments box */}
-            <div className="flex-1 border border-[#EDEDED] rounded-lg p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between">
+            <div className="flex-1 border border-[#EDEDED] rounded-md p-4 bg-[#fff] min-h-[90px] flex flex-col justify-between">
               <div className="flex items-center gap-2 mb-2 min-h-[48px] flex-wrap">
                 {afterAttachments.map((attachment, index) => (
                   <div key={index} className="relative">
@@ -623,6 +636,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             color="success"
             className="mr-0 sm:mr-2 text-white"
             type="submit"
+            radius="md"
             isLoading={submitting}
             isDisabled={submitting || !projectId}
           >
@@ -631,13 +645,14 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
           <Button
             color="danger"
             variant="light"
+            radius="md"
             onPress={
               task && task._id ? () => setShowDeleteModal(true) : onClose
             }
             isDisabled={submitting}
             type="button"
           >
-            <Trash2 className="text-red-500" />
+            <Trash2 className="text-primary" />
           </Button>
           <DeleteConfirmModal
             isOpen={showDeleteModal}

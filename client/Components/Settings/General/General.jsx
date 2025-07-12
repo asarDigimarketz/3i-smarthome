@@ -244,45 +244,6 @@ const General = ({ initialHotelData }) => {
   //   colorInputRef.current?.click();
   // };
 
-  const handleCleanupOldLogos = async () => {
-    if (!userPermissions.hasEditPermission) {
-      addToast({
-        title: "Access Denied",
-        description: "You don't have permission to perform this action",
-        color: "danger",
-      });
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/settings/general/cleanup-logos`,
-        {},
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        addToast({
-          title: "Success",
-          description: "Old logo files cleaned up successfully!",
-          color: "success",
-        });
-      }
-    } catch (error) {
-      console.error("Error cleaning up old logos:", error);
-      addToast({
-        title: "Error",
-        description:
-          error.response?.data?.message || "Failed to cleanup old logo files",
-        color: "danger",
-      });
-    }
-  };
-
   const LogoPreview = () => (
     <div className="flex flex-col items-center space-y-4">
       {logoPreview && (
@@ -307,8 +268,13 @@ const General = ({ initialHotelData }) => {
       <div className="flex items-center space-x-2">
         <Input
           id="logo-upload"
+          radius="sm"
           type="file"
           className="w-64"
+          variant="bordered"
+          classNames={{
+            inputWrapper: " h-[50px] border-[#E0E5F2]",
+          }}
           placeholder="Upload Logo"
           accept="image/*"
           onChange={handleFileChange}
@@ -368,6 +334,11 @@ const General = ({ initialHotelData }) => {
               Company Name
             </label>
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               id="companyName"
               name="companyName"
               placeholder="Company name"
@@ -380,6 +351,11 @@ const General = ({ initialHotelData }) => {
               GST No
             </label>
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               id="gstNo"
               name="gstNo"
               placeholder="GST No"
@@ -395,6 +371,11 @@ const General = ({ initialHotelData }) => {
               Contact Person
             </label>
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               id="firstName"
               name="firstName"
               placeholder="First Name"
@@ -407,6 +388,11 @@ const General = ({ initialHotelData }) => {
               &nbsp;
             </label>
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               id="lastName"
               name="lastName"
               placeholder="Last Name"
@@ -422,6 +408,11 @@ const General = ({ initialHotelData }) => {
               Mobile No
             </label>
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               id="mobileNo"
               name="mobileNo"
               placeholder="Mobile No"
@@ -434,6 +425,11 @@ const General = ({ initialHotelData }) => {
               Landline No
             </label>
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               id="landlineNo"
               name="landlineNo"
               placeholder="Landline No"
@@ -446,6 +442,11 @@ const General = ({ initialHotelData }) => {
               Email ID
             </label>
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               id="emailId"
               name="emailId"
               type="email"
@@ -460,6 +461,11 @@ const General = ({ initialHotelData }) => {
           <label className="block mb-2">Address</label>
           <div aria-label="Street Address" className="flex space-x-4 mb-4">
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               placeholder="Door No."
               className="w-1/2"
               name="doorNo"
@@ -467,6 +473,11 @@ const General = ({ initialHotelData }) => {
               onChange={handleInputChange}
             />
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               placeholder="Street Name"
               className="w-1/2"
               name="streetName"
@@ -476,6 +487,11 @@ const General = ({ initialHotelData }) => {
           </div>
           <div aria-label="Location Details" className="flex space-x-4 mb-4">
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               placeholder="Pin code"
               className="w-1/2"
               name="pincode"
@@ -483,6 +499,11 @@ const General = ({ initialHotelData }) => {
               onChange={handleInputChange}
             />
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               placeholder="District"
               className="w-1/2"
               name="district"
@@ -492,6 +513,11 @@ const General = ({ initialHotelData }) => {
           </div>
           <div aria-label="Region Information" className="flex space-x-4">
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               placeholder="State"
               className="w-1/2"
               name="state"
@@ -499,6 +525,11 @@ const General = ({ initialHotelData }) => {
               onChange={handleInputChange}
             />
             <Input
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
               placeholder="Country"
               className="w-1/2"
               name="country"

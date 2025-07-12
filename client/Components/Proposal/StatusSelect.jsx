@@ -16,6 +16,7 @@ export function StatusSelect({ value, onChange }) {
       radius="sm"
       variant="bordered"
       className="w-full"
+      aria-label="Select status"
       classNames={{
         trigger: "border-[#E0E5F2]  h-[50px]",
       }}

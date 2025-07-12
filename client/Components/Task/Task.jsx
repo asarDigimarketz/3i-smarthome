@@ -118,7 +118,7 @@ const Task = () => {
   return (
     <div className="min-h-screen  bg-[#F8F9FB]">
       <DashboardHeader title="Task" description="Manage all your Tasks." />
-      <Card className="w-full mx-auto mt-4 shadow-md">
+      <Card className="w-full mx-auto mt-4 shadow-md md:min-h-[600px] bg-white rounded-md">
         <div className="p-2 sm:p-4 md:p-8">
           <div className="flex items-center justify-between mb-4 md:mb-6">
             {!userPermissions.hasAddPermission && (

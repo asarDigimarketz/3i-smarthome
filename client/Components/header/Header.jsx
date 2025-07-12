@@ -10,6 +10,7 @@ import {
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@heroui/badge";
+import Link from "next/link";
 
 const Header = () => {
   const { data: session } = useSession();
@@ -48,23 +49,25 @@ const Header = () => {
       {/* Right Side - Notifications and User */}
       <div className="flex items-center space-x-2 md:space-x-4 mr-3">
         {/* Notification Bell */}
-        <Badge
-          className="bg-white text-primary"
-          content="5+"
-          shape="circle"
-          size="sm"
-        >
-          <Button
-            isIconOnly
-            aria-label="more than 99 notifications"
-            radius="full"
-            variant="light"
-            className="text-white hover:bg-white/10"
-            size="lg"
+        <Link href="/dashboard/notification">
+          <Badge
+            className="bg-white text-primary"
+            content="5+"
+            shape="circle"
+            size="sm"
           >
-            <Bell size={24} />
-          </Button>
-        </Badge>
+            <Button
+              isIconOnly
+              aria-label="more than 99 notifications"
+              radius="full"
+              variant="light"
+              className="text-white hover:bg-white/10"
+              size="lg"
+            >
+              <Bell size={24} />
+            </Button>
+          </Badge>
+        </Link>
 
         {/* User Dropdown */}
         <Dropdown placement="bottom-end">

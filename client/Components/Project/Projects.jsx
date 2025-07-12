@@ -33,6 +33,7 @@ export function ProjectsPage() {
   // Pagination states
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 6; // Show 6 projects per page
 
   // Check user permissions on component mount
   useEffect(() => {
@@ -86,6 +87,11 @@ export function ProjectsPage() {
   const handleDateRangeChange = (range) => setDateRange(range);
   const handleSearchChange = (e) => setSearchValue(e.target.value);
 
+  // Reset page to 1 when filters/search change
+  useEffect(() => {
+    setPage(1);
+  }, [serviceFilter, dateRange, statusFilter, searchValue]);
+
   return (
     <div>
       <div className="mb-6">
@@ -117,6 +123,7 @@ export function ProjectsPage() {
             size="md"
             variant="bordered"
             className="w-50"
+            aria-label="Project date range"
             classNames={{
               base: "bg-white",
               inputWrapper: "border-gray-300 hover:border-gray-400",
@@ -147,7 +154,7 @@ export function ProjectsPage() {
           )}
         </div>
       </div>
-      <div className="space-y-6 bg-white rounded-xl shadow-lg p-6">
+      <div className="space-y-6 bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
         <div className="bg-brand-light-red rounded-lg mb-6 p-4">
           <ProposalFilters onServiceChange={handleServiceChange} />
         </div>
@@ -158,6 +165,7 @@ export function ProjectsPage() {
           statusFilter={statusFilter}
           searchValue={searchValue}
           page={page}
+          pageSize={pageSize}
           setTotalPages={setTotalPages}
         />
         <div className="flex justify-center mt-6">

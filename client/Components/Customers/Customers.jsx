@@ -231,6 +231,7 @@ const Customers = () => {
             size="md"
             variant="bordered"
             className="w-50"
+            aria-label="Filter customers by date range"
             classNames={{
               base: "bg-white",
               inputWrapper: "border-gray-300 hover:border-gray-400",

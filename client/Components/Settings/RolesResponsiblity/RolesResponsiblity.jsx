@@ -362,7 +362,7 @@ export default function RolesResponsibility() {
 
   return (
     <PermissionGuard requiredPermission="settings" requiredAction="view">
-      <div className="container mx-auto p-4 max-w-15xl border rounded-lg bg-white shadow-sm">
+      <div className="mx-auto space-y-8 bg-white rounded-lg p-4 md:p-8 shadow-sm min-h-[811px]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-primary">
@@ -395,6 +395,11 @@ export default function RolesResponsibility() {
                   placeholder="Enter role name (e.g., Manager, Technician, etc.)"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
+                  variant="bordered"
+                  radius="sm"
+                  classNames={{
+                    inputWrapper: " h-[50px] border-[#E0E5F2]",
+                  }}
                   className="max-w-md"
                   isInvalid={!role.trim() && role !== ""}
                   errorMessage={
