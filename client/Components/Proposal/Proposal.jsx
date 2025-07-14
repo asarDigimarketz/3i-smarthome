@@ -9,9 +9,8 @@ import { Pagination } from "@heroui/pagination";
 import { addToast } from "@heroui/toast";
 import { useSession } from "next-auth/react";
 import { StatusDropdown } from "./status-dropdown";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { DateRangePicker } from "@heroui/date-picker";
-import axios from "axios";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 
 function App() {
@@ -71,13 +70,15 @@ function App() {
     checkUserPermissions();
   }, [session]);
 
+  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
     }, 500);
-
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Remove auto-reset on page refresh; user can clear date range with button
 
   // Handle status filter change
   const handleStatusChange = (status) => {
@@ -142,6 +143,22 @@ function App() {
                   input: "text-gray-700",
                   label: "text-gray-600",
                 }}
+                endContent={
+                  dateRange ? (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDateRange(null);
+                      }}
+                      className="flex items-center justify-center p-1 cursor-pointer focus:outline-none"
+                      tabIndex={-1}
+                      role="button"
+                      aria-label="Clear date range"
+                    >
+                      <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                    </span>
+                  ) : null
+                }
               />
               <StatusDropdown onStatusChange={handleStatusChange} />
               {userPermissions.hasAddPermission ? (

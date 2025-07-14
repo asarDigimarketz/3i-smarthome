@@ -823,7 +823,7 @@ const Dashboard = () => {
                   Latest project updates and system activities
                 </p>
               </div>
-              <Link href="/dashboard/notifications">
+              <Link href="/dashboard/notification">
                 <Button
                   isIconOnly
                   variant="light"

@@ -10,7 +10,7 @@ import { Select, SelectItem } from "@heroui/select";
 import { Button } from "@heroui/button";
 import Link from "next/link";
 
-const ProjectDetails = () => {
+const ProjectDetails = ({ serviceFilter = "All" }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
@@ -92,11 +92,24 @@ const ProjectDetails = () => {
     fetchProjectDetails();
   }, [projectId]);
 
+  // Filter projects based on service filter
+  const filteredProjects = projects.filter((proj) => {
+    if (serviceFilter === "All") return true;
+    return proj.services === serviceFilter;
+  });
+
   // Handle project selection change
   const handleProjectChange = (selectedId) => {
     if (selectedId) {
       router.push(`/dashboard/task?projectId=${selectedId}`);
     }
+  };
+
+  // Check if current project matches the service filter
+  const shouldShowProject = () => {
+    if (!project) return false;
+    if (serviceFilter === "All") return true;
+    return project.services === serviceFilter;
   };
 
   // Project selection dropdown
@@ -112,8 +125,8 @@ const ProjectDetails = () => {
         isLoading={loadingProjects}
         className="w-full"
       >
-        {projects && projects.length > 0 ? (
-          projects.map((proj) => (
+        {filteredProjects && filteredProjects.length > 0 ? (
+          filteredProjects.map((proj) => (
             <SelectItem
               key={proj._id}
               value={proj._id}
@@ -140,7 +153,9 @@ const ProjectDetails = () => {
           ))
         ) : (
           <SelectItem key="no-projects" isDisabled>
-            No projects available
+            {serviceFilter === "All"
+              ? "No projects available"
+              : `No ${serviceFilter} projects available`}
           </SelectItem>
         )}
       </Select>
@@ -169,15 +184,21 @@ const ProjectDetails = () => {
     );
   }
 
-  if (!project) {
+  if (!project || !shouldShowProject()) {
     return (
       <div className="w-full">
         {renderProjectSelector()}
         <Card className="bg-white rounded-md">
           <div className="p-4 text-center">
-            <h3 className="font-semibold">No Project Selected</h3>
+            <h3 className="font-semibold">
+              {!project
+                ? "No Project Selected"
+                : `No ${serviceFilter} Project Selected`}
+            </h3>
             <p className="text-sm text-gray-500">
-              Please select a project from the dropdown above
+              {!project
+                ? "Please select a project from the dropdown above"
+                : `Please select a ${serviceFilter} project from the dropdown above`}
             </p>
           </div>
         </Card>

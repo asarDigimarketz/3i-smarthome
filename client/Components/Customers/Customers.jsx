@@ -31,6 +31,7 @@ import {
   Speaker,
   Tv2,
   HouseWifi,
+  X,
 } from "lucide-react";
 import DashboardHeader from "../header/DashboardHeader";
 
@@ -238,6 +239,22 @@ const Customers = () => {
               input: "text-gray-700",
               label: "text-gray-600",
             }}
+            endContent={
+              dateRange ? (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDateRangeChange(null);
+                  }}
+                  className="flex items-center justify-center p-1 cursor-pointer focus:outline-none"
+                  tabIndex={-1}
+                  role="button"
+                  aria-label="Clear date range"
+                >
+                  <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                </span>
+              ) : null
+            }
           />
           <Dropdown>
             <DropdownTrigger>

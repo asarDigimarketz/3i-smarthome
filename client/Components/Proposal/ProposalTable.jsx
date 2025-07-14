@@ -1,5 +1,4 @@
 "use client";
-import { ChevronDown, Edit3, Eye, Check, X, Edit } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -8,9 +7,7 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { Button } from "@heroui/button";
-import { Input, Textarea } from "@heroui/input";
-import { Select, SelectItem } from "@heroui/select";
+
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";

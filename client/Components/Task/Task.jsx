@@ -26,6 +26,9 @@ const Task = () => {
     hasViewPermission: false,
   });
 
+  // Service filter state
+  const [serviceFilter, setServiceFilter] = useState("All");
+
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskListRefreshKey, setTaskListRefreshKey] = useState(0);
@@ -69,6 +72,11 @@ const Task = () => {
   useEffect(() => {
     setShowTaskForm(false);
   }, [projectId]);
+
+  // Handle service filter change
+  const handleServiceChange = (service) => {
+    setServiceFilter(service);
+  };
 
   const handleAddTask = () => {
     if (!projectId) {
@@ -129,12 +137,17 @@ const Task = () => {
           </div>
 
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between mb-4 md:mb-8 gap-2 md:gap-0">
-            <ProposalFilters />
+            <div className="bg-brand-light-red rounded-lg p-4 w-full">
+              <ProposalFilters onServiceChange={handleServiceChange} />
+            </div>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 md:gap-8">
             <div className="w-full md:w-1/3 mb-4 md:mb-0">
-              <ProjectDetails userPermissions={userPermissions} />
+              <ProjectDetails
+                userPermissions={userPermissions}
+                serviceFilter={serviceFilter}
+              />
             </div>
             <Divider className="my-2 md:my-0" orientation="vertical" />
             <div className="w-full md:w-2/3 bg-white border-1 border-gray-200 p-2 sm:p-4 md:p-8 rounded-lg shadow-sm overflow-x-auto">
@@ -157,6 +170,7 @@ const Task = () => {
                   userPermissions={userPermissions}
                   onEditTask={handleEditTask}
                   refreshKey={taskListRefreshKey}
+                  serviceFilter={serviceFilter}
                 />
                 {showTaskForm && (
                   <div className="w-full">

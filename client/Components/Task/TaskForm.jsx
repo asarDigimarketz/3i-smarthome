@@ -351,7 +351,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             placeholder="Enter task name"
             name="title"
             value={formData.title}
-            radius="md"
+            radius="sm"
             onChange={handleChange}
             isRequired
             className="rounded-lg border-gray-200 w-full"
@@ -363,7 +363,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
           />
           <Textarea
             label="Comment"
-            radius="md"
+            radius="sm"
             placeholder="Enter comment"
             name="comment"
             value={formData.comment}
@@ -380,7 +380,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             <Input
               type="date"
               label="Start Date"
-              radius="md"
+              radius="sm"
               placeholder="Select start date"
               name="startDate"
               value={formData.startDate}
@@ -397,7 +397,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
               type="date"
               label="End Date"
               placeholder="Select end date"
-              radius="md"
+              radius="sm"
               name="endDate"
               value={formData.endDate}
               onChange={handleChange}
@@ -421,7 +421,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
                 )
               )
             }
-            radius="md"
+            radius="sm"
             onSelectionChange={(keys) =>
               handleSelectChange("assignedTo")([...keys])
             }
@@ -475,7 +475,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             label="Status"
             placeholder="Select status"
             selectedKeys={[formData.status]}
-            radius="md"
+            radius="sm"
             onSelectionChange={(keys) =>
               handleSelectChange("status")(Array.from(keys)[0])
             }
@@ -636,7 +636,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             color="success"
             className="mr-0 sm:mr-2 text-white"
             type="submit"
-            radius="md"
+            radius="sm"
             isLoading={submitting}
             isDisabled={submitting || !projectId}
           >
@@ -645,7 +645,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
           <Button
             color="danger"
             variant="light"
-            radius="md"
+            radius="sm"
             onPress={
               task && task._id ? () => setShowDeleteModal(true) : onClose
             }
