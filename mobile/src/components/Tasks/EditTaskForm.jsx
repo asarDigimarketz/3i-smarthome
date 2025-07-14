@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as DocumentPicker from 'expo-document-picker';
 import { Calendar, Check, ChevronDown, FileText, X, User, Camera, Save } from "lucide-react-native";
-import { Image, ScrollView, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert } from "react-native";
+import { Image, ScrollView, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert, ActionSheetIOS, Platform } from "react-native";
 import { TextInput as PaperTextInput } from 'react-native-paper';
+import { API_CONFIG } from '../../../config';
+import * as ImagePicker from 'expo-image-picker';
 
 const EditTaskForm = ({
   editingTask,
@@ -15,15 +17,151 @@ const EditTaskForm = ({
   showStatusDropdown,
   setShowStatusDropdown,
   statusOptions,
-  pickImages,
-  removeImage,
   setShowEditForm,
   onUpdateTask,
   updating,
-  employees = []
+  employees = [],
+  projectId
 }) => {
   const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+  const [existingBeforeImages, setExistingBeforeImages] = useState(
+    editingTask.beforeAttachments?.filter(att => att.mimetype?.startsWith('image')) || []
+  );
+  const [existingAfterImages, setExistingAfterImages] = useState(
+    editingTask.afterAttachments?.filter(att => att.mimetype?.startsWith('image')) || []
+  );
+  const [existingAttachments, setExistingAttachments] = useState(
+    editingTask.attachements?.filter(att => att.mimetype?.startsWith('image')) || []
+  );
 
+  // Add pickImages function
+  const pickImages = async (field) => {
+    const setImages = (images) => {
+      setEditingTask(prev => ({
+        ...prev,
+        [field]: [...(prev[field] || []), ...images]
+      }));
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Gallery'],
+          cancelButtonIndex: 0,
+        },
+        async (buttonIndex) => {
+          if (buttonIndex === 1) {
+            // Take Photo
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              alert('Camera permission is required!');
+              return;
+            }
+            let result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 1,
+            });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              setImages(result.assets.map(a => a.uri));
+            }
+          } else if (buttonIndex === 2) {
+            // Choose from Gallery
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              alert('Gallery permission is required!');
+              return;
+            }
+            let result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: false,
+              aspect: [4, 3],
+              quality: 1,
+            });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              setImages(result.assets.map(a => a.uri));
+            }
+          }
+        }
+      );
+    } else {
+      // For Android
+      Alert.alert(
+        'Add Image',
+        'Choose an option',
+        [
+          {
+            text: 'Take Photo',
+            onPress: async () => {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== 'granted') {
+                alert('Camera permission is required!');
+                return;
+              }
+              let result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 1,
+              });
+              if (!result.canceled && result.assets && result.assets.length > 0) {
+                setImages(result.assets.map(a => a.uri));
+              }
+            }
+          },
+          {
+            text: 'Choose from Gallery',
+            onPress: async () => {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== 'granted') {
+                alert('Gallery permission is required!');
+                return;
+              }
+              let result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: false,
+                aspect: [4, 3],
+                quality: 1,
+              });
+              if (!result.canceled && result.assets && result.assets.length > 0) {
+                setImages(result.assets.map(a => a.uri));
+              }
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    }
+  };
+
+  // Add removeImage function
+  const removeImage = (field, index) => {
+    setEditingTask(prev => ({
+      ...prev,
+      [field]: prev[field].filter((_, i) => i !== index)
+    }));
+  };
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    // if (url.startsWith('http')) {
+    //   console.log('📱 Task Image URL Details:');
+    //   console.log('  └─ Type: Direct URL (no modification needed)');
+    //   console.log('  └─ URL:', url);
+    //   return url;
+    // }
+    let fullLogoUrl;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      fullLogoUrl = url.replace('http://localhost:5000', API_CONFIG.API_URL)
+                             .replace('https://localhost:5000', API_CONFIG.API_URL);
+    } else if (url.startsWith('/')) {
+      fullLogoUrl = `${API_CONFIG.API_URL}${url}`;
+    } else {
+      fullLogoUrl = `${API_CONFIG.API_URL}/${url}`;
+    }
+    
+    return fullLogoUrl;
+  };
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -83,18 +221,101 @@ const EditTaskForm = ({
     return editingTask.assignedTo.name || `${editingTask.assignedTo.firstName} ${editingTask.assignedTo.lastName}`;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Validation
-    if (!editingTask.title.trim()) {
+    if (!projectId) {
+      Alert.alert('Validation Error', 'Project is required');
+      return;
+    }
+    if (!editingTask.title || !editingTask.title.trim()) {
       Alert.alert('Validation Error', 'Task title is required');
       return;
     }
-    if (!editingTask.status) {
-      Alert.alert('Validation Error', 'Please select a status');
+    if (!editingTask.status || !['new','inprogress','completed'].includes(editingTask.status)) {
+      Alert.alert('Validation Error', 'Please select a valid status');
       return;
     }
-    
-    onUpdateTask(editingTask);
+    if (!editingTask.startDate) {
+      Alert.alert('Validation Error', 'Start date is required');
+      return;
+    }
+
+    // Prepare payload for update
+    const formData = new FormData();
+    formData.append('projectId', projectId);
+    formData.append('title', editingTask.title);
+    formData.append('comment', editingTask.comment || '');
+    formData.append('startDate', editingTask.startDate.toISOString());
+    if (editingTask.endDate) formData.append('endDate', editingTask.endDate.toISOString());
+    if (editingTask.assignedTo && editingTask.assignedTo._id) formData.append('assignedTo', editingTask.assignedTo._id);
+    formData.append('status', editingTask.status);
+
+    // Append existing before images that weren't removed
+    existingBeforeImages.forEach((image, idx) => {
+      formData.append('existingBeforeAttachments', JSON.stringify({
+        url: image.url,
+        originalName: image.originalName,
+        mimetype: image.mimetype
+      }));
+    });
+
+    // Append existing after images that weren't removed
+    existingAfterImages.forEach((image, idx) => {
+      formData.append('existingAfterAttachments', JSON.stringify({
+        url: image.url,
+        originalName: image.originalName,
+        mimetype: image.mimetype
+      }));
+    });
+
+    // Append existing general attachments that weren't removed
+    existingAttachments.forEach((image, idx) => {
+      formData.append('existingAttachments', JSON.stringify({
+        url: image.url,
+        originalName: image.originalName,
+        mimetype: image.mimetype
+      }));
+    });
+
+    // Attach new before images
+    if (editingTask.beforeImages && editingTask.beforeImages.length > 0) {
+      editingTask.beforeImages.forEach((uri, idx) => {
+        formData.append('beforeAttachments', {
+          uri,
+          name: `before_${idx}.jpg`,
+          type: 'image/jpeg',
+        });
+      });
+    }
+
+    // Attach new after images
+    if (editingTask.afterImages && editingTask.afterImages.length > 0) {
+      editingTask.afterImages.forEach((uri, idx) => {
+        formData.append('afterAttachments', {
+          uri,
+          name: `after_${idx}.jpg`,
+          type: 'image/jpeg',
+        });
+      });
+    }
+
+    // Attach new document (PDF/Image) as attachements array
+    if (editingTask.attachment) {
+      formData.append('attachements', {
+        uri: editingTask.attachment.uri,
+        name: editingTask.attachment.name,
+        type: editingTask.attachment.type,
+      });
+    }
+
+    try {
+      // Call the update callback with the correct payload
+      await onUpdateTask(formData);
+      setShowEditForm(false);
+    } catch (error) {
+      console.error('Error updating task:', error);
+      Alert.alert('Error', 'Failed to update task. Please try again.');
+    }
   };
 
   return (
@@ -273,21 +494,38 @@ const EditTaskForm = ({
         />
       </View>
 
-      {/* Image Upload Sections */}
+      {/* Before Images Section */}
       <View className="mb-4">
-        <Text className="text-sm font-medium text-gray-700 mb-2">Before Images (Optional)</Text>
-        <TouchableOpacity
-          onPress={() => pickImages('beforeImages')}
-          className="flex-row items-center justify-center bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg py-4 mb-2"
-        >
-          <Camera size={20} color="#3B82F6" />
-          <Text className="text-blue-600 ml-2 font-medium">Add Before Images</Text>
-        </TouchableOpacity>
+        <Text className="text-sm font-medium text-gray-700 mb-2">Before Images</Text>
         
+        {/* Existing Before Images */}
+        {existingBeforeImages.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+            {existingBeforeImages.map((image, index) => (
+              <View key={`existing-before-${index}`} className="relative mr-2">
+                <Image 
+                  source={{ uri: getFullUrl(image.url) }} 
+                  className="w-16 h-16 rounded-lg" 
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    const newImages = existingBeforeImages.filter((_, i) => i !== index);
+                    setExistingBeforeImages(newImages);
+                  }}
+                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                >
+                  <X size={12} color="white" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+        
+        {/* New Before Images */}
         {editingTask.beforeImages && editingTask.beforeImages.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
             {editingTask.beforeImages.map((image, index) => (
-              <View key={index} className="relative mr-2">
+              <View key={`new-before-${index}`} className="relative mr-2">
                 <Image source={{ uri: image }} className="w-16 h-16 rounded-lg" />
                 <TouchableOpacity
                   onPress={() => removeImage('beforeImages', index)}
@@ -299,25 +537,87 @@ const EditTaskForm = ({
             ))}
           </ScrollView>
         )}
+
+        <TouchableOpacity
+          onPress={() => pickImages('beforeImages')}
+          className="flex-row items-center justify-center bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg py-4"
+        >
+          <Camera size={20} color="#3B82F6" />
+          <Text className="text-blue-600 ml-2 font-medium">Add Before Images</Text>
+        </TouchableOpacity>
       </View>
 
-      <View className="mb-6">
-        <Text className="text-sm font-medium text-gray-700 mb-2">After Images (Optional)</Text>
+      {/* After Images Section */}
+      <View className="mb-4">
+        <Text className="text-sm font-medium text-gray-700 mb-2">After Images</Text>
+        
+        {/* Existing After Images */}
+        {existingAfterImages.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+            {existingAfterImages.map((image, index) => (
+              <View key={`existing-after-${index}`} className="relative mr-2">
+                <Image 
+                  source={{ uri: getFullUrl(image.url) }} 
+                  className="w-16 h-16 rounded-lg" 
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    const newImages = existingAfterImages.filter((_, i) => i !== index);
+                    setExistingAfterImages(newImages);
+                  }}
+                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                >
+                  <X size={12} color="white" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+        
+        {/* New After Images */}
+        {editingTask.afterImages && editingTask.afterImages.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+            {editingTask.afterImages.map((image, index) => (
+              <View key={`new-after-${index}`} className="relative mr-2">
+                <Image source={{ uri: image }} className="w-16 h-16 rounded-lg" />
+                <TouchableOpacity
+                  onPress={() => removeImage('afterImages', index)}
+                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                >
+                  <X size={12} color="white" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
         <TouchableOpacity
           onPress={() => pickImages('afterImages')}
-          className="flex-row items-center justify-center bg-green-50 border-2 border-dashed border-green-300 rounded-lg py-4 mb-2"
+          className="flex-row items-center justify-center bg-green-50 border-2 border-dashed border-green-300 rounded-lg py-4"
         >
           <Camera size={20} color="#10B981" />
           <Text className="text-green-600 ml-2 font-medium">Add After Images</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* General Attachments Section */}
+      <View className="mb-4">
+        <Text className="text-sm font-medium text-gray-700 mb-2">General Attachments</Text>
         
-        {editingTask.afterImages && editingTask.afterImages.length > 0 && (
+        {/* Existing Attachments */}
+        {existingAttachments.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-            {editingTask.afterImages.map((image, index) => (
-              <View key={index} className="relative mr-2">
-                <Image source={{ uri: image }} className="w-16 h-16 rounded-lg" />
+            {existingAttachments.map((image, index) => (
+              <View key={`existing-attachment-${index}`} className="relative mr-2">
+                <Image 
+                  source={{ uri: getFullUrl(image.url) }} 
+                  className="w-16 h-16 rounded-lg" 
+                />
                 <TouchableOpacity
-                  onPress={() => removeImage('afterImages', index)}
+                  onPress={() => {
+                    const newAttachments = existingAttachments.filter((_, i) => i !== index);
+                    setExistingAttachments(newAttachments);
+                  }}
                   className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
                 >
                   <X size={12} color="white" />

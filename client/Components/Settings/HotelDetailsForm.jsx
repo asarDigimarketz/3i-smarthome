@@ -5,6 +5,7 @@ import { cn } from "../../lib/utils";
 import General from "./General/General";
 import EmailConfiguration from "./EmailConfiguration/EmailConfiguration";
 import UserManagement from "./RolesResponsiblity/RolesResponsiblity.jsx";
+import FirebaseNotificationSetup from "./FirebaseNotificationSetup";
 import axios from "axios";
 
 export default function HotelManagementInterface() {
@@ -54,6 +55,7 @@ export default function HotelManagementInterface() {
     { key: "general", title: "General" },
     { key: "email", title: "Email Configuration" },
     { key: "user-management", title: "User Management" },
+    { key: "firebase-notifications", title: "Firebase Notifications" },
   ];
 
   return (
@@ -97,6 +99,7 @@ export default function HotelManagementInterface() {
           )}
           {selectedTab === "email" && <EmailConfiguration />}
           {selectedTab === "user-management" && <UserManagement />}
+          {selectedTab === "firebase-notifications" && <FirebaseNotificationSetup />}
         </div>
       </div>
     </section>

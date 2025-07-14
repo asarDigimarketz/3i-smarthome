@@ -11,14 +11,17 @@ import {
   Linking, 
   Modal, 
   Image, 
-  Dimensions 
+  Dimensions,
+  TextInput 
 } from 'react-native';
+
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { WebView } from 'react-native-webview';
 import axios from 'axios';
+import { API_CONFIG } from '../../../../config';
 
 // 🔧 NETWORK CONFIGURATION - UPDATE WITH YOUR DEVELOPMENT MACHINE'S IP
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL; // ✅ Your actual IP address
+const API_BASE_URL = API_CONFIG.API_URL; // ✅ Your actual IP address
 
 const ProposalDetail = () => {
   const router = useRouter();
@@ -30,10 +33,14 @@ const ProposalDetail = () => {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [showFileModal, setShowFileModal] = useState(false);
-  const [currentFileUrl, setCurrentFileUrl] = useState('');
-  const [currentFileName, setCurrentFileName] = useState('');
   const [fileLoading, setFileLoading] = useState(false);
+  
+  // Amount selector states
+  const [showAmountDropdown, setShowAmountDropdown] = useState(false);
+  const [showAmountModal, setShowAmountModal] = useState(false);
+  const [newAmount, setNewAmount] = useState('');
+  const [amountOptions, setAmountOptions] = useState([]);
+  const [amountLoading, setAmountLoading] = useState(false);
 
   const colors = {
     'Hot': { bg: 'bg-red-100', text: 'text-red-600', border: 'border-red-600' },
@@ -45,8 +52,8 @@ const ProposalDetail = () => {
 
   const serviceColors = {
     'Home Cinema': { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-600' },
-    'Security System': { bg: 'bg-cyan-50', text: 'text-cyan-600', border: 'border-cyan-600' },
-    'Home Automation': { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-600' },
+    'Security System': { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-600' },
+    'Home Automation': { bg: 'bg-cyan-50', text: 'text-cyan-600', border: 'border-cyan-600' },
     'Outdoor Audio': { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-600' }
   };
 
@@ -58,7 +65,7 @@ const ProposalDetail = () => {
       setLoading(true);
       const response = await axios.get(`${API_BASE_URL}/api/proposals/${id}`, {
         headers: {
-          'x-api-key': process.env.EXPO_PUBLIC_API_KEY // Replace with your actual API key
+          'x-api-key': API_CONFIG.API_KEY // Replace with your actual API key
         }
       });
 
@@ -87,6 +94,17 @@ const ProposalDetail = () => {
         setProposalDetails(transformedProposal);
         setStatus(transformedProposal.status);
         setAmount(transformedProposal.amount);
+        
+        // Initialize amount options if available
+        if (transformedProposal.amountOptions && Array.isArray(transformedProposal.amountOptions)) {
+          setAmountOptions(transformedProposal.amountOptions);
+        } else {
+          // Set initial amount option if amount exists
+          if (transformedProposal.amount) {
+            const formattedAmount = `₹${parseInt(transformedProposal.amount).toLocaleString('en-IN')}`;
+            setAmountOptions([formattedAmount]);
+          }
+        }
       } else {
         Alert.alert('Error', 'Failed to fetch proposal details');
       }
@@ -108,7 +126,7 @@ const ProposalDetail = () => {
         value: newStatus
       }, {
         headers: {
-          'x-api-key': process.env.EXPO_PUBLIC_API_KEY // Replace with your actual API key
+          'x-api-key': API_CONFIG.API_KEY // Replace with your actual API key
         }
       });
 
@@ -149,7 +167,7 @@ const ProposalDetail = () => {
                 value: 'Confirmed'
               }, {
                 headers: {
-                  'x-api-key': process.env.EXPO_PUBLIC_API_KEY
+                  'x-api-key': API_CONFIG.API_KEY
                 }
               });
 
@@ -197,7 +215,7 @@ const ProposalDetail = () => {
               
               const response = await axios.delete(`${API_BASE_URL}/api/proposals/${id}`, {
                 headers: {
-                  'x-api-key': process.env.EXPO_PUBLIC_API_KEY // Replace with your actual API key
+                  'x-api-key': API_CONFIG.API_KEY // Replace with your actual API key
                 }
               });
 
@@ -242,44 +260,132 @@ const ProposalDetail = () => {
     </View>
   );
 
-  const AmountSelector = () => {
-    return (
-      <View className="py-3 border-b border-gray-100">
+  // Amount handling functions - Modal based approach
+  const handleSaveAmount = () => {
+    if (newAmount && newAmount.trim()) {
+      const numericValue = parseInt(newAmount.replace(/[^\d]/g, ''));
+      if (numericValue > 0) {
+        const formattedAmount = `₹${numericValue.toLocaleString('en-IN')}`;
+
+        // Add to amount options if not already present
+        if (!amountOptions.includes(formattedAmount)) {
+          setAmountOptions(prev => [...prev, formattedAmount]);
+        }
+
+        // Set the project amount
+        setAmount(numericValue);
+        setProposalDetails(prev => ({ ...prev, amount: numericValue }));
+        setNewAmount('');
+        setShowAmountModal(false);
+        Alert.alert('Success', 'Amount added successfully');
+      } else {
+        Alert.alert('Error', 'Please enter a valid amount');
+      }
+    } else {
+      Alert.alert('Error', 'Please enter an amount');
+    }
+  };
+
+  const handleCancelAmount = () => {
+    setNewAmount('');
+    setShowAmountModal(false);
+  };
+
+  // Handle amount selection from dropdown
+  const handleAmountSelect = (selectedAmount) => {
+    const numericValue = parseInt(selectedAmount.replace(/[^\d]/g, ''));
+    setAmount(numericValue);
+    setProposalDetails(prev => ({ ...prev, amount: numericValue }));
+    setShowAmountDropdown(false);
+  };
+
+  // Handle fixing amount via API
+  const handleFixAmount = async () => {
+    try {
+      setAmountLoading(true);
+      
+      const response = await axios.patch(`${API_BASE_URL}/api/proposals/${id}/field`, {
+        field: 'projectAmount',
+        value: amount
+      }, {
+        headers: {
+          'x-api-key': API_CONFIG.API_KEY
+        }
+      });
+
+      if (response.data.success) {
+        Alert.alert('Success', 'Amount fixed successfully');
+        fetchProposalDetails(); // Refresh data
+      } else {
+        Alert.alert('Error', 'Failed to fix amount');
+      }
+    } catch (error) {
+      console.error('Error fixing amount:', error);
+      Alert.alert('Error', 'Network error. Please check your connection.');
+    } finally {
+      setAmountLoading(false);
+    }
+  };
+
+      // AmountSelector with right-aligned controls
+  const renderAmountSection = () => (
+    <View className="py-3 border-b border-gray-100">
+      <View className="flex-row items-center justify-between">
+        <Text className="text-gray-500 text-sm">Amount:</Text>
+        
+        {/* Right-aligned controls */}
         <View className="flex-row items-center gap-2">
-          <Text className="text-gray-500 w-[60px] text-sm">Amount:</Text>
-          <View className="flex-row items-center border border-gray-300 rounded-lg overflow-hidden w-[145]">
-            <View className="bg-gray-100 px-2 py-2 border-r border-gray-300">
-              <Text className="text-gray-600">₹</Text>
-            </View>
-            <View className="flex-row px-2 py-2 justify-center">
-              <Text className="text-gray-800">{amount?.toLocaleString('en-IN') || '0'}</Text>
-            </View>
-          </View>
-        </View>
-        {/* Buttons on next line, right-aligned */}
-        <View className="flex-row justify-end mt-2 gap-2">
-          <TouchableOpacity 
-            className="bg-red-600 rounded-lg px-4 py-2"
-            onPress={() => {
-              // Handle Add action - could open amount history or add new amount
-              Alert.alert('Info', 'Amount history feature coming soon');
-            }}
+          <TouchableOpacity
+            className="flex-row items-center justify-between border border-gray-300 rounded-lg px-3 py-2 min-w-32 bg-white"
+            onPress={() => setShowAmountDropdown(!showAmountDropdown)}
+            disabled={status === 'Confirmed'}
           >
-            <Text className="text-white font-semibold text-sm">Add</Text>
+            <Text className="text-gray-800 font-medium">
+              ₹{parseInt(amount || 0).toLocaleString('en-IN')}
+            </Text>
+            <ChevronDown size={16} color="#9CA3AF" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            className="bg-red-600 rounded-lg px-4 py-2"
-            onPress={() => {
-              // Handle Fix action - could open amount editor
-              Alert.alert('Info', 'Amount editing feature coming soon');
-            }}
+          
+          <TouchableOpacity
+            className={`${status === 'Confirmed' ? 'bg-gray-400' : 'bg-red-600'} rounded-lg px-3 py-2`}
+            onPress={() => setShowAmountModal(true)}
+            disabled={status === 'Confirmed'}
           >
-            <Text className="text-white font-semibold text-sm">Fix</Text>
+            <Text className="text-white text-sm font-semibold">Add</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            className={`${status === 'Confirmed' || amountLoading ? 'bg-gray-400' : 'bg-blue-600'} rounded-lg px-3 py-2`}
+            onPress={handleFixAmount}
+            disabled={status === 'Confirmed' || amountLoading}
+          >
+            <Text className="text-white text-sm font-semibold">
+              {amountLoading ? 'Fixing...' : 'Fix'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
-    );
-  };
+      
+      {/* Simple dropdown */}
+      {showAmountDropdown && amountOptions.length > 0 && (
+        <View className="mt-2 bg-white border border-gray-200 rounded-lg max-h-32 self-end w-48">
+          <ScrollView className="max-h-32" showsVerticalScrollIndicator={false}>
+            {amountOptions.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                className="px-3 py-2 border-b border-gray-100"
+                onPress={() => handleAmountSelect(option)}
+              >
+                <Text className="text-gray-800 text-sm">{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+
+  const AmountSelector = renderAmountSection;
 
   const StatusSelector = () => (
     <View className="flex-row py-3 border-b border-gray-100">
@@ -288,8 +394,8 @@ const ProposalDetail = () => {
         <View className="relative">
           <TouchableOpacity
             onPress={() => setShowStatusDropdown(!showStatusDropdown)}
-            className={`flex-row items-center justify-between border ${colors[status]?.border || 'border-gray-600'} rounded-lg px-2 py-1 w-32 ${colors[status]?.bg || 'bg-white'}`}
-            disabled={updating}
+            className={`flex-row items-center justify-between border ${colors[status]?.border || 'border-gray-600'} rounded-lg px-2 py-1 w-32 ${colors[status]?.bg || 'bg-white'} ${status === 'Confirmed' ? 'opacity-50' : ''}`}
+            disabled={updating || status === 'Confirmed'}
           >
             <Text className={`font-medium ${colors[status]?.text || 'text-gray-800'}`}>
               {status}
@@ -301,16 +407,12 @@ const ProposalDetail = () => {
             />
           </TouchableOpacity>
 
-          {showStatusDropdown && (
-            <View className="absolute bottom-9 left-0 bg-white rounded-lg shadow-xl z-10 w-32">
+                    {showStatusDropdown && (
+            <View className="absolute bottom-9 left-0 bg-white rounded-lg shadow-xl w-32 border border-gray-200">
               {statusOptions.map((option, index) => (
                 <TouchableOpacity
                   key={option}
-                  className={`px-3 py-2 border-b border-gray-100 active:bg-gray-50 ${
-                    index === 0 ? 'rounded-t-lg' : ''
-                  } ${
-                    index === statusOptions.length - 1 ? 'rounded-b-lg border-b-0' : ''
-                  }`}
+                  className="px-3 py-2 border-b border-gray-100"
                   onPress={() => {
                     setShowStatusDropdown(false);
                     if (option !== status) {
@@ -331,7 +433,7 @@ const ProposalDetail = () => {
                 </TouchableOpacity>
               ))}
             </View>
-          )}
+            )}
         </View>
       </View>
     </View>
@@ -367,27 +469,11 @@ const ProposalDetail = () => {
 
   const handleViewFile = async (url, filename) => {
     try {
-      if (!url) {
-        Alert.alert('Error', 'File URL not available');
-        return;
-      }
-      
-      // Construct full URL if it's a relative path
-      let fullUrl = url;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        fullUrl = `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-      }
-      
-      console.log('Opening file in modal:', fullUrl);
-      
-      // Set file details and show modal
-      setCurrentFileUrl(fullUrl);
-      setCurrentFileName(filename);
-      setShowFileModal(true);
-      
+      const fullUrl = url.startsWith('http') ? url : `${API_CONFIG.API_URL}${url}`;
+      await Linking.openURL(fullUrl);
     } catch (error) {
       console.error('Error opening file:', error);
-      Alert.alert('Error', `Failed to open file: ${error.message}`);
+      Alert.alert('Error', 'Could not open the file. Please try again.');
     }
   };
 
@@ -402,10 +488,10 @@ const ProposalDetail = () => {
   };
 
   const renderFileViewer = () => {
-    if (isImageFile(currentFileName)) {
+    if (isImageFile(proposalDetails.attachmentUrl.split('/').pop())) {
       return (
         <Image
-          source={{ uri: currentFileUrl }}
+          source={{ uri: proposalDetails.attachmentUrl }}
           style={{ 
             width: Dimensions.get('window').width - 40, 
             height: Dimensions.get('window').height - 200,
@@ -423,7 +509,7 @@ const ProposalDetail = () => {
       // For PDFs and other files, use WebView
       return (
         <WebView
-          source={{ uri: currentFileUrl }}
+          source={{ uri: proposalDetails.attachmentUrl }}
           style={{ 
             width: Dimensions.get('window').width - 40, 
             height: Dimensions.get('window').height - 200 
@@ -476,10 +562,15 @@ const ProposalDetail = () => {
         enableAutomaticScroll
         keyboardShouldPersistTaps="handled"
       >
-        <ScrollView className="flex-1">
-          <View className={`m-4 rounded-lg shadow-sm ${
-            serviceColors[proposalDetails.service]?.bg || 'bg-white'
-          } ${status === 'Confirmed' ? '' : ''}`}>
+                <TouchableOpacity 
+          activeOpacity={1}
+          onPress={() => {
+            setShowAmountDropdown(false);
+            setShowStatusDropdown(false);
+          }}
+        >
+          <ScrollView className="flex-1">
+            <View className={`m-4 rounded-lg bg-gray-200 shadow-lg ${status === 'Confirmed' ? 'border-2 border-green-500' : ''}`}>
             <View className="p-4">
               <DetailRow label="Customer" value={proposalDetails.name} />
               <DetailRow label="Date" value={proposalDetails.date} />
@@ -549,11 +640,13 @@ const ProposalDetail = () => {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                className="bg-[#c92125] rounded-lg px-6 py-3 w-[100]"
+                className={`${updating || status === 'Confirmed' ? 'bg-gray-400' : 'bg-[#c92125]'} rounded-lg px-6 py-3 w-[100]`}
                 onPress={() => router.push(`/proposal/edit/${id}`)}
-                disabled={updating}
+                disabled={updating || status === 'Confirmed'}
               >
-                <Text className="text-white font-semibold text-center">Edit</Text>
+                <Text className="text-white font-semibold text-center">
+                  {status === 'Confirmed' ? 'Locked' : 'Edit'}
+                </Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -587,29 +680,74 @@ const ProposalDetail = () => {
             </View>
           </View>
         </ScrollView>
+        </TouchableOpacity>
       </KeyboardAwareScrollView>
+
+      {/* Add Amount Modal */}
+      <Modal
+        visible={showAmountModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCancelAmount}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-white rounded-lg p-6 w-80 mx-4">
+            <Text className="text-lg font-bold text-gray-800 mb-4 text-center">
+              Add New Amount
+            </Text>
+            
+            <Text className="text-sm text-gray-600 mb-2">Enter Amount:</Text>
+            <TextInput
+              className="border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-base mb-6"
+              placeholder="Enter amount (e.g., 50000)"
+              value={newAmount}
+              onChangeText={setNewAmount}
+              keyboardType="numeric"
+              autoFocus={true}
+              returnKeyType="done"
+              onSubmitEditing={handleSaveAmount}
+            />
+            
+            <View className="flex-row justify-end gap-3">
+              <TouchableOpacity
+                className="bg-gray-400 rounded-lg px-6 py-3 flex-1"
+                onPress={handleCancelAmount}
+              >
+                <Text className="text-white text-center font-semibold">Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className="bg-blue-600 rounded-lg px-6 py-3 flex-1"
+                onPress={handleSaveAmount}
+              >
+                <Text className="text-white text-center font-semibold">Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* File Viewer Modal */}
       <Modal
-        visible={showFileModal}
+        visible={fileLoading}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setShowFileModal(false)}
+        onRequestClose={() => setFileLoading(false)}
       >
         <View className="flex-1 bg-white">
           {/* Modal Header */}
           <View className="bg-white p-4 shadow-sm flex-row items-center justify-between border-b border-gray-200">
             <View className="flex-1">
               <Text className="text-lg font-bold text-gray-800" numberOfLines={1}>
-                {truncateFilename(currentFileName, 25)}
+                {truncateFilename(proposalDetails.attachmentUrl.split('/').pop(), 25)}
               </Text>
               <Text className="text-sm text-gray-500">
-                {getFileTypeIndicator(currentFileName)}
+                {getFileTypeIndicator(proposalDetails.attachmentUrl.split('/').pop())}
               </Text>
             </View>
             <TouchableOpacity 
               className="ml-3 p-2"
-              onPress={() => setShowFileModal(false)}
+              onPress={() => setFileLoading(false)}
             >
               <X size={24} color="#374151" />
             </TouchableOpacity>
@@ -624,7 +762,7 @@ const ProposalDetail = () => {
               </View>
             )}
             
-            {currentFileUrl ? renderFileViewer() : (
+            {proposalDetails.attachmentUrl ? renderFileViewer() : (
               <Text className="text-gray-500">No file to display</Text>
             )}
           </View>
@@ -636,7 +774,7 @@ const ProposalDetail = () => {
                 className="bg-blue-600 rounded-lg px-6 py-3 flex-1 mr-2"
                 onPress={async () => {
                   try {
-                    await Linking.openURL(currentFileUrl);
+                    await Linking.openURL(proposalDetails.attachmentUrl);
                   } catch (error) {
                     Alert.alert('Error', 'Failed to open file externally');
                   }
