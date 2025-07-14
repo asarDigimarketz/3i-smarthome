@@ -83,7 +83,7 @@ const Customer = () => {
           phone: customer.contactNumber,
           email: customer.email,
           address: customer.fullAddress || 
-                  `${customer.address.addressLine}, ${customer.address.city}, ${customer.address.state} - ${customer.address.pincode}`,
+                  `${customer.address.addressLine}, ${customer.address.city}, ${customer.address.state}, ${customer.address.country} - ${customer.address.pincode}`,
           services: customer.services || [],
           amountSpend: customer.formattedTotalSpent || `₹${customer.totalSpent?.toLocaleString('en-IN') || '0'}`,
           totalProjects: customer.totalProjects || 0,
@@ -150,7 +150,7 @@ const Customer = () => {
       // Validate required fields
       if (!newCustomer.customerName || !newCustomer.contactNumber || !newCustomer.email || 
           !newCustomer.addressLine || !newCustomer.city || !newCustomer.district || 
-          !newCustomer.state || !newCustomer.pincode) {
+          !newCustomer.state || !newCustomer.country || !newCustomer.pincode) {
         Alert.alert('Error', 'Please fill in all required fields');
         return;
       }
@@ -282,11 +282,11 @@ const Customer = () => {
         }
       >
         <View className="flex-row justify-between items-center px-5 py-4 bg-white">
-          <Text className="text-xl font-bold text-gray-800">Customers ({filteredCustomers.length})</Text>
+          <Text className="text-xl font-bold text-gray-800">Customers</Text>
           {actions.add && (
             <TouchableOpacity 
               className="flex-row items-center bg-red-600 px-4 py-2 rounded-lg"
-              onPress={() => setShowAddForm(true)}
+              onPress={() => router.push('/(tabs)/customer/AddCustomer')}
             >
               <Text className="text-white font-semibold mr-1">Add</Text>
               <Plus size={20} color="#FFFFFF" />
@@ -296,161 +296,16 @@ const Customer = () => {
         
         <View className="p-2">
           {/* Search Bar */}
-          <View className="flex-row items-center bg-red-100 rounded-xl px-4 mb-6">
+          <View className="flex-row items-center border border-gray-200 bg-white rounded-xl px-4 mb-6">
             <Search size={18} color="#666666" className="mr-3" />
             <TextInput
-              className="flex-1 text-sm text-black py-3"
+              className="flex-1 text-sm text-black py-4"
               placeholder="Search Customers"
               placeholderTextColor="#666666"
               value={searchQuery}
               onChangeText={handleSearch}
             />
           </View>
-
-          {/* Add Customer Form */}
-          {showAddForm && (
-            <View className="bg-white rounded-xl p-4 mb-6 shadow-lg">
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-lg font-bold text-gray-900">Add New Customer</Text>
-                <TouchableOpacity 
-                  onPress={() => setShowAddForm(false)}
-                  className="p-1"
-                >
-                  <X size={20} color="#666666" />
-                </TouchableOpacity>
-              </View>
-              
-              <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
-                              {/* Customer Name */}
-              <View className="mb-4">
-                <PaperTextInput
-                  label="Customer Name *"
-                  value={newCustomer.customerName}
-                  onChangeText={(text) => setNewCustomer({...newCustomer, customerName: text})}
-                  mode="outlined"
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-
-              {/* Contact Number */}
-              <View className="mb-4">
-                <PaperTextInput
-                  label="Contact Number *"
-                  value={newCustomer.contactNumber}
-                  onChangeText={(text) => setNewCustomer({...newCustomer, contactNumber: text})}
-                  mode="outlined"
-                  keyboardType="phone-pad"
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-
-              {/* Email */}
-              <View className="mb-4">
-                <PaperTextInput
-                  label="Email *"
-                  value={newCustomer.email}
-                  onChangeText={(text) => setNewCustomer({...newCustomer, email: text})}
-                  mode="outlined"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-
-              {/* Address Line */}
-              <View className="mb-4">
-                <PaperTextInput
-                  label="Address Line *"
-                  value={newCustomer.addressLine}
-                  onChangeText={(text) => setNewCustomer({...newCustomer, addressLine: text})}
-                  mode="outlined"
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-
-              {/* City and District */}
-              <View className="flex-row gap-3 mb-4">
-                <View className="flex-1">
-                  <PaperTextInput
-                    label="City *"
-                    value={newCustomer.city}
-                    onChangeText={(text) => setNewCustomer({...newCustomer, city: text})}
-                    mode="outlined"
-                    theme={{ colors: { primary: '#DC2626' } }}
-                  />
-                </View>
-                <View className="flex-1">
-                  <PaperTextInput
-                    label="District *"
-                    value={newCustomer.district}
-                    onChangeText={(text) => setNewCustomer({...newCustomer, district: text})}
-                    mode="outlined"
-                    theme={{ colors: { primary: '#DC2626' } }}
-                  />
-                </View>
-              </View>
-
-              {/* State and Pincode */}
-              <View className="flex-row gap-3 mb-4">
-                <View className="flex-1">
-                  <PaperTextInput
-                    label="State *"
-                    value={newCustomer.state}
-                    onChangeText={(text) => setNewCustomer({...newCustomer, state: text})}
-                    mode="outlined"
-                    theme={{ colors: { primary: '#DC2626' } }}
-                  />
-                </View>
-                <View className="flex-1">
-                  <PaperTextInput
-                    label="Pincode *"
-                    value={newCustomer.pincode}
-                    onChangeText={(text) => setNewCustomer({...newCustomer, pincode: text})}
-                    mode="outlined"
-                    keyboardType="numeric"
-                    maxLength={6}
-                    theme={{ colors: { primary: '#DC2626' } }}
-                  />
-                </View>
-              </View>
-
-              {/* Notes */}
-              <View className="mb-4">
-                <PaperTextInput
-                  label="Notes (Optional)"
-                  value={newCustomer.notes}
-                  onChangeText={(text) => setNewCustomer({...newCustomer, notes: text})}
-                  mode="outlined"
-                  multiline
-                  numberOfLines={3}
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-              </ScrollView>
-
-              {/* Form Actions */}
-              <View className="flex-row gap-3 mt-4">
-                <TouchableOpacity 
-                  className="flex-1 bg-gray-200 py-3 rounded-lg"
-                  onPress={() => setShowAddForm(false)}
-                  disabled={addingCustomer}
-                >
-                  <Text className="text-gray-700 font-semibold text-center">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  className="flex-1 bg-red-600 py-3 rounded-lg"
-                  onPress={addCustomer}
-                  disabled={addingCustomer}
-                >
-                  {addingCustomer ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text className="text-white font-semibold text-center">Save Customer</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
 
           {/* No customers message */}
           {filteredCustomers.length === 0 && !loading && (
@@ -470,7 +325,7 @@ const Customer = () => {
           {filteredCustomers.map((customer) => (
             <TouchableOpacity
               key={customer.id}
-              className="bg-[#f4f4f4] rounded-xl p-5 shadow-lg mb-5"
+              className="bg-[#f4f4f4] rounded-xl p-5 shadow-lg mb-5 border border-[#c92125]"
               onPress={() => viewCustomerDetail(customer)}
             >
               <View className="flex-row justify-between items-start mb-3">

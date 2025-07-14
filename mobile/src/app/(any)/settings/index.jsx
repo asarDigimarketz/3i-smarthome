@@ -89,7 +89,7 @@ export default function GeneralSettings() {
         // Set logo preview if available
         if (generalData.logoUrl || generalData.logo) {
           const logoUrl = generalData.logoUrl || generalData.logo;
-          console.log('📷 Raw logo URL from API:', logoUrl);
+      
           
           // Handle different URL formats and fix localhost issue
           let fullLogoUrl;
@@ -103,8 +103,7 @@ export default function GeneralSettings() {
             fullLogoUrl = `${API_CONFIG.API_URL}/${logoUrl}`;
           }
           
-          console.log('📷 Converted logo URL for mobile:', fullLogoUrl);
-          console.log('📷 API_CONFIG.API_URL:', API_CONFIG.API_URL);
+          console.log('  └─ Final URL:', fullLogoUrl);
           setSelectedImage(fullLogoUrl);
         }
       } else {

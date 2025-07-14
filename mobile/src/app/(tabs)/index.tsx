@@ -6,16 +6,95 @@ import { DashboardSection } from "../../components/Home/DashboardCard";
 import { projectData } from "../../data/mockData";
 import { useAuth } from '../../utils/AuthContext';
 import { hasPagePermission } from '../../utils/permissions';
+import { API_CONFIG } from '../../../config';
 
-export default function Index( ) {
+// Helper function to map server status to mobile status
+const mapServerToMobileStatus = (serverStatus: any): string => {
+  const statusMap: { [key: string]: string } = {
+    'new': 'New',
+    'in-progress': 'InProgress',
+    'completed': 'Complete',
+    'done': 'Done',
+    'cancelled': 'Cancelled'
+  };
+  return statusMap[serverStatus] || 'New';
+};
+
+// Helper function to transform API data to mobile format
+const transformProjectData = (apiProject: any): any => {
+  if (!apiProject) return null;
+  try {
+    return {
+      id: apiProject._id || apiProject.id || Math.random().toString(),
+      customerName: apiProject.customerName || 'Unknown Customer',
+      address: typeof apiProject.address === 'object'
+        ? `${apiProject.address.addressLine || ''}, ${apiProject.address.city || ''}, ${apiProject.address.district || ''}, ${apiProject.address.state || ''}, ${apiProject.address.country || ''} - ${apiProject.address.pincode || ''}`.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '').trim()
+        : apiProject.address || 'No address provided',
+      service: apiProject.services || 'Unknown',
+      amount: `₹${apiProject.projectAmount?.toLocaleString('en-IN') || '0'}`,
+      date: apiProject.projectDate 
+        ? new Date(apiProject.projectDate).toLocaleDateString('en-IN') 
+        : (apiProject.createdAt ? new Date(apiProject.createdAt).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')),
+      status: mapServerToMobileStatus(apiProject.projectStatus || 'new'),
+      progress: `${apiProject.completedTasks || 0}/${apiProject.totalTasks || 0}`,
+      description: apiProject.projectDescription || '',
+      size: apiProject.size || '',
+      contactNumber: apiProject.contactNumber || '',
+      email: apiProject.email || '',
+      comment: apiProject.comment || '',
+      attachment: apiProject.attachment || null,
+      assignedEmployees: apiProject.assignedEmployees || [],
+      createdAt: apiProject.createdAt || new Date().toISOString(),
+      updatedAt: apiProject.updatedAt || new Date().toISOString(),
+    };
+  } catch (error) {
+    return null;
+  }
+};
+
+export default function Index() {
   const { user } = useAuth();
-  const [state, setState] = useState(false); // Example, add all your hooks here
-  // ... other hooks ...
+  const [recentProjects, setRecentProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get the 5 most recent projects
-  const recentProjects = projectData
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+  const API_BASE_URL = API_CONFIG.API_URL;
+  const API_KEY = API_CONFIG.API_KEY;
+
+  useEffect(() => {
+    const fetchRecentProjects = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/projects?limit=5&sort=-projectDate`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': API_KEY,
+          },
+        });
+        if (!response.ok) throw new Error('Failed to fetch projects');
+        const data = await response.json();
+        if (data && data.success) {
+          const projectsArray = data.projects || data.data || [];
+          const transformed = projectsArray
+            .map(transformProjectData)
+            .filter((p: any) => p !== null)
+            .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 5);
+          setRecentProjects(transformed);
+        } else {
+          setRecentProjects([]);
+        }
+      } catch (err) {
+        setError('Failed to load recent projects' as string);
+        setRecentProjects([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRecentProjects();
+  }, []);
 
   if (!hasPagePermission(user, '/dashboard', 'view')) {
     return (
@@ -34,30 +113,36 @@ export default function Index( ) {
           <DashboardSection />
           <ActivitiesSection />
           {/* Recent Projects Section */}
-          <View className="mb-6">
+          <View className="mb-2">
             <Text className="text-xl font-bold text-gray-600 my-4">Recent Projects</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              className="mx-[-16px]"
-            >
-              <View className="flex-row px-4 space-x-4 gap-1">
-                {recentProjects.map((project) => (
-                  <View key={project.id} className="w-[300px]">
-                    <ProjectCard
-                      project={project}
-                      customer={{
-                        name: project.customerName,
-                        address: project.address
-                      }}
-                    />
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
+            {loading ? (
+              <Text className="text-gray-500">Loading...</Text>
+            ) : error ? (
+              <Text className="text-red-500">{error}</Text>
+            ) : (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                className="mx-[-16px]"
+              >
+                <View className="flex-row px-6 space-x-4 gap-4">
+                  {recentProjects.map((project: any) => (
+                    <View key={project.id} className="w-[320px]">
+                      <ProjectCard
+                        project={project}
+                        customer={{
+                          name: project.customerName,
+                          address: project.address
+                        }}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
           </View>
 
-          <View className="h-5" /> 
+          {/* <View className="h-3" />  */}
         </ScrollView>
       </SafeAreaView>
     </>

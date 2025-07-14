@@ -3,7 +3,7 @@
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker"
 import * as DocumentPicker from "expo-document-picker"
 import { useRouter } from "expo-router"
-import { ArrowLeft, Calendar, ChevronDown, Upload } from "lucide-react-native"
+import { ArrowLeft, Calendar, ChevronDown, Upload, Plus, FileText, X } from "lucide-react-native"
 import { useEffect, useState } from "react"
 import { Image, Text, TouchableOpacity, useWindowDimensions, View, Alert } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view"
@@ -39,7 +39,9 @@ const AddEmployee = () => {
   })
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
-  const [selectedFile, setSelectedFile] = useState(null)
+  const [avatar, setAvatar] = useState(null)
+  const [avatarPreview, setAvatarPreview] = useState(null)
+  const [documents, setDocuments] = useState([])
   const [roles, setRoles] = useState([]);
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
@@ -73,20 +75,50 @@ const AddEmployee = () => {
     })
   }
 
-  const pickDocument = async () => {
+  // Handle avatar upload (image only)
+  const pickAvatar = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ["image/*", "application/pdf"],
+        type: "image/*",
         multiple: false,
       })
 
       if (result.assets && result.assets.length > 0) {
         const file = result.assets[0]
-        setSelectedFile(file)
+        
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          Alert.alert("File too large", "Avatar file size should be less than 5MB")
+          return
+        }
+
+        setAvatar(file)
+        setAvatarPreview(file.uri)
+      }
+    } catch (err) {
+      console.log("Avatar picker error:", err)
+    }
+  }
+
+  // Handle document upload (multiple files)
+  const pickDocuments = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["image/*", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+        multiple: true,
+      })
+
+      if (result.assets && result.assets.length > 0) {
+        setDocuments(prev => [...prev, ...result.assets])
       }
     } catch (err) {
       console.log("Document picker error:", err)
     }
+  }
+
+  // Remove document from list
+  const removeDocument = (index) => {
+    setDocuments(prev => prev.filter((_, i) => i !== index))
   }
 
   // Enhanced handleInputChange with error clearing
@@ -217,13 +249,22 @@ const AddEmployee = () => {
       }
 
       // Avatar file
-      if (selectedFile && selectedFile.uri) {
+      if (avatar && avatar.uri) {
         formDataToSend.append("avatar", {
-          uri: selectedFile.uri,
-          type: selectedFile.mimeType || 'image/jpeg',
-          name: selectedFile.name || 'profile.jpg',
+          uri: avatar.uri,
+          type: avatar.mimeType || 'image/jpeg',
+          name: avatar.name || 'profile.jpg',
         });
       }
+
+      // Document files
+      documents.forEach((doc) => {
+        formDataToSend.append("documents", {
+          uri: doc.uri,
+          type: doc.mimeType || 'application/octet-stream',
+          name: doc.name || 'document',
+        });
+      });
 
       // Step 1: Create Employee record
       const employeeRes = await axios.post(
@@ -333,20 +374,29 @@ const AddEmployee = () => {
       >
         <View className="p-6">
 
+          {/* Profile Image Upload */}
           <View className="items-center py-6">
-            <TouchableOpacity
-              className="w-24 h-24 rounded-full bg-gray-200 justify-center items-center mb-2"
-              onPress={pickDocument}
-            >
-              {selectedFile ? (
-                <Image
-                  source={{ uri: selectedFile.uri }}
-                  className="w-24 h-24 rounded-full"
-                />
-              ) : (
-                <Upload size={24} color="#9CA3AF" />
-              )}
-            </TouchableOpacity>
+            <View className="relative">
+              <TouchableOpacity
+                className="w-24 h-24 rounded-full bg-gray-200 justify-center items-center mb-2"
+                onPress={pickAvatar}
+              >
+                {avatarPreview ? (
+                  <Image
+                    source={{ uri: avatarPreview }}
+                    className="w-24 h-24 rounded-full"
+                  />
+                ) : (
+                  <Plus size={24} color="#9CA3AF" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="absolute -bottom-2 -right-2 w-8 h-8 bg-red-600 rounded-full justify-center items-center"
+                onPress={pickAvatar}
+              >
+                <Upload size={16} color="white" />
+              </TouchableOpacity>
+            </View>
             <Text className="text-sm text-gray-500">Upload profile image</Text>
           </View>
 
@@ -688,39 +738,60 @@ const AddEmployee = () => {
             />
           </View>
 
-   
-          <Text className="text-base font-semibold text-gray-700 mb-4 mt-5">
-          Attachment
-          </Text>
-
-          <TouchableOpacity
-            className="bg-red-600 h-12 rounded-lg flex-row items-center justify-center mb-2"
-            onPress={pickDocument}
-          >
-            <Upload size={20} color="white" className="mr-2" />
-            <Text className="text-white font-medium">Upload</Text>
-          </TouchableOpacity>
-
-          {selectedFile && (
-            <View className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
-              <View className="flex-1">
-                <Text className="text-gray-800 font-medium" numberOfLines={1}>
-                  {selectedFile.name}
-                </Text>
-                <Text className="text-gray-500 text-sm">
-                  {(selectedFile.size / 1024).toFixed(2)} KB
+          {/* Document Upload Section */}
+          <View className="mb-6">
+            <Text className="text-base font-semibold text-gray-700 mb-4">
+              Documents
+            </Text>
+            
+            {/* Upload Button */}
+            <View className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
+              <View className="items-center">
+                <TouchableOpacity
+                  className="bg-red-600 px-6 py-3 rounded-lg flex-row items-center"
+                  onPress={pickDocuments}
+                >
+                  <Upload size={20} color="white" />
+                  <Text className="text-white font-medium ml-2">Upload Documents</Text>
+                </TouchableOpacity>
+                <Text className="text-sm text-gray-500 mt-2 text-center">
+                  Upload employee documents (ID proof, certificates, etc.)
                 </Text>
               </View>
-              <TouchableOpacity
-                className="p-2"
-                onPress={() => setSelectedFile(null)}
-              >
-                <Text className="text-red-600">Remove</Text>
-              </TouchableOpacity>
             </View>
-          )}
 
-     
+            {/* Document List */}
+            {documents.length > 0 && (
+              <View className="mt-4 space-y-2">
+                {documents.map((doc, index) => (
+                  <View
+                    key={index}
+                    className="flex-row items-center justify-between p-3 bg-gray-100 rounded-lg mb-2"
+                  >
+                    <View className="flex-row items-center flex-1">
+                      <FileText size={20} color="#6B7280" />
+                      <View className="ml-3 flex-1">
+                        <Text className="text-gray-800 font-medium" numberOfLines={1}>
+                          {doc.name}
+                        </Text>
+                        <Text className="text-gray-500 text-sm">
+                          {(doc.size / 1024).toFixed(2)} KB
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      className="p-2"
+                      onPress={() => removeDocument(index)}
+                    >
+                      <X size={20} color="#DC2626" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Form Actions */}
           <View className="flex-row justify-center space-x-6 mt-8 gap-4">
             <TouchableOpacity
               className="bg-gray-100 px-8 py-3 rounded-lg"

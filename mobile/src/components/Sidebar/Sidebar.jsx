@@ -52,7 +52,7 @@ const Sidebar = ({ isVisible, onClose }) => {
               fullLogoUrl = `${API_CONFIG.API_URL}/${rawLogoUrl}`;
             }
             
-            console.log('✅ Sidebar Logo URL found:', fullLogoUrl);
+          
             setLogoUrl(fullLogoUrl);
           }
         }
@@ -81,6 +81,7 @@ const Sidebar = ({ isVisible, onClose }) => {
     { id: 'employee-settings', label: 'Employee', route: '/settings/Employee', color: 'text-green-600', bg: 'bg-green-50' },
     { id: 'email-config', label: 'Email Configuration', route: '/settings/EmailConfigure', color: 'text-purple-600', bg: 'bg-purple-50' },
     { id: 'notification-config', label: 'Notification', route: '/settings/NotificationConfigure', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+    { id: 'firebase-notification', label: 'Firebase Notifications', route: '/settings/FirebaseNotification', color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
 
   // Filter menu items based on user permissions

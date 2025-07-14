@@ -15,17 +15,17 @@ module.exports = {
           },
           // Home Automation colors
           automation: {
-            primary: '#014c95',
-            secondary: '#36b9f6',
-            light: '#e2f3ff',
-            border: '#0068ad'
-          },
-          // Security System colors
-          security: {
             primary: '#026b87',
             secondary: '#5deaff',
             light: '#ebf8fc',
             border: '#00a8d6'
+          },
+          // Security System colors
+          security: {
+            primary: '#014c95',
+            secondary: '#36b9f6',
+            light: '#e2f3ff',
+            border: '#0068ad'
           },
           // Outdoor Audio colors
           audio: {

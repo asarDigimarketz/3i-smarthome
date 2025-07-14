@@ -155,7 +155,7 @@ const ForgotPasswordScreen = () => {
   const renderStep1 = () => (
     <View className="flex-1 justify-center px-6">
       <View className="mb-8">
-        <Text className="text-3xl font-bold text-gray-900 mb-2">Forgot Password</Text>
+        <Text className="text-2xl font-bold text-gray-900 mb-2">Forgot Password</Text>
         <Text className="text-gray-600 text-base">
           Enter your email address and we'll send you an OTP to reset your password.
         </Text>

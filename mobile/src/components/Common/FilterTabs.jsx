@@ -34,9 +34,9 @@ const FilterTabs = ({ selectedFilter, onFilterChange }) => {
       case 'Home Cinema':
         return '#7c3aed';
       case 'Security System':
-        return '#0891b2';
+        return '#2563eb';
       case 'Home Automation':
-        return '#2563eb';  
+        return '#0891b2';  
       case 'Outdoor Audio Solution':
         return '#db2777';
       default:

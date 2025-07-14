@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Plus, Search, ChevronDown } from 'lucide-react-native';
-import { useState, useEffect } from 'react';
+import { Plus, Search, ChevronDown, Phone, MapPin } from 'lucide-react-native';
+import { useState, useEffect, useRef } from 'react';
 import { FlatList, Text, View, Alert, ActivityIndicator, Button } from 'react-native';
 import axios from 'axios';
 import FilterTabs from '../../../components/Common/FilterTabs';
@@ -9,32 +9,25 @@ import { useAuth } from '../../../utils/AuthContext';
 import { hasPagePermission, getPageActions } from '../../../utils/permissions';
 import { TouchableOpacity } from 'react-native';
 import { TextInput } from 'react-native-paper';
+import { API_CONFIG } from '../../../../config'; // adjust path as needed
 
-// 🔧 NETWORK CONFIGURATION
-// Replace 'localhost' with your development machine's IP address
-// To find your IP: 
-// - Windows: Run 'ipconfig' in cmd, look for IPv4 Address
-// - Mac/Linux: Run 'ifconfig' in terminal, look for inet address
-// - Or use your machine's local network IP (e.g., 192.168.1.100)
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL; // ✅ Your actual IP address
-
-// Alternative: Use ngrok or similar service to expose localhost
-// const API_BASE_URL = 'https://your-ngrok-url.ngrok.io/api';
+const API_BASE_URL = API_CONFIG.API_URL;
+const API_KEY = API_CONFIG.API_KEY;
 
 function getStatusClassNames(status) {
   switch (status) {
     case 'Hot':
-      return 'bg-red-100 text-red-600';
+      return 'bg-red-100 text-red-600 border border-red-300';
     case 'Cold':
-      return 'bg-blue-100 text-blue-600';
+      return 'bg-blue-100 text-blue-600 border border-blue-300';
     case 'Warm':
-      return 'bg-orange-100 text-orange-600';
+      return 'bg-orange-100 text-orange-600 border border-orange-300';
     case 'Scrap':
-      return 'bg-yellow-100 text-yellow-600';
+      return 'bg-yellow-100 text-yellow-600 border border-yellow-300';
     case 'Confirmed':
-      return 'bg-green-100 text-green-600';
+      return 'bg-green-200 text-green-600 border border-green-300';
     default:
-      return 'bg-gray-100 text-gray-600';
+      return 'bg-gray-100 text-gray-600 border border-gray-300';
   }
 }
 
@@ -49,6 +42,7 @@ const ProposalList = () => {
   const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
   const actions = getPageActions(user, '/dashboard/proposals');
+  const searchTimeoutRef = useRef(null);
 
   // Add status options array
   const statusOptions = [
@@ -73,9 +67,10 @@ const ProposalList = () => {
         sortOrder: 'desc'
       };
 
-      // Add search filter
-      if (searchText) {
-        params.search = searchText;
+      // Add search filter for customer name
+      if (searchText && searchText.trim()) {
+        params.search = searchText.trim();
+        console.log('🔍 Searching for customer name:', searchText.trim());
       }
 
       // Add status filter
@@ -90,12 +85,12 @@ const ProposalList = () => {
 
       console.log('📤 Fetching proposals with params:', params);
       console.log('🔗 API URL:', `${API_BASE_URL}/api/proposals`);
-      console.log('🔑 API Key:', process.env.EXPO_PUBLIC_API_KEY ? 'Set' : 'Not Set');
+      console.log('🔑 API Key:', API_KEY ? 'Set' : 'Not Set');
 
       const response = await axios.get(`${API_BASE_URL}/api/proposals`, {
         params,
         headers: {
-          'x-api-key': process.env.EXPO_PUBLIC_API_KEY // Replace with your actual API key
+          'x-api-key': API_KEY // Replace with your actual API key
         }
       });
 
@@ -105,7 +100,16 @@ const ProposalList = () => {
       if (response.data.success) {
         const proposals = response.data.data.proposals || [];
         console.log('✅ Proposals fetched successfully:', proposals.length, 'items');
-        setProposals(proposals);
+        // Additional client-side filtering for customer name if needed
+        let filteredProposals = proposals;
+        if (searchText && searchText.trim()) {
+          filteredProposals = proposals.filter(proposal => 
+            proposal.customerName && 
+            proposal.customerName.toLowerCase().includes(searchText.toLowerCase().trim())
+          );
+          console.log('🔍 Client-side filtered proposals:', filteredProposals.length, 'items');
+        }
+        setProposals(filteredProposals);
       } else {
         console.error('❌ API returned success: false');
         console.error('❌ Error message:', response.data.error);
@@ -151,10 +155,35 @@ const ProposalList = () => {
     }
   };
 
+  // Handle search text change with debouncing
+  const handleSearchTextChange = (text) => {
+    setSearchText(text);
+    
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Set new timeout for debounced search
+    searchTimeoutRef.current = setTimeout(() => {
+      console.log('🔍 Debounced search triggered for:', text);
+      fetchProposals();
+    }, 300); // 300ms delay
+  };
+
   // Load proposals on component mount and when filters change
   useEffect(() => {
     fetchProposals();
-  }, [searchText, selectedStatus, activeTab]);
+  }, [selectedStatus, activeTab]); // Removed searchText from dependencies as it's handled by debouncing
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Transform API data to match component expectations
   const transformProposalData = (apiProposal) => {
@@ -204,21 +233,27 @@ const ProposalList = () => {
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-lg font-bold text-gray-800">{transformedItem.name}</Text>
           <View className={`px-3 py-1 rounded-lg ${bg}`}>
-            <Text className={`${getStatusClassNames(transformedItem.status)} text-xs font-semibold px-3 py-2 rounded-lg`}>
+            <Text className={`${getStatusClassNames(transformedItem.status)} text-xs font-semibold px-3 py-2 rounded-lg border`}>
               {transformedItem.status}
             </Text>
           </View>
         </View>
         
         <View className="mb-3">
-          <Text className="text-gray-600 mb-1">{transformedItem.phone}</Text>
-          <Text className="text-gray-500 text-sm mb-1">{transformedItem.address}</Text>
+          <View className="flex-row items-center mb-1">
+            <Phone size={14} color="#6B7280" />
+            <Text className="text-gray-600 ml-2">{transformedItem.phone}</Text>
+          </View>
+          <View className="flex-row items-center mb-1">
+            <MapPin size={14} color="#6B7280" />
+            <Text className="text-gray-500 text-sm ml-2 w-[80%]">{transformedItem.address}</Text>
+          </View>
         </View>
 
         <View className="border-t border-gray-100 pt-2">
           <View className="flex-row justify-between items-center">
             <Text className="text-gray-600 text-sm">Size: {transformedItem.size}</Text>
-            <Text className="text-gray-900 font-bold">{transformedItem.amount}</Text>
+            <Text className="text-gray-700 font-bold">Amount: {transformedItem.amount}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -310,9 +345,9 @@ const ProposalList = () => {
           {/* Second Row: Search Field */}
           <TextInput
             mode="outlined"
-            placeholder="Search proposals..."
+            placeholder="Search by customer name..."
             value={searchText}
-            onChangeText={setSearchText}
+            onChangeText={handleSearchTextChange}
             left={<TextInput.Icon icon={() => <Search size={20} color="#6B7280" />} />}
             outlineColor="#e5e7eb"
             activeOutlineColor="#DC2626"
