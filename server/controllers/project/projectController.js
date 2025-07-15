@@ -239,7 +239,7 @@ const getProjects = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 10,
+      limit = 6,
       sortBy = "createdAt",
       sortOrder = "desc",
       search = "",
@@ -247,6 +247,7 @@ const getProjects = async (req, res) => {
       service = "",
       startDate = "",
       endDate = "",
+      assignedEmployees = "",
     } = req.query;
 
     const options = {
@@ -261,16 +262,22 @@ const getProjects = async (req, res) => {
       endDate,
     };
 
-    const projects = await Project.getProjectsWithFilters({}, options);
+    // Build filter for assignedEmployees if present
+    const filter = {};
+    if (assignedEmployees) {
+      filter["assignedEmployees"] = assignedEmployees;
+    }
 
-    // Get total count for pagination
-    const total = await Project.getProjectsCount({
-      search,
-      status,
-      service,
-      startDate,
-      endDate,
-    });
+    const projects = await Project.getProjectsWithFilters(filter, options);
+
+    // Get total count for pagination (exclude empty filter fields)
+    const countFilters = { ...filter };
+    if (search) countFilters.search = search;
+    if (status) countFilters.status = status;
+    if (service) countFilters.service = service;
+    if (startDate) countFilters.startDate = startDate;
+    if (endDate) countFilters.endDate = endDate;
+    const total = await Project.getProjectsCount(countFilters);
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / limit);

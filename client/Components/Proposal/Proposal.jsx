@@ -9,9 +9,8 @@ import { Pagination } from "@heroui/pagination";
 import { addToast } from "@heroui/toast";
 import { useSession } from "next-auth/react";
 import { StatusDropdown } from "./status-dropdown";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { DateRangePicker } from "@heroui/date-picker";
-import axios from "axios";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 
 function App() {
@@ -71,13 +70,15 @@ function App() {
     checkUserPermissions();
   }, [session]);
 
+  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
     }, 500);
-
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Remove auto-reset on page refresh; user can clear date range with button
 
   // Handle status filter change
   const handleStatusChange = (status) => {
@@ -103,9 +104,9 @@ function App() {
   };
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
-      <div className="flex-1">
-        <div className=" space-y-6">
+    <div className="flex bg-gray-50 min-h-screen overflow-x-auto">
+      <div className="flex-1 min-w-0">
+        <div className="space-y-6">
           {/* Page Header */}
           <DashboardHeader
             title="Proposal"
@@ -135,12 +136,29 @@ function App() {
                 size="md"
                 variant="bordered"
                 className="w-50"
+                aria-label="Proposal date range"
                 classNames={{
                   base: "bg-white",
                   inputWrapper: "border-gray-300 hover:border-gray-400",
                   input: "text-gray-700",
                   label: "text-gray-600",
                 }}
+                endContent={
+                  dateRange ? (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDateRange(null);
+                      }}
+                      className="flex items-center justify-center p-1 cursor-pointer focus:outline-none"
+                      tabIndex={-1}
+                      role="button"
+                      aria-label="Clear date range"
+                    >
+                      <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                    </span>
+                  ) : null
+                }
               />
               <StatusDropdown onStatusChange={handleStatusChange} />
               {userPermissions.hasAddPermission ? (
@@ -168,17 +186,19 @@ function App() {
           </div>
 
           {/* Components with box shadow */}
-          <div className="space-y-6 bg-white rounded-xl shadow-lg p-6">
+          <div className="space-y-6 bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
             <div className="">
               <ProposalFilters onServiceChange={handleServiceChange} />
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-x-auto">
               <ProposalTable
                 searchQuery={debouncedSearchQuery}
                 statusFilter={statusFilter}
                 dateRange={dateRange}
                 serviceFilter={serviceFilter}
                 userPermissions={userPermissions}
+                page={currentPage}
+                setTotalPages={setTotalPages}
               />
             </div>
             <div className="flex justify-end mt-6">

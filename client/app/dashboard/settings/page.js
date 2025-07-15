@@ -1,10 +1,10 @@
-import HotelManagementInterface from "../../../Components/Settings/HotelDetailsForm";
+import Settings from "../../../Components/Settings/Settings.jsx";
 import PermissionGuard from "../../../Components/auth/PermissionGuard";
 
 export default function Page() {
   return (
     <PermissionGuard requiredPermission="settings" requiredAction="view">
-      <HotelManagementInterface />
+      <Settings />
     </PermissionGuard>
   );
 }

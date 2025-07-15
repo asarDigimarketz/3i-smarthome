@@ -1,9 +1,11 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
+import type React from "react"
+
+import { useState, useEffect } from "react"
 import { addToast } from "@heroui/toast"
-import Link from "next/link";
-import { Eye, EyeOff, Lock, Mail, User, CheckCircle } from "lucide-react";
+import Link from "next/link"
+import { Eye, EyeOff, Lock, Mail, User, CheckCircle, Shield, Wifi } from "lucide-react"
 import { Input } from "@heroui/input"
 import { Button } from "@heroui/button"
 import { validatePassword } from "../../utils/passwordValidation"
@@ -13,14 +15,43 @@ import Image from "next/image"
 // Add this helper component
 const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
   <div className="flex items-center gap-1.5">
-    <div className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${
-      met ? 'bg-green-400' : 'bg-red-400'
-    }`} />
-    <span className={`transition-colors duration-200 ${
-      met ? 'text-green-400' : 'text-red-400'
-    }`}>
-      {text}
-    </span>
+    <div className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${met ? "bg-green-400" : "bg-red-400"}`} />
+    <span className={`transition-colors duration-200 ${met ? "text-green-400" : "text-red-400"}`}>{text}</span>
+  </div>
+)
+
+const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
+  <div className="fixed inset-0 backdrop-blur-xl bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-purple-900/95 flex flex-col items-center justify-center z-50">
+    <div className="relative w-40 h-40 mb-8">
+      {/* Animated tech rings */}
+      <div className="absolute inset-0 border-2 border-blue-400/60 rounded-full animate-pulse"></div>
+      <div className="absolute inset-4 border-2 border-purple-400/40 rounded-full animate-spin-slow"></div>
+      <div className="absolute inset-8 border-2 border-cyan-400/30 rounded-full animate-spin-reverse"></div>
+
+      {/* Glowing center */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full animate-pulse flex items-center justify-center">
+          {hotelLogo ? (
+            <div className="relative w-10 h-10">
+              <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain" />
+            </div>
+          ) : (
+            <User className="w-8 h-8 text-white" />
+          )}
+        </div>
+      </div>
+    </div>
+
+    <h3 className="text-3xl font-bold text-white mb-3 animate-fade-in bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+      Creating Your Account
+    </h3>
+    <p className="text-gray-300 text-center max-w-md animate-fade-in-delay text-lg">
+      Setting up your hotel management dashboard...
+    </p>
+
+    <div className="w-80 h-2 bg-slate-800/50 rounded-full mt-8 overflow-hidden backdrop-blur-sm">
+      <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 rounded-full animate-progress-infinite"></div>
+    </div>
   </div>
 )
 
@@ -54,17 +85,17 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-        // Validate password before submission
-        const { isValid } = validatePassword(password)
-        if (!isValid) {
-          addToast({
-            title: "Invalid Password",
-            description: "Please ensure your password meets all requirements",
-            color: "danger",
-          })
-          return
-        }
-        
+    // Validate password before submission
+    const { isValid } = validatePassword(password)
+    if (!isValid) {
+      addToast({
+        title: "Invalid Password",
+        description: "Please ensure your password meets all requirements",
+        color: "danger",
+      })
+      return
+    }
+
     if (!name || !email || !password) {
       addToast({
         title: "Error",
@@ -118,24 +149,33 @@ export default function Register() {
     }
   }
 
-
   if (registered) {
     return (
-      <div className="flex min-h-screen bg-black">
-        <div className="flex w-full items-center justify-center p-6">
-          <div className="w-full max-w-md rounded-[40px] p-12">
-            <div className="mx-auto max-w-sm text-center">
-              <div className="mb-8 mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500">
-                <CheckCircle className="h-8 w-8 text-white" />
+      <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+        </div>
+
+        <div className="flex w-full items-center justify-center p-6 relative z-10">
+          <div className="w-full max-w-md">
+            <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl text-center">
+              <div className="mb-8 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg">
+                <CheckCircle className="h-10 w-10 text-white" />
               </div>
-              <h2 className="mb-2 text-3xl font-bold text-white">Registration Successful</h2>
-              <p className="mb-8 text-gray-400">Please check your email to verify your account.</p>
-              <p className="mb-8 text-gray-400">
-                A verification email has been sent to <strong className="text-white">{email}</strong>
+              <h2 className="mb-4 text-3xl font-bold text-white">Registration Successful</h2>
+              <p className="mb-6 text-gray-300">Please check your email to verify your account.</p>
+              <p className="mb-8 text-gray-300">
+                A verification email has been sent to <strong className="text-blue-400">{email}</strong>
               </p>
               <Link
                 href="/login"
-                className="inline-block rounded-lg bg-white px-6 py-3 text-sm font-medium text-black hover:bg-gray-100 transition-colors"
+                className="inline-block h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 
+                  hover:from-blue-600 hover:to-purple-700 text-white font-semibold 
+                  rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all 
+                  duration-200 flex items-center justify-center"
               >
                 Return to Login
               </Link>
@@ -147,209 +187,224 @@ export default function Register() {
   }
 
   return (
-    <div className="flex min-h-screen bg-black">
-    {/* Left Section */}
-    <div className="relative hidden w-1/2 p-8 lg:block">
-      <div className="h-full w-full overflow-hidden rounded-[40px] bg-gradient-to-b from-blue-400 via-blue-600 to-black">
-        <div className="flex h-full flex-col items-center justify-center px-8 text-center text-white">
-          {hotelLogo && (
-            <div className="absolute top-12 left-1/2 -translate-x-1/2">
-              <div className="relative w-28 h-28">
-                <Image
-                  src={hotelLogo}
-                  alt="Hotel Logo"
-                  fill
-                  sizes="(max-width: 768px) 96px, 112px"
-                  priority
-                  className="object-contain drop-shadow-2xl filter brightness-0 invert opacity-90"
-                />
-              </div>
-            </div>
-          )}
-          <div className="mb-8">
-            <h1 className="text-2xl font-semibold">Hotel Management</h1>
-          </div>
-          <h2 className="mb-6 text-4xl font-bold">Get Started with Us</h2>
-          <p className="mb-12 text-lg">Complete these easy steps to register your account.</p>
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 relative overflow-hidden">
+      {loading && <LoadingOverlay hotelLogo={hotelLogo} />}
 
-          <div className="w-full max-w-sm space-y-4">
-            <div className="rounded-lg bg-white/10 p-4 backdrop-blur-sm">
-              <div className="flex items-center gap-4">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black">1</span>
-                <span className="text-lg">Create your account</span>
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+      </div>
+
+      {/* Left Section - Hotel Features */}
+      <div className="relative hidden w-1/2 p-8 lg:flex flex-col justify-center">
+        <div className="max-w-lg mx-auto">
+          <div className="text-center mb-12">
+            {hotelLogo && (
+              <div className="mb-8 flex justify-center">
+                <div className="relative w-24 h-24 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-2xl p-4 backdrop-blur-sm border border-white/10">
+                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-2" />
+                </div>
               </div>
-            </div>
-            <div className="rounded-lg bg-white/5 p-4 backdrop-blur-sm">
-              <div className="flex items-center gap-4">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white">2</span>
-                <span className="text-lg">Verify your email</span>
+            )}
+            <h1 className="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Hotel Management
+            </h1>
+            <p className="text-xl text-gray-300 mb-8">Get Started with Your Management System</p>
+          </div>
+
+          <div className="space-y-6">
+            {[
+              {
+                icon: <User className="w-6 h-6" />,
+                title: "Create Account",
+                description: "Set up your management dashboard",
+                gradient: "from-blue-500 to-cyan-500",
+              },
+              {
+                icon: <Shield className="w-6 h-6" />,
+                title: "Verify Email",
+                description: "Secure your account with email verification",
+                gradient: "from-purple-500 to-pink-500",
+              },
+              {
+                icon: <Wifi className="w-6 h-6" />,
+                title: "Start Managing",
+                description: "Access your complete hotel management suite",
+                gradient: "from-green-500 to-emerald-500",
+              },
+            ].map((feature, index) => (
+              <div
+                key={index}
+                className="group relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 hover:bg-white/10 transition-all duration-300 hover:transform hover:scale-105"
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center text-white shadow-lg`}
+                  >
+                    {feature.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">{feature.title}</h3>
+                    <p className="text-gray-300 text-sm">{feature.description}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="rounded-lg bg-white/5 p-4 backdrop-blur-sm">
-              <div className="flex items-center gap-4">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white">3</span>
-                <span className="text-lg">Start managing your hotel</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
-    </div>
 
-    {/* Right Section */}
-    <div className="flex w-full items-center justify-center bg-black p-6 lg:w-1/2">
-      <div className="w-full max-w-md rounded-[40px] p-12">
-        <div className="mx-auto max-w-sm">
-          {hotelLogo && (
-            <div className="mb-4 flex justify-center">
-              <div className="relative w-24 h-24">
-                <Image
-                  src={hotelLogo}
-                  alt="Hotel Logo"
-                  fill
-                  sizes="96px"
-                  priority
-                  className="object-contain drop-shadow-xl filter opacity-90 transition-opacity duration-300 hover:opacity-100"
-                />
+      {/* Right Section - Registration Form */}
+      <div className="flex w-full items-center justify-center p-6 lg:w-1/2 relative">
+        <div className="w-full max-w-md">
+          <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
+            {/* Mobile logo */}
+            {hotelLogo && (
+              <div className="mb-8 flex justify-center lg:hidden">
+                <div className="relative w-20 h-20 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
+                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-1" />
+                </div>
               </div>
-            </div>
-          )}
-         {/*  <h2 className="mb-2 text-3xl font-bold text-white">Create Account</h2> */}
-          {/* <p className="mb-8 text-gray-400">Enter your details to get started with our platform.</p> */}
+            )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-white mb-2">Create Account</h2>
+              <p className="text-gray-300">Join our hotel management platform</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Name Input */}
               <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-gray-200">
-                  Full Name
-                </label>
-                <div className="relative flex items-center">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5 pointer-events-none" />
+                <label className="text-sm font-medium text-gray-200">Full Name</label>
+                <div className="relative">
                   <Input
-                    id="name"
+                    placeholder="Enter your full name"
                     type="text"
+                    variant="bordered"
+                    radius="lg"
+                    size="lg"
+                    startContent={<User className="text-blue-400" />}
+                    isRequired
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="h-12 w-full pl-10 bg-gray-900/50 border border-gray-800 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg transition-all duration-200"
-                    placeholder="Enter your full name"
-                    required
+                    classNames={{
+                      inputWrapper: "bg-transparent border-blue-400/40 focus:border-blue-500 h-[50px]",
+                      input: "text-white placeholder:text-blue-100",
+                    }}
+                    className="mb-4 text-white placeholder:text-blue-100"
                   />
                 </div>
               </div>
 
               {/* Email Input */}
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-gray-200">
-                  Email Address
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5 pointer-events-none" />
+                <label className="text-sm font-medium text-gray-200">Email Address</label>
+                <div className="relative">
                   <Input
-                    id="email"
+                    placeholder="Enter your email"
                     type="email"
+                    variant="bordered"
+                    radius="lg"
+                    size="lg"
+                    startContent={<Mail className="text-blue-400" />}
+                    isRequired
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-12 w-full pl-10 bg-gray-900/50 border border-gray-800 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg transition-all duration-200"
-                    placeholder="name@example.com"
-                    required
+                    classNames={{
+                      inputWrapper: "bg-transparent border-blue-400/40 focus:border-blue-500 h-[50px]",
+                      input: "text-white placeholder:text-blue-100",
+                    }}
+                    className="mb-4 text-white placeholder:text-blue-100"
                   />
                 </div>
               </div>
 
               {/* Password Input */}
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-200">
-                  Password
-                </label>
-                <div className="relative flex items-center">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5 pointer-events-none" />
+                <label className="text-sm font-medium text-gray-200">Password</label>
+                <div className="relative">
                   <Input
-                    id="password"
+                    placeholder="Create a password"
                     type={showPassword ? "text" : "password"}
+                    variant="bordered"
+                    radius="lg"
+                    size="lg"
+                    startContent={<Lock className="text-blue-400" />}
+                    endContent={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-blue-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-blue-400/20"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    }
+                    isRequired
                     value={password}
                     onChange={handlePasswordChange}
-                    className={`h-12 w-full pl-10 pr-12 bg-gray-900/50 border ${
-                      passwordErrors.length > 0 ? 'border-red-500' : 'border-gray-800'
-                    } text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg transition-all duration-200`}
-                    placeholder="Create a password"
-                    required
+                    classNames={{
+                      inputWrapper: `bg-transparent ${
+                        passwordErrors.length > 0 ? "border-red-500/40" : "border-blue-400/40"
+                      } focus:border-blue-500 h-[50px]`,
+                      input: "text-white placeholder:text-blue-100",
+                    }}
+                    className="mb-4"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 focus:outline-none focus:text-gray-300 transition-colors"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
                 </div>
-                
+
                 {/* Password Requirements List */}
                 <div className="mt-2">
                   {password && (
                     <div className="text-xs space-y-1.5">
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                        <RequirementItem
-                          met={password.length >= 8}
-                          text="8+ characters"
-                        />
-                        <RequirementItem
-                          met={/[A-Z]/.test(password)}
-                          text="Uppercase letter"
-                        />
-                        <RequirementItem
-                          met={/[a-z]/.test(password)}
-                          text="Lowercase letter"
-                        />
-                        <RequirementItem
-                          met={/\d/.test(password)}
-                          text="Number"
-                        />
-                        <RequirementItem
-                          met={/[@$!%*?&]/.test(password)}
-                          text="Special character"
-                        />
+                        <RequirementItem met={password.length >= 8} text="8+ characters" />
+                        <RequirementItem met={/[A-Z]/.test(password)} text="Uppercase letter" />
+                        <RequirementItem met={/[a-z]/.test(password)} text="Lowercase letter" />
+                        <RequirementItem met={/\d/.test(password)} text="Number" />
+                        <RequirementItem met={/[@$!%*?&]/.test(password)} text="Special character" />
                       </div>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="h-12 w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin mr-2" />
-                  Creating account...
-                </div>
-              ) : (
-                "Create Account"
-              )}
-            </Button>
-
-            <p className="text-center text-sm text-gray-400">
-              Already have an account?{" "}
-              <Link 
-                href="/login" 
-                className="text-blue-500 hover:text-blue-400 font-medium transition-colors"
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                className="h-12 w-full bg-gradient-to-r from-blue-500 to-purple-600 
+                  hover:from-blue-600 hover:to-purple-700 text-white font-semibold 
+                  rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all 
+                  duration-200 disabled:opacity-50 disabled:cursor-not-allowed border-0"
+                disabled={loading}
               >
-                Sign in
-              </Link>
-            </p>
-          </form>
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                    Creating account...
+                  </div>
+                ) : (
+                  "Create Account"
+                )}
+              </Button>
+
+              <div className="mt-8 text-center">
+                <p className="text-gray-400 text-sm mb-4">
+                  Already have an account?{" "}
+                  <Link
+                    href="/login"
+                    className="text-blue-400 hover:text-blue-300 font-medium transition-colors hover:underline decoration-2 underline-offset-4"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+                <p className="text-gray-400 text-xs">Secured by advanced encryption and verification</p>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-)
+  )
 }

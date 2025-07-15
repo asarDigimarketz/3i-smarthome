@@ -75,38 +75,36 @@ const upload = multer({
   fileFilter: fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB file size limit
-    files: 1, // Only one file per upload
+    files: 10, // Allow up to 10 files per upload (adjust as needed)
   },
 });
 
 /**
- * Middleware for single file upload (proposal attachment)
+ * Middleware for multiple file upload (proposal attachments)
  */
-const uploadProposalAttachment = upload.single("attachment");
+const uploadProposalAttachments = upload.array("attachments", 10); // up to 10 files
 
 /**
- * Enhanced middleware wrapper with better error handling
+ * Enhanced middleware wrapper with better error handling (multiple files)
  */
 const handleProposalUpload = (req, res, next) => {
-  uploadProposalAttachment(req, res, function (err) {
+  uploadProposalAttachments(req, res, function (err) {
     if (err instanceof multer.MulterError) {
       let errorMessage = "File upload error";
-
       switch (err.code) {
         case "LIMIT_FILE_SIZE":
           errorMessage = "File size too large. Maximum size allowed is 10MB.";
           break;
         case "LIMIT_FILE_COUNT":
-          errorMessage = "Too many files. Only one file is allowed.";
+          errorMessage = "Too many files. Maximum 10 files allowed.";
           break;
         case "LIMIT_UNEXPECTED_FILE":
           errorMessage =
-            'Unexpected field name. Use "attachment" as field name.';
+            'Unexpected field name. Use "attachments" as field name.';
           break;
         default:
           errorMessage = err.message;
       }
-
       return res.status(400).json({
         success: false,
         error: errorMessage,
@@ -117,18 +115,16 @@ const handleProposalUpload = (req, res, next) => {
         error: err.message,
       });
     }
-
-    // If file was uploaded, add file info to request
-    if (req.file) {
-      req.fileInfo = {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path,
-      };
+    // If files were uploaded, add filesInfo array to request
+    if (req.files && req.files.length > 0) {
+      req.filesInfo = req.files.map((file) => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: file.path,
+      }));
     }
-
     next();
   });
 };
@@ -186,7 +182,7 @@ const handleFileUpdate = async (oldFilePath) => {
 
 module.exports = {
   upload,
-  uploadProposalAttachment,
+  uploadProposalAttachments,
   handleProposalUpload,
   deleteFile,
   getFileUrl,

@@ -56,7 +56,7 @@ const EmployeeDetail = () => {
       let ongoing = 0;
       if (emp && emp._id) {
         const projectsRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/projects?assignedEmployee=${emp._id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/projects?assignedEmployees=${emp._id}`,
           {
             headers: {
               "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
@@ -66,43 +66,54 @@ const EmployeeDetail = () => {
         if (projectsRes.ok) {
           const projectsData = await projectsRes.json();
           if (projectsData.success && Array.isArray(projectsData.data)) {
-            projects = projectsData.data.map((proj) => {
-              // Determine status for stats
-              const status = proj.projectStatus || "";
-              if (
-                ["complete", "completed", "done"].includes(status.toLowerCase())
+            // Only include projects where assignedEmployees includes this employee
+            projects = projectsData.data
+              .filter(
+                (proj) =>
+                  Array.isArray(proj.assignedEmployees) &&
+                  proj.assignedEmployees.some((e) => e._id === emp._id)
               )
-                completed++;
-              else if (
-                ["inprogress", "in-progress", "ongoing"].includes(
-                  status.toLowerCase()
+              .map((proj) => {
+                // Determine status for stats
+                const status = proj.projectStatus || "";
+                if (
+                  ["complete", "completed", "done"].includes(
+                    status.toLowerCase()
+                  )
                 )
-              )
-                ongoing++;
-              return {
-                id: proj._id || proj.id,
-                customer:
-                  proj.customerName || emp.firstName + " " + emp.lastName,
-                status: proj.projectStatus || "N/A",
-                service: proj.services || "N/A",
-                amount: proj.projectAmount
-                  ? `₹${proj.projectAmount.toLocaleString("en-IN")}`
-                  : "N/A",
-                date: proj.projectDate
-                  ? new Date(proj.projectDate).toLocaleDateString("en-GB")
-                  : "N/A",
-                address:
-                  proj.fullAddress ||
-                  `${proj.address?.addressLine || ""} , ${
-                    proj.address?.city || ""
-                  } , ${proj.address?.district || ""} - ${
-                    proj.address?.pincode || ""
+                  completed++;
+                else if (
+                  ["inprogress", "in-progress", "ongoing"].includes(
+                    status.toLowerCase()
+                  )
+                )
+                  ongoing++;
+                return {
+                  id: proj._id || proj.id,
+                  customer:
+                    proj.customerName || emp.firstName + " " + emp.lastName,
+                  status: proj.projectStatus || "N/A",
+                  service: proj.services || "N/A",
+                  amount: proj.projectAmount
+                    ? `₹${proj.projectAmount.toLocaleString("en-IN")}`
+                    : "N/A",
+                  date: proj.projectDate
+                    ? new Date(proj.projectDate).toLocaleDateString("en-GB")
+                    : "N/A",
+                  address:
+                    proj.fullAddress ||
+                    `${proj.address?.addressLine || ""} , ${
+                      proj.address?.city || ""
+                    } , ${proj.address?.district || ""} - ${
+                      proj.address?.pincode || ""
+                    }`,
+                  progress: `${proj.completedTasks || 0}/${
+                    proj.totalTasks || 0
                   }`,
-                progress: `${proj.completedTasks || 0}/${proj.totalTasks || 0}`,
-                color: getServiceColor(proj.services),
-                assignedEmployees: proj.assignedEmployees || [],
-              };
-            });
+                  color: getServiceColor(proj.services),
+                  assignedEmployees: proj.assignedEmployees || [],
+                };
+              });
           }
         }
       }
@@ -111,7 +122,10 @@ const EmployeeDetail = () => {
         id: emp.employeeId,
         name: `${emp.firstName} ${emp.lastName}`,
         role: emp.role?.role || "N/A",
-        department: emp.department?.name || "N/A",
+        department:
+          typeof emp.department === "object" && emp.department !== null
+            ? emp.department.name
+            : emp.department || "N/A",
         dateOfBirth: emp.dateOfBirth
           ? new Date(emp.dateOfBirth).toLocaleDateString("en-GB")
           : "N/A",
@@ -313,7 +327,12 @@ const EmployeeDetail = () => {
                     </div>
                     <div>
                       <p className="text-default-500">Department</p>
-                      <p className="font-medium">{employeeData.department}</p>
+                      <p className="font-medium">
+                        {typeof employeeData.department === "object" &&
+                        employeeData.department !== null
+                          ? employeeData.department.name
+                          : employeeData.department || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-default-500">Date of Birth</p>
@@ -354,17 +373,69 @@ const EmployeeDetail = () => {
                   {employeeData.attachments &&
                     employeeData.attachments.length > 0 && (
                       <div>
-                        <p className="text-default-500">Attachements</p>
-                        <div className="space-y-1 mt-1">
+                        <p className="text-default-500">Documents</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
                           {employeeData.attachments.map((attachment, index) => (
                             <div
                               key={index}
-                              className="flex items-center gap-2"
+                              className="flex items-center bg-[#E3F2FD] rounded px-2 py-1 shadow-sm"
+                              style={{ minWidth: 0, maxWidth: 220 }}
                             >
-                              <File className="text-primary" width={16} />
-                              <span className="text-sm">
-                                Document {index + 1}
-                              </span>
+                              {attachment.mimetype &&
+                              attachment.mimetype.startsWith("image") ? (
+                                <a
+                                  href={
+                                    attachment.url &&
+                                    attachment.url.startsWith("http")
+                                      ? attachment.url
+                                      : `/${attachment.url}`
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download={attachment.originalName || true}
+                                  className="block w-10 h-10 rounded overflow-hidden mr-2 border border-gray-300"
+                                >
+                                  <img
+                                    src={
+                                      attachment.url &&
+                                      attachment.url.startsWith("http")
+                                        ? attachment.url
+                                        : `/${attachment.url}`
+                                    }
+                                    alt={
+                                      attachment.originalName ||
+                                      `Document ${index + 1}`
+                                    }
+                                    className="object-cover w-full h-full"
+                                  />
+                                </a>
+                              ) : (
+                                <File
+                                  className="text-primary mr-2"
+                                  width={24}
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <a
+                                  href={
+                                    attachment.url &&
+                                    attachment.url.startsWith("http")
+                                      ? attachment.url
+                                      : `/${attachment.url}`
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download={attachment.originalName || true}
+                                  className="text-blue-600 hover:underline truncate block max-w-[120px]"
+                                  title={
+                                    attachment.originalName ||
+                                    `Document ${index + 1}`
+                                  }
+                                >
+                                  {attachment.originalName ||
+                                    `Document ${index + 1}`}
+                                </a>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -412,7 +483,7 @@ const EmployeeDetail = () => {
           {/* Projects */}
           <div>
             <h2 className="text-xl font-bold mb-4">Projects</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {employeeData.projects
                 .filter((project) => {
                   if (projectFilter === "all") return true;

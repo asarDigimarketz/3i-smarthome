@@ -1,5 +1,4 @@
 "use client";
-import { ChevronDown, Edit3, Eye, Check, X, Edit } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -8,9 +7,7 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { Button } from "@heroui/button";
-import { Input, Textarea } from "@heroui/input";
-import { Select, SelectItem } from "@heroui/select";
+
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -22,6 +19,8 @@ const ProposalTable = ({
   statusFilter,
   dateRange,
   serviceFilter,
+  page = 1,
+  setTotalPages = () => {},
 }) => {
   const router = useRouter();
   const [proposals, setProposals] = useState([]);
@@ -60,8 +59,8 @@ const ProposalTable = ({
       }
 
       // Add pagination
-      params.append("limit", "50"); // Get more records for table
-
+      params.append("page", page);
+      params.append("limit", "5"); // Get more records for table
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/api/proposals?${params.toString()}`,
         {
@@ -70,9 +69,11 @@ const ProposalTable = ({
           },
         }
       );
-
       if (response.data.success) {
         setProposals(response.data.data.proposals);
+        if (setTotalPages && response.data.data.pagination) {
+          setTotalPages(response.data.data.pagination.total || 1);
+        }
       }
     } catch (error) {
       console.error("Error fetching proposals:", error);
@@ -86,10 +87,10 @@ const ProposalTable = ({
     }
   };
 
-  // Fetch proposals on component mount and when filters change
+  // Fetch proposals on component mount and when filters/page change
   useEffect(() => {
     fetchProposals();
-  }, [searchQuery, statusFilter, dateRange, serviceFilter]);
+  }, [searchQuery, statusFilter, dateRange, serviceFilter, page]);
 
   const handleRowClick = (proposal) => {
     // Only open modal if we're not currently editing
@@ -399,7 +400,7 @@ const ProposalTable = ({
         classNames={{
           base: "w-full bg-white shadow-sm rounded-lg overflow-hidden",
           wrapper: "overflow-x-auto",
-          table: "w-full",
+          table: "w-full min-w-[700px]", // Ensures horizontal scroll on small screens
           thead: "[&>tr]:first:shadow-none ",
           th: [
             "font-medium",
@@ -429,6 +430,8 @@ const ProposalTable = ({
             "last:pr-6",
             "border-b-0",
             "text-sm",
+            "max-w-[220px]",
+            "break-words",
           ],
         }}
       >

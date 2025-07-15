@@ -53,7 +53,7 @@ const ProposalDetailsModal = ({
     status: "Warm",
     comment: "",
     date: "",
-    attachment: null,
+    attachments: null,
   });
 
   // Amount dropdown options
@@ -83,7 +83,7 @@ const ProposalDetailsModal = ({
         date: proposalData.date
           ? new Date(proposalData.date).toLocaleDateString()
           : "",
-        attachment: proposalData.attachment || null,
+        attachments: proposalData.attachments || null,
       });
 
       // Update amount options if available in proposal data
@@ -275,7 +275,7 @@ const ProposalDetailsModal = ({
 
       // Add file if selected
       if (selectedFile) {
-        submitData.append("attachment", selectedFile);
+        submitData.append("attachments", selectedFile);
       }
 
       const response = await axios.put(
@@ -438,7 +438,7 @@ const ProposalDetailsModal = ({
           </div>
         ) : (
           <>
-            <Dropdown>
+            <Dropdown radius="md">
               <DropdownTrigger>
                 <Button
                   variant="bordered"
@@ -504,7 +504,7 @@ const ProposalDetailsModal = ({
           }}
         />
       ) : (
-        <div className="text-black-400 font-medium">
+        <div className="text-black font-[400]">
           {formData.comment || "No comment"}
         </div>
       )}
@@ -583,7 +583,7 @@ const ProposalDetailsModal = ({
                       variant="bordered"
                     />
                   ) : (
-                    <div className="text-gray-900 font-medium">
+                    <div className="text-black font-[400]">
                       {formData.customerName}
                     </div>
                   )}
@@ -592,9 +592,7 @@ const ProposalDetailsModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Date:
                   </label>
-                  <div className="text-gray-900 font-medium">
-                    {formData.date}
-                  </div>
+                  <div className="text-black font-[400]">{formData.date}</div>
                 </div>
               </div>
 
@@ -613,7 +611,7 @@ const ProposalDetailsModal = ({
                       variant="bordered"
                     />
                   ) : (
-                    <div className="text-black-400 font-medium">
+                    <div className="text-black font-[400]">
                       {formData.contactNumber}
                     </div>
                   )}
@@ -632,7 +630,7 @@ const ProposalDetailsModal = ({
                       type="email"
                     />
                   ) : (
-                    <div className="text-black-400 font-medium">
+                    <div className="text-black font-[400]">
                       {formData.email}
                     </div>
                   )}
@@ -644,7 +642,7 @@ const ProposalDetailsModal = ({
                 <label className="text-sm font-medium text-gray-700">
                   Address:
                 </label>
-                <div className="text-black-400 font-medium">
+                <div className="text-black font-[400]">
                   {`${formData.address.addressLine}, ${formData.address.city}, ${formData.address.district}, ${formData.address.state}, ${formData.address.country} - ${formData.address.pincode}`}
                 </div>
               </div>
@@ -655,7 +653,7 @@ const ProposalDetailsModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Service:
                   </label>
-                  <div className="text-black-400 font-medium">
+                  <div className="text-black font-[400]">
                     {formData.services}
                   </div>
                 </div>
@@ -663,7 +661,7 @@ const ProposalDetailsModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Description:
                   </label>
-                  <div className="text-black-400 font-medium text-sm">
+                  <div className="text-black font-[400] text-sm">
                     {formData.projectDescription}
                   </div>
                 </div>
@@ -674,7 +672,7 @@ const ProposalDetailsModal = ({
                 <label className="text-sm font-medium text-gray-700">
                   Size:
                 </label>
-                <div className="text-black-400 font-medium">
+                <div className="text-black font-[400]">
                   {formData.size} <span className="text-gray-500">sqt</span>
                 </div>
               </div>
@@ -693,8 +691,9 @@ const ProposalDetailsModal = ({
                 <Select
                   selectedKeys={new Set([formData.status])}
                   variant="bordered"
-                  radius="full"
+                  radius="md"
                   className="max-w-[160px]"
+                  aria-label="Proposal status"
                   classNames={{
                     trigger: "border-gray-300",
                   }}
@@ -743,20 +742,69 @@ const ProposalDetailsModal = ({
                     <span className="text-sm text-gray-600">
                       {selectedFile
                         ? selectedFile.name
-                        : formData.attachment
-                        ? formData.attachment.originalName
+                        : formData.attachments &&
+                          Array.isArray(formData.attachments) &&
+                          formData.attachments.length > 0
+                        ? formData.attachments.map((att, idx) => (
+                            <span
+                              key={att._id || att.filename || idx}
+                              className="block"
+                            >
+                              {att.originalName || att.filename}
+                            </span>
+                          ))
+                        : formData.attachments &&
+                          formData.attachments.originalName
+                        ? formData.attachments.originalName
                         : "No file selected"}
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg">
-                    <FileText size={16} className="text-blue-600" />
-                    <span className="text-sm text-gray-700">
-                      {formData.attachment
-                        ? formData.attachment.originalName ||
-                          formData.attachment.filename
-                        : "No attachment"}
-                    </span>
+                  <div className="flex flex-col gap-2 p-2 border border-gray-200 rounded-lg">
+                    {formData.attachments &&
+                    Array.isArray(formData.attachments) &&
+                    formData.attachments.length > 0 ? (
+                      formData.attachments.map((att, idx) => (
+                        <div
+                          key={att._id || att.filename || idx}
+                          className="flex items-center gap-2"
+                        >
+                          <FileText size={16} className="text-blue-600" />
+                          <a
+                            href={
+                              att.url || att.attachmentUrl || `/${att.filename}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-700 hover:underline"
+                          >
+                            {att.originalName || att.filename}
+                          </a>
+                        </div>
+                      ))
+                    ) : formData.attachments &&
+                      formData.attachments.originalName ? (
+                      <div className="flex items-center gap-2">
+                        <FileText size={16} className="text-blue-600" />
+                        <a
+                          href={
+                            formData.attachments.url ||
+                            formData.attachments.attachmentUrl ||
+                            `/${formData.attachments.filename}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-700 hover:underline"
+                        >
+                          {formData.attachments.originalName ||
+                            formData.attachments.filename}
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-700">
+                        No attachment
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -770,6 +818,7 @@ const ProposalDetailsModal = ({
                   onPress={handleSave}
                   className="px-6"
                   disabled={loading}
+                  radius="md"
                 >
                   save
                 </Button>
@@ -777,6 +826,7 @@ const ProposalDetailsModal = ({
                   onPress={handleEdit}
                   className="px-6 bg-[#616161] text-white"
                   disabled={loading}
+                  radius="md"
                 >
                   Edit
                 </Button>
@@ -785,6 +835,7 @@ const ProposalDetailsModal = ({
                     onPress={handleDelete}
                     className="px-6  text-white hover:bg-red-50 bg-[#999999]"
                     disabled={loading}
+                    radius="md"
                   >
                     Delete
                   </Button>

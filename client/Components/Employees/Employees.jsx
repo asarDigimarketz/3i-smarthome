@@ -101,7 +101,10 @@ const Employees = () => {
           id: emp.employeeId,
           name: `${emp.firstName} ${emp.lastName}`,
           role: emp.role?.role || "N/A",
-          department: emp.department?.name || "N/A",
+          department:
+            typeof emp.department === "object" && emp.department !== null
+              ? emp.department.name
+              : emp.department || "N/A",
           status: emp.status === "active" ? "Active" : "Inactive",
           email: emp.email,
           phone: emp.mobileNo,
@@ -252,7 +255,7 @@ const Employees = () => {
 
       {/* Employee Cards */}
       <Card className="bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
           {loading ? (
             // Show loading skeletons
             Array.from({ length: 6 }).map((_, index) => (

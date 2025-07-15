@@ -52,7 +52,9 @@ const EmployeeCard = ({
               Department
             </div>
             <div className="text-lg font-semibold text-[#232323]">
-              {department}
+              {typeof department === "object" && department !== null
+                ? department.name
+                : department || "N/A"}
             </div>
           </div>
         </div>
@@ -82,7 +84,7 @@ const EmployeeCard = ({
         as={Link}
         href={`/dashboard/employees/${id}`}
         isPressable
-        className="border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow bg-white min-w-[400px] max-w-[420px]"
+        className="border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow bg-white 2xl:min-w-[400px] 2xl:max-w-[480px]"
         style={{ boxShadow: "0 1px 4px 0 rgba(0,0,0,0.04)" }}
       >
         {cardContent}
@@ -92,7 +94,7 @@ const EmployeeCard = ({
 
   // If no view permission, render as non-clickable card
   return (
-    <Card className="border border-primary rounded-xl shadow-sm bg-white min-w-[400px] max-w-[420px]">
+    <Card className="border border-primary rounded-xl shadow-sm bg-white 2xl:min-w-[400px] 2xl:max-w-[420px]">
       {cardContent}
     </Card>
   );

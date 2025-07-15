@@ -313,6 +313,11 @@ const EmailConfiguration = () => {
             </label>
             <Select
               className="w-full md:w-1/3"
+              variant="bordered"
+              radius="sm"
+              classNames={{
+                trigger: "border-[#E0E5F2]  h-[50px]",
+              }}
               value={selectedProvider}
               onChange={(e) => handleProviderChange(e.target.value)}
               aria-label="Select email provider"
@@ -333,6 +338,11 @@ const EmailConfiguration = () => {
             </label>
             <div className="w-1/3">
               <Input
+                variant="bordered"
+                radius="sm"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
                 id="smtpHost"
                 value={formData.smtpHost}
                 onChange={handleChange}
@@ -345,6 +355,11 @@ const EmailConfiguration = () => {
               SMTP Port
             </label>
             <Input
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
+              variant="bordered"
+              radius="sm"
               id="smtpPort"
               value={formData.smtpPort}
               onChange={handleChange}
@@ -358,6 +373,11 @@ const EmailConfiguration = () => {
               SMTP Username
             </label>
             <Input
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
+              variant="bordered"
+              radius="sm"
               id="smtpUsername"
               value={formData.smtpUsername}
               onChange={handleChange}
@@ -370,6 +390,11 @@ const EmailConfiguration = () => {
               SMTP Password
             </label>
             <Input
+              classNames={{
+                inputWrapper: " h-[50px] border-[#E0E5F2]",
+              }}
+              variant="bordered"
+              radius="sm"
               id="smtpPassword"
               value={formData.smtpPassword}
               onChange={handleChange}
@@ -386,6 +411,11 @@ const EmailConfiguration = () => {
                 Sender
               </label>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
+                variant="bordered"
+                radius="sm"
                 id="senderEmail"
                 value={formData.senderEmail}
                 onChange={handleChange}
@@ -402,6 +432,11 @@ const EmailConfiguration = () => {
                 Test Email
               </label>
               <Input
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
+                variant="bordered"
+                radius="sm"
                 id="test-email"
                 value={testData.email}
                 onChange={(e) =>
@@ -411,12 +446,17 @@ const EmailConfiguration = () => {
                 className="w-1/3"
               />
             </div>
-            <div className="flex my-3 gap-4">
+            <div className="flex my-3 ">
               <label htmlFor="test-message" className="w-1/2 mb-2 items-center">
                 Write Message
               </label>
               <Input
                 id="test-message"
+                classNames={{
+                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                }}
+                variant="bordered"
+                radius="sm"
                 value={testData.message}
                 onChange={(e) =>
                   setTestData((prev) => ({ ...prev, message: e.target.value }))
@@ -424,13 +464,15 @@ const EmailConfiguration = () => {
                 placeholder="Write your Content"
                 className="w-1/3"
               />
-              <Button
-                className="bg-primary text-white w-1/12 rounded-full"
-                onClick={handleTestEmail}
-                isLoading={testLoading}
-              >
-                {testLoading ? "Sending..." : "Send"}
-              </Button>
+              <div className="ml-3  align-middle">
+                <Button
+                  className="bg-primary text-white w-1/12 rounded-full  "
+                  onPress={handleTestEmail}
+                  isLoading={testLoading}
+                >
+                  {testLoading ? "Sending..." : "Send"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

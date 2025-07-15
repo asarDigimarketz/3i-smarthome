@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete";
+import { useCustomerAutocomplete } from "./_CustomerAutocompleteLogic";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Card } from "@heroui/card";
@@ -44,6 +46,18 @@ export function AddProjectPage() {
     attachments: [], // for existing attachments (edit mode)
   });
   const [errors, setErrors] = useState({});
+
+  // Customer Autocomplete logic (shared with AddProposal)
+  const {
+    customerOptions,
+    emailInput,
+    contactInput,
+    selectedCustomer,
+    isSearching,
+    handleCustomerSelection,
+    handleEmailInputChange,
+    handleContactInputChange,
+  } = useCustomerAutocomplete();
 
   // Fetch project data if editing
   useEffect(() => {
@@ -352,39 +366,103 @@ export function AddProjectPage() {
               <label className="block text-gray-700 mb-2">
                 Contact Number *
               </label>
-              <Input
+              <Autocomplete
+                label=""
+                placeholder="Enter contact number"
+                inputValue={contactInput}
+                onInputChange={(value) =>
+                  handleContactInputChange(value, setFormData)
+                }
+                selectedKey={selectedCustomer?._id}
+                onSelectionChange={(key) =>
+                  handleCustomerSelection(key, setFormData)
+                }
+                items={customerOptions}
+                allowsCustomValue
+                isRequired
+                fullWidth
+                className="w-full"
                 classNames={{
-                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                  base: "w-full",
+                  listboxWrapper: "max-h-[200px]",
+                  selectorButton: "text-default-500",
                 }}
-                placeholder="Contact Number"
+                inputProps={{
+                  classNames: {
+                    inputWrapper: "h-[50px] border-[#E0E5F2]",
+                  },
+                }}
+                size="lg"
                 radius="sm"
                 variant="bordered"
-                className="w-full"
-                value={formData.contactNumber}
-                onChange={(e) =>
-                  handleInputChange("contactNumber", e.target.value)
-                }
-                isInvalid={!!errors.contactNumber}
-                errorMessage={errors.contactNumber}
-              />
+                isLoading={isSearching}
+                menuTrigger="input"
+              >
+                {(item) => (
+                  <AutocompleteItem
+                    key={item._id}
+                    textValue={item.contactNumber}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-small font-medium">
+                        {item.contactNumber}
+                      </span>
+                      <span className="text-tiny text-default-400">
+                        {item.customerName} • {item.email}
+                      </span>
+                    </div>
+                  </AutocompleteItem>
+                )}
+              </Autocomplete>
             </div>
 
             <div>
               <label className="block text-gray-700 mb-2">Email Id *</label>
-              <Input
+              <Autocomplete
+                label=""
+                placeholder="Enter email address"
+                inputValue={emailInput}
+                onInputChange={(value) =>
+                  handleEmailInputChange(value, setFormData)
+                }
+                selectedKey={selectedCustomer?._id}
+                onSelectionChange={(key) =>
+                  handleCustomerSelection(key, setFormData)
+                }
+                items={customerOptions}
+                allowsCustomValue
+                isRequired
+                fullWidth
+                className="w-full"
                 classNames={{
-                  inputWrapper: " h-[50px] border-[#E0E5F2]",
+                  base: "w-full",
+                  listboxWrapper: "max-h-[200px]",
+                  selectorButton: "text-default-500",
                 }}
-                placeholder="Email Id"
-                type="email"
+                inputProps={{
+                  classNames: {
+                    inputWrapper: "h-[50px] border-[#E0E5F2]",
+                  },
+                }}
+                size="lg"
                 radius="sm"
                 variant="bordered"
-                className="w-full"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                isInvalid={!!errors.email}
-                errorMessage={errors.email}
-              />
+                isLoading={isSearching}
+                menuTrigger="input"
+              >
+                {(item) => (
+                  <AutocompleteItem key={item._id} textValue={item.email}>
+                    <div className="flex flex-col">
+                      <span className="text-small font-medium">
+                        {item.email}
+                      </span>
+                      <span className="text-tiny text-default-400">
+                        {item.customerName} • {item.contactNumber}
+                      </span>
+                    </div>
+                  </AutocompleteItem>
+                )}
+              </Autocomplete>
             </div>
 
             <div>

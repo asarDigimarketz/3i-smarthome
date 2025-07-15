@@ -23,6 +23,7 @@ export function ProjectCards({
   statusFilter,
   searchValue,
   page = 1,
+  pageSize = 6,
   setTotalPages,
 }) {
   const [projects, setProjects] = useState([]);
@@ -44,8 +45,8 @@ export function ProjectCards({
       params.push(`endDate=${encodeURIComponent(dateRange.end)}`);
     }
     params.push(`page=${page}`);
-    params.push("limit=12");
-    return params.length ? `?${params.join("&")}` : "?limit=12";
+    params.push(`limit=${pageSize}`);
+    return params.length ? `?${params.join("&")}` : `?limit=${pageSize}`;
   };
 
   // Fetch projects from API with filters
@@ -378,6 +379,7 @@ export function ProjectCards({
                 value={getProgressPercent(project.progress)}
                 color="primary"
                 className="h-2"
+                aria-label="Project progress"
               />
             </div>
 

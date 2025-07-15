@@ -72,10 +72,7 @@ const EmployeeSchema = new mongoose.Schema(
       required: true,
     },
     department: {
-      type: {
-        name: String,
-        createdAt: Date,
-      },
+      type: Object,
       required: true,
     },
     notes: {
@@ -91,7 +88,11 @@ const EmployeeSchema = new mongoose.Schema(
     },
     documents: [
       {
-        type: String,
+        url: { type: String },
+        originalName: { type: String },
+        mimetype: { type: String },
+        size: { type: Number },
+        uploadedAt: { type: Date, default: Date.now },
       },
     ],
     createdAt: {

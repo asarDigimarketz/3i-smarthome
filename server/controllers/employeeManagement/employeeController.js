@@ -35,7 +35,7 @@ const upload = multer({
 // Configure multer middleware
 exports.uploadFiles = upload.fields([
   { name: "avatar", maxCount: 1 },
-  { name: "documents", maxCount: 10 },
+  { name: "documents", maxCount: 10 }, // use documents, not attachments
 ]);
 
 // Helper function to generate employee ID
@@ -199,10 +199,7 @@ exports.createEmployee = async (req, res) => {
       typeof req.body.role === "string"
         ? JSON.parse(req.body.role)
         : req.body.role;
-    const department =
-      typeof req.body.department === "string"
-        ? JSON.parse(req.body.department)
-        : req.body.department;
+    const department = req.body.department;
 
     const dateOfHiring = req.body.dateOfHiring;
 
@@ -240,12 +237,15 @@ exports.createEmployee = async (req, res) => {
       employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${avatar.filename}`;
     }
 
-    // Handle document uploads
+    // Handle documents upload (array of objects)
     if (req.files && req.files.documents) {
-      employeeData.documents = req.files.documents.map(
-        (doc) =>
-          `${BACKEND_URL}/assets/images/employees/documents/${doc.filename}`
-      );
+      employeeData.documents = req.files.documents.map((file) => ({
+        url: `${BACKEND_URL}/assets/images/employees/documents/${file.filename}`,
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        uploadedAt: new Date(),
+      }));
     }
 
     // Save to database
@@ -321,10 +321,15 @@ exports.updateEmployee = async (req, res) => {
       typeof req.body.role === "string"
         ? JSON.parse(req.body.role)
         : req.body.role;
-    const departmentData =
-      typeof req.body.department === "string"
-        ? JSON.parse(req.body.department)
-        : req.body.department;
+    let departmentData = req.body.department;
+    // Only parse if it looks like an object/array, otherwise use as string
+    if (
+      typeof departmentData === "string" &&
+      (departmentData.trim().startsWith("{") ||
+        departmentData.trim().startsWith("["))
+    ) {
+      departmentData = JSON.parse(departmentData);
+    }
     const statusData = req.body.status;
 
     if (!roleData || !departmentData || !statusData) {
@@ -366,16 +371,59 @@ exports.updateEmployee = async (req, res) => {
       employeeData.avatar = req.body.existingAvatar;
     }
 
-    // Handle document uploads
-    const existingDocuments = req.body.existingDocuments || [];
-    employeeData.documents = [...existingDocuments];
+    // Handle documents
+    let baseDocuments = [];
+    if (req.body.existingDocuments) {
+      try {
+        baseDocuments = JSON.parse(req.body.existingDocuments);
+      } catch {
+        baseDocuments = [];
+      }
+    }
+    employeeData.documents = Array.isArray(baseDocuments)
+      ? baseDocuments.map((doc) =>
+          typeof doc === "object" ? doc : { url: doc }
+        )
+      : [];
+    if (req.files && req.files.documents) {
+      const newFiles = req.files.documents.map((file) => ({
+        url: `${BACKEND_URL}/assets/images/employees/documents/${file.filename}`,
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        uploadedAt: new Date(),
+      }));
+      employeeData.documents.push(...newFiles);
+    }
+    // Remove deleted documents from disk
+    if (req.body.removedDocuments) {
+      try {
+        const removed = JSON.parse(req.body.removedDocuments);
+        for (const doc of removed) {
+          const url = typeof doc === "object" ? doc.url : doc;
+          if (url) {
+            let relPath = url.replace(BACKEND_URL, "");
+            if (!relPath.startsWith("/assets/images/employees/documents/")) {
+              // If only filename is present, prepend the correct folder
+              if (!relPath.startsWith("/")) relPath = "/" + relPath;
+              relPath = "/assets/images/employees/documents" + relPath;
+            }
+            if (relPath.startsWith("/")) relPath = relPath.slice(1);
+            const filePath = path.join(process.cwd(), "public", relPath);
 
-    if (req.files?.documents) {
-      const newDocumentPaths = req.files.documents.map(
-        (doc) =>
-          `${BACKEND_URL}/assets/images/employees/documents/${doc.filename}`
-      );
-      employeeData.documents.push(...newDocumentPaths);
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            } else {
+              console.warn(
+                "[Employee Remove Document] File not found:",
+                filePath
+              );
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error removing documents:", err);
+      }
     }
 
     const updatedEmployee = await Employee.findOneAndUpdate(

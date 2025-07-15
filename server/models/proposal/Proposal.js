@@ -130,29 +130,35 @@ const proposalSchema = new mongoose.Schema(
       type: [String],
     },
 
-    // File Attachment
-    attachment: {
-      filename: {
-        type: String,
-        trim: true,
+    // File Attachments (multiple)
+    attachments: [
+      {
+        filename: {
+          type: String,
+          trim: true,
+        },
+        originalName: {
+          type: String,
+          trim: true,
+        },
+        mimetype: {
+          type: String,
+          trim: true,
+        },
+        size: {
+          type: Number,
+          min: [0, "File size cannot be negative"],
+        },
+        path: {
+          type: String,
+          trim: true,
+        },
+        url: {
+          type: String,
+          trim: true,
+        },
       },
-      originalName: {
-        type: String,
-        trim: true,
-      },
-      mimetype: {
-        type: String,
-        trim: true,
-      },
-      size: {
-        type: Number,
-        min: [0, "File size cannot be negative"],
-      },
-      path: {
-        type: String,
-        trim: true,
-      },
-    },
+    ],
 
     // Proposal Date
     date: {

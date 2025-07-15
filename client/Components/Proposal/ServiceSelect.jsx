@@ -15,6 +15,7 @@ export function ServicesSelect({ value, onChange, isInvalid, errorMessage }) {
       radius="sm"
       variant="bordered"
       className="w-full"
+      aria-label="Select service"
       classNames={{
         trigger: "border-[#E0E5F2]  h-[50px]",
       }}

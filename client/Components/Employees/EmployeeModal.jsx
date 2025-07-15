@@ -9,11 +9,10 @@ import {
 import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { Input, Textarea } from "@heroui/input";
-import { Card, CardBody } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
 import { DatePicker } from "@heroui/date-picker";
 import { addToast } from "@heroui/toast";
-import { Plus, Upload, FileText, X, Trash2 } from "lucide-react";
+import { Plus, Upload, X } from "lucide-react";
 import { parseDate } from "@internationalized/date";
 
 export const EmployeeModal = ({
@@ -49,16 +48,12 @@ export const EmployeeModal = ({
   });
 
   const [roles, setRoles] = useState([]);
-  const [departments] = useState([
-    { name: "Installation", createdAt: new Date() },
-    { name: "Service", createdAt: new Date() },
-    { name: "Sales", createdAt: new Date() },
-    { name: "Support", createdAt: new Date() },
-  ]);
 
   const [avatar, setAvatar] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
-  const [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState([]); // new files
+  const [removedDocuments, setRemovedDocuments] = useState([]); // removed existing files
+  const [existingDocuments, setExistingDocuments] = useState([]); // existing files (edit mode)
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -118,6 +113,7 @@ export const EmployeeModal = ({
           },
         });
         setAvatarPreview(emp.avatar);
+        setExistingDocuments(emp.documents || []); // <-- use documents
       } else {
         // Reset form for new employee
         setFormData({
@@ -142,6 +138,7 @@ export const EmployeeModal = ({
           },
         });
         setAvatarPreview(null);
+        setExistingDocuments([]); // <-- use documents
       }
 
       setAvatar(null);
@@ -266,15 +263,55 @@ export const EmployeeModal = ({
     }
   };
 
-  const handleDocumentChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      setDocuments((prev) => [...prev, ...files]);
-    }
+  // File input handler for multiple files
+  const handleFileChange = (event) => {
+    const files = Array.from(event.target.files);
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const maxSize = 10 * 1024 * 1024;
+    const validFiles = files.filter((file) => {
+      if (!allowedTypes.includes(file.type)) {
+        addToast({
+          title: "Invalid file type",
+          description: `${file.name} is not a supported file type`,
+          color: "danger",
+        });
+        return false;
+      }
+      if (file.size > maxSize) {
+        addToast({
+          title: "File too large",
+          description: `${file.name} exceeds 10MB size limit`,
+          color: "danger",
+        });
+        return false;
+      }
+      return true;
+    });
+    setDocuments((prev) => [...prev, ...validFiles]);
+    event.target.value = null;
   };
 
-  const removeDocument = (index) => {
+  // Remove a new file before upload
+  const handleRemoveSelectedFile = (index) => {
     setDocuments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Remove an existing document (edit mode)
+  const handleRemoveExistingDocument = (index) => {
+    // Always send the full url for removed documents
+    const doc = existingDocuments[index];
+    setRemovedDocuments((prev) => [
+      ...prev,
+      doc.url ? doc.url : doc, // fallback to doc if url missing
+    ]);
+    setExistingDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
@@ -328,22 +365,32 @@ export const EmployeeModal = ({
       }
 
       // Department data
-      const selectedDepartment = departments.find(
-        (d) => d.name === formData.department
-      );
-      if (selectedDepartment) {
-        formDataToSend.append("department", JSON.stringify(selectedDepartment));
-      }
+      // Department is now a free text input, just send the value
+      formDataToSend.append("department", formData.department);
 
       // Avatar file
       if (avatar) {
         formDataToSend.append("avatar", avatar);
       }
 
-      // Document files
-      documents.forEach((doc) => {
-        formDataToSend.append("documents", doc);
+      // Documents
+      documents.forEach((file) => {
+        formDataToSend.append("documents", file);
       });
+      // Removed documents
+      if (removedDocuments.length > 0) {
+        formDataToSend.append(
+          "removedDocuments",
+          JSON.stringify(removedDocuments)
+        );
+      }
+      // Existing documents
+      if (existingDocuments.length > 0) {
+        formDataToSend.append(
+          "existingDocuments",
+          JSON.stringify(existingDocuments.map((a) => a._id || a.url))
+        );
+      }
 
       const url = isEditing
         ? `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement/${employeeData.id}`
@@ -531,7 +578,7 @@ export const EmployeeModal = ({
                 <div className="grid grid-cols-2 gap-4">
                   <Input
                     label="First Name"
-                    placeholder="First Name"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     value={formData.firstName}
                     onChange={(e) =>
@@ -540,13 +587,12 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.firstName}
                     errorMessage={errors.firstName}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="Last Name"
-                    placeholder="Last Name"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     value={formData.lastName}
                     onChange={(e) =>
@@ -555,13 +601,12 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.lastName}
                     errorMessage={errors.lastName}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="Mobile Number"
-                    placeholder="Mobile Number"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     value={formData.mobileNo}
                     onChange={(e) =>
@@ -570,13 +615,12 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.mobileNo}
                     errorMessage={errors.mobileNo}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="Email ID"
-                    placeholder="Email ID"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     type="email"
                     value={formData.email}
@@ -584,13 +628,12 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.email}
                     errorMessage={errors.email}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Select
                     label="Gender"
-                    placeholder="Select gender"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     selectedKeys={formData.gender ? [formData.gender] : []}
                     onSelectionChange={(keys) => {
@@ -600,8 +643,7 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.gender}
                     errorMessage={errors.gender}
                     classNames={{
-                      label: "text-sm font-medium",
-                      trigger: "text-sm",
+                      trigger: "border-[#E0E5F2]  h-[50px]",
                     }}
                   >
                     <SelectItem key="male">Male</SelectItem>
@@ -610,6 +652,7 @@ export const EmployeeModal = ({
                   </Select>
                   <DatePicker
                     label="Date of Birth"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     value={formData.dateOfBirth}
                     onChange={(date) => handleInputChange("dateOfBirth", date)}
@@ -617,13 +660,14 @@ export const EmployeeModal = ({
                     errorMessage={errors.dateOfBirth}
                     showMonthAndYearPickers={true}
                     classNames={{
-                      label: "text-sm font-medium",
+                      label: "text-sm font-regular",
                       input: "text-sm",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="Address Line"
-                    placeholder="Address Line"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     value={formData.address.addressLine}
                     onChange={(e) =>
@@ -632,13 +676,12 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.addressLine}
                     errorMessage={errors.addressLine}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="City"
-                    placeholder="City"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     value={formData.address.city}
                     onChange={(e) =>
@@ -647,26 +690,24 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.city}
                     errorMessage={errors.city}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="District"
-                    placeholder="District"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     value={formData.address.district}
                     onChange={(e) =>
                       handleAddressChange("district", e.target.value)
                     }
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="State"
-                    placeholder="State"
+                    labelPlacement={"outside"}
                     value={formData.address.state}
                     variant="bordered"
                     onChange={(e) =>
@@ -675,13 +716,12 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.state}
                     errorMessage={errors.state}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="Country"
-                    placeholder="Country"
+                    labelPlacement={"outside"}
                     value={formData.address.country}
                     variant="bordered"
                     onChange={(e) =>
@@ -690,13 +730,12 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.country}
                     errorMessage={errors.country}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Input
                     label="Pincode"
-                    placeholder="Pincode"
+                    labelPlacement={"outside"}
                     value={formData.address.pincode}
                     variant="bordered"
                     onChange={(e) =>
@@ -705,39 +744,32 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.pincode}
                     errorMessage={errors.pincode}
                     classNames={{
-                      input: "text-sm",
-                      label: "text-sm font-medium",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
-                  <Select
+                  <Input
                     label="Department"
-                    placeholder="Select department"
+                    labelPlacement={"outside"}
                     variant="bordered"
-                    selectedKeys={
-                      formData.department ? [formData.department] : []
+                    value={formData.department}
+                    onChange={(e) =>
+                      handleInputChange("department", e.target.value)
                     }
-                    onSelectionChange={(keys) => {
-                      const selectedKey = Array.from(keys)[0];
-                      handleInputChange("department", selectedKey);
-                    }}
                     isInvalid={!!errors.department}
                     errorMessage={errors.department}
                     classNames={{
-                      label: "text-sm font-medium",
-                      trigger: "text-sm",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
-                  >
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.name} value={dept.name}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                  </Select>
+                  />
                   <Select
                     label="Role"
-                    placeholder="Select role"
+                    labelPlacement={"outside"}
                     variant="bordered"
-                    selectedKeys={formData.role ? [formData.role] : []}
+                    selectedKeys={
+                      roles.some((r) => r._id === formData.role)
+                        ? [formData.role]
+                        : []
+                    }
                     onSelectionChange={(keys) => {
                       const selectedKey = Array.from(keys)[0];
                       handleInputChange("role", selectedKey);
@@ -745,8 +777,7 @@ export const EmployeeModal = ({
                     isInvalid={!!errors.role}
                     errorMessage={errors.role}
                     classNames={{
-                      label: "text-sm font-medium",
-                      trigger: "text-sm",
+                      trigger: "border-[#E0E5F2]  h-[50px]",
                     }}
                   >
                     {roles.map((role) => (
@@ -757,6 +788,7 @@ export const EmployeeModal = ({
                   </Select>
                   <DatePicker
                     label="Date of Hiring"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     value={formData.dateOfHiring}
                     onChange={(date) => handleInputChange("dateOfHiring", date)}
@@ -764,22 +796,22 @@ export const EmployeeModal = ({
                     errorMessage={errors.dateOfHiring}
                     showMonthAndYearPickers={true}
                     classNames={{
-                      label: "text-sm font-medium",
+                      label: "text-sm font-regular",
                       input: "text-sm",
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
                     }}
                   />
                   <Select
                     label="Status"
-                    placeholder="Select status"
+                    labelPlacement={"outside"}
                     variant="bordered"
                     selectedKeys={[formData.status]}
                     onSelectionChange={(keys) => {
-                      const selectedKey = Array.from(keys)[0];
+                      // const selectedKey = Array.from(keys)[0];
                       handleInputChange("status", selectedKey);
                     }}
                     classNames={{
-                      label: "text-sm font-medium",
-                      trigger: "text-sm",
+                      trigger: "border-[#E0E5F2]  h-[50px]",
                     }}
                   >
                     <SelectItem key="active">Active</SelectItem>
@@ -789,71 +821,104 @@ export const EmployeeModal = ({
 
                 <Textarea
                   label="Notes"
-                  placeholder="Additional notes about the employee"
+                  labelPlacement={"outside"}
                   variant="bordered"
                   value={formData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
                   classNames={{
-                    input: "text-sm",
-                    label: "text-sm font-medium",
+                    inputWrapper: " h-[50px] border-[#E0E5F2]",
                   }}
                 />
 
-                {/* Document Upload Section */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Documents
+                {/* Documents Section */}
+                <div className="col-span-2">
+                  <label className="block text-gray-700 mb-2">
+                    Employee Documents
                   </label>
-                  <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
-                    <CardBody className="p-4">
-                      <div className="flex items-center justify-center space-x-4">
-                        <Button
-                          variant="flat"
-                          startContent={<Upload size={16} />}
-                          className="text-sm"
-                          onPress={() => documentInputRef.current?.click()}
-                        >
-                          Upload Documents
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2 text-center">
-                        Upload employee documents (ID proof, certificates, etc.)
-                      </p>
-                      <input
-                        ref={documentInputRef}
-                        type="file"
-                        multiple
-                        onChange={handleDocumentChange}
-                        className="hidden"
-                      />
-                    </CardBody>
-                  </Card>
-
-                  {/* Document List */}
-                  {documents.length > 0 && (
-                    <div className="mt-2 space-y-2">
-                      {documents.map((doc, index) => (
+                  <div className="flex items-center gap-4 mb-2">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="employee-documents-upload"
+                    />
+                    <label htmlFor="employee-documents-upload">
+                      <Button
+                        as="span"
+                        color="primary"
+                        radius="sm"
+                        startContent={<Upload />}
+                        className="cursor-pointer"
+                      >
+                        Upload
+                      </Button>
+                    </label>
+                  </div>
+                  {/* List all documents (existing and new) */}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {/* Existing documents (edit mode) */}
+                    {Array.isArray(existingDocuments) &&
+                      existingDocuments.map((doc, idx) => (
                         <div
-                          key={index}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                          key={doc._id || doc.url || idx}
+                          className="flex items-center bg-gray-100 rounded px-2 py-1"
                         >
-                          <div className="flex items-center space-x-2">
-                            <FileText size={16} className="text-gray-500" />
-                            <span className="text-sm">{doc.name}</span>
-                          </div>
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                            color="danger"
-                            onPress={() => removeDocument(index)}
+                          <a
+                            href={
+                              doc.url && doc.url.startsWith("http")
+                                ? doc.url
+                                : `/${doc.url}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline max-w-xs truncate"
+                            download={doc.originalName || true}
+                            title={doc.originalName || "Document"}
                           >
-                            <Trash2 size={16} />
+                            {doc.originalName || "Document"}
+                          </a>
+                          <Button
+                            type="button"
+                            isIconOnly
+                            color="primary"
+                            className="ml-2"
+                            onPress={() => handleRemoveExistingDocument(idx)}
+                          >
+                            <X className="w-4 h-4" />
                           </Button>
                         </div>
                       ))}
-                    </div>
-                  )}
+                    {/* New files (not yet uploaded) */}
+                    {documents.map((file, idx) => (
+                      <div
+                        key={file.name + idx}
+                        className="flex items-center bg-gray-100 rounded px-2 py-1"
+                      >
+                        <span className="truncate max-w-xs" title={file.name}>
+                          {file.name}
+                        </span>
+                        <Button
+                          type="button"
+                          size="xs"
+                          color="primary"
+                          variant="light"
+                          className="ml-2"
+                          onPress={() => handleRemoveSelectedFile(idx)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                    {(!Array.isArray(existingDocuments) ||
+                      existingDocuments.length === 0) &&
+                      documents.length === 0 && (
+                        <span className="text-gray-500 text-xs">
+                          *Attach employee docs/pdf/jpeg/png
+                        </span>
+                      )}
+                  </div>
                 </div>
               </div>
             </ModalBody>

@@ -6,6 +6,7 @@ const {
   getFileUrl,
   handleFileUpdate,
 } = require("../../middleware/upload");
+const path = require("path");
 
 /**
  * Proposal Controller
@@ -94,16 +95,33 @@ const createProposal = async (req, res) => {
       amountOptions: parsedAmountOptions,
     };
 
-    // Add file information if file was uploaded
-    if (req.fileInfo) {
-      proposalData.attachment = {
-        filename: req.fileInfo.filename,
-        originalName: req.fileInfo.originalName,
-        mimetype: req.fileInfo.mimetype,
-        size: req.fileInfo.size,
-        path: req.fileInfo.path,
-      };
+    // Add file information if files were uploaded (multiple attachments)
+    if (req.filesInfo && req.filesInfo.length > 0) {
+      proposalData.attachments = req.filesInfo.map((file) => ({
+        filename: file.filename,
+        originalName: file.originalName,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: file.path,
+        url: `${process.env.BACKEND_URL ? process.env.BACKEND_URL + "/" : ""}${
+          file.path
+        }`,
+      }));
     }
+    // If attachments sent as JSON (for edit mode), merge with new files
+    if (req.body.attachments && typeof req.body.attachments === "string") {
+      try {
+        const existingAttachments = JSON.parse(req.body.attachments);
+        proposalData.attachments = [
+          ...(proposalData.attachments || []),
+          ...existingAttachments,
+        ];
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+    // Remove old single attachment field if present
+    delete proposalData.attachment;
 
     // Create proposal
     const proposal = await Proposal.create(proposalData);
@@ -151,7 +169,7 @@ const getProposals = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 10,
+      limit = 5,
       sortBy = "createdAt",
       sortOrder = "desc",
       search = "",
@@ -197,9 +215,13 @@ const getProposals = async (req, res) => {
     // Add file URLs to proposals
     const proposalsWithUrls = proposals.map((proposal) => ({
       ...proposal,
-      attachmentUrl: proposal.attachment
-        ? getFileUrl(proposal.attachment.filename)
-        : null,
+      attachments: proposal.attachments
+        ? proposal.attachments.map((att) => ({
+            ...att,
+            url:
+              att.url || (att.filename ? getFileUrl(att.filename) : undefined),
+          }))
+        : [],
     }));
 
     // Calculate pagination info
@@ -249,10 +271,17 @@ const getProposal = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        proposal,
-        attachmentUrl: proposal.attachment
-          ? getFileUrl(proposal.attachment.filename)
-          : null,
+        proposal: {
+          ...proposal.toObject(),
+          attachments: proposal.attachments
+            ? proposal.attachments.map((att) => ({
+                ...att,
+                url:
+                  att.url ||
+                  (att.filename ? getFileUrl(att.filename) : undefined),
+              }))
+            : [],
+        },
       },
     });
   } catch (error) {
@@ -270,6 +299,14 @@ const getProposal = async (req, res) => {
  * @access  Private
  */
 const updateProposal = async (req, res) => {
+  // Windows absolute path fix: if filePath is absolute and starts with D:\ or C:\, use as is, else join with __dirname
+  function normalizeFilePath(filePath) {
+    if (!filePath) return null;
+    if (path.isAbsolute(filePath)) return filePath;
+    if (/^[A-Za-z]:\\/.test(filePath)) return filePath;
+    return path.join(__dirname, "../public", filePath);
+  }
+
   try {
     let proposal = await Proposal.findById(req.params.id);
 
@@ -281,10 +318,7 @@ const updateProposal = async (req, res) => {
     }
 
     // Store old file info for cleanup if new file is uploaded
-    const oldAttachment = proposal.attachment;
-
-    // Store old status to check if it changed to "Confirmed"
-    const oldStatus = proposal.status;
+    const oldAttachments = proposal.attachments || [];
 
     // Prepare update data
     const updateData = { ...req.body };
@@ -319,16 +353,98 @@ const updateProposal = async (req, res) => {
       updateData.projectAmount = parseFloat(updateData.projectAmount);
     }
 
-    // Handle file update
-    if (req.fileInfo) {
-      updateData.attachment = {
-        filename: req.fileInfo.filename,
-        originalName: req.fileInfo.originalName,
-        mimetype: req.fileInfo.mimetype,
-        size: req.fileInfo.size,
-        path: req.fileInfo.path,
-      };
+    // DEBUG: Log the incoming removeAttachments field
+
+    // Remove attachments if requested (like project logic)
+    let baseAttachments = proposal.attachments ? [...proposal.attachments] : [];
+    if (req.body.removeAttachments) {
+      try {
+        const removeList = JSON.parse(req.body.removeAttachments);
+
+        if (Array.isArray(removeList) && proposal.attachments) {
+          proposal.attachments.forEach((att) => {
+            if (removeList.includes(att.filename) && att.path) {
+              let absPath = att.path;
+              if (!path.isAbsolute(absPath)) {
+                absPath = path.join(__dirname, "../public", att.path);
+              }
+
+              if (require("fs").existsSync(absPath)) {
+                require("fs").unlinkSync(absPath);
+              } else {
+                console.warn("[Proposal Attachment Not Found]", absPath);
+              }
+            }
+          });
+          baseAttachments = proposal.attachments.filter(
+            (att) => !removeList.includes(att.filename)
+          );
+          updateData.attachments = baseAttachments;
+        }
+      } catch (err) {
+        console.error("Failed to remove attachments:", err);
+      }
     }
+
+    // Handle multiple file uploads (attachments)
+    // Remove attachments marked for deletion from baseAttachments (legacy, can be removed if not used)
+    let removedAttachments = [];
+    if (
+      req.body.removedAttachments &&
+      typeof req.body.removedAttachments === "string"
+    ) {
+      try {
+        removedAttachments = JSON.parse(req.body.removedAttachments);
+      } catch (e) {
+        removedAttachments = [];
+      }
+    }
+    if (removedAttachments.length > 0 && Array.isArray(baseAttachments)) {
+      baseAttachments = baseAttachments.filter((att) => {
+        return !removedAttachments.some(
+          (remAtt) =>
+            (remAtt._id && att._id && remAtt._id === att._id) ||
+            (remAtt.filename &&
+              att.filename &&
+              remAtt.filename === att.filename)
+        );
+      });
+      for (const remAtt of removedAttachments) {
+        // Try to get the correct path from the original proposal.attachments if not present
+        let filePath = remAtt.path;
+        if (!filePath) {
+          const found = (proposal.attachments || []).find(
+            (att) =>
+              (remAtt._id && att._id && remAtt._id === att._id) ||
+              (remAtt.filename &&
+                att.filename &&
+                remAtt.filename === att.filename)
+          );
+          if (found && found.path) filePath = found.path;
+        }
+        filePath = normalizeFilePath(filePath);
+        if (filePath) {
+          await handleFileUpdate(filePath);
+        }
+      }
+    }
+    // Add new uploaded files
+    if (req.filesInfo && req.filesInfo.length > 0) {
+      const newAttachments = req.filesInfo.map((file) => ({
+        filename: file.filename,
+        originalName: file.originalName,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: file.path,
+        url: `${process.env.BACKEND_URL ? process.env.BACKEND_URL + "/" : ""}${
+          file.path
+        }`,
+      }));
+      baseAttachments = baseAttachments.concat(newAttachments);
+    }
+    updateData.attachments = baseAttachments;
+    // Remove old single attachment field if present
+    delete updateData.attachment;
 
     // Update proposal
     proposal = await Proposal.findByIdAndUpdate(req.params.id, updateData, {
@@ -337,12 +453,14 @@ const updateProposal = async (req, res) => {
     });
 
     // If new file was uploaded, delete old file
-    if (req.fileInfo && oldAttachment && oldAttachment.path) {
-      await handleFileUpdate(oldAttachment.path);
+    if (req.filesInfo && oldAttachments.length > 0) {
+      for (const oldFile of oldAttachments) {
+        await handleFileUpdate(oldFile.path);
+      }
     }
 
     // Check if status changed to "Confirmed" and create project automatically
-    if (updateData.status === "Confirmed" && oldStatus !== "Confirmed") {
+    if (updateData.status === "Confirmed") {
       try {
         // Check if project already exists for this proposal
         const existingProject = await Project.findOne({

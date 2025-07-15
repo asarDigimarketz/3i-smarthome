@@ -1,6 +1,7 @@
+"use client";
+
 import { Card, CardBody } from "@heroui/card";
 import { Avatar, AvatarGroup } from "@heroui/avatar";
-import Link from "next/link";
 import { Phone, ChevronDown, Check } from "lucide-react";
 import { Progress } from "@heroui/progress";
 import {
@@ -57,7 +58,7 @@ const ProjectCard = ({
     if (!progress) return 0;
     if (typeof progress === "string" && progress.includes("%")) {
       // Handle "50%" style
-      return parseFloat(progress.replace("%", "")) || 0;
+      return Number.parseFloat(progress.replace("%", "")) || 0;
     }
     if (typeof progress === "string" && progress.includes("/")) {
       // Handle "current/total" style
@@ -115,11 +116,13 @@ const ProjectCard = ({
       onClick={() => router.push(`/dashboard/task?projectId=${id}`)}
     >
       <Card
-        className="overflow-visible hover:scale-105 transition-transform"
+        className="overflow-hidden hover:scale-105 transition-transform h-80"
         onClick={(e) => e.stopPropagation()}
       >
-        <CardBody className="p-0">
-          <div className={`${color} p-4 text-white rounded-t-lg`}>
+        <CardBody className="p-0 h-full flex flex-col overflow-hidden">
+          <div
+            className={`${color} p-4 text-white rounded-t-lg flex-1 flex flex-col overflow-hidden`}
+          >
             <div className="flex justify-between items-start gap-4">
               <div>
                 <Dropdown radius="sm" placement="bottom-start">
@@ -165,11 +168,19 @@ const ProjectCard = ({
                     ))}
                   </DropdownMenu>
                 </Dropdown>
-                <h3 className="text-2xl font-bold mt-4 flex items-center gap-3">
-                  {customer} <Phone className="w-5 h-5 mt-1" />
-                </h3>
-                <div className="flex items-center gap-1  text-white/80 text-sm w-4/5 mt-4">
-                  <p>{address}</p>
+                <div className=" mt-4 flex items-center gap-3 w-4/5  ">
+                  <h3 className="text-2xl font-bold line-clamp-1 overflow-hidden text-ellipsis ">
+                    {customer}
+                  </h3>
+                  <div>
+                    <Phone className="w-5 h-5  mt-1" />
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-1 text-white/80 text-sm w-4/5 mt-4 overflow-hidden">
+                  <p className="line-clamp-3 leading-tight overflow-hidden text-ellipsis">
+                    {address}
+                  </p>
                 </div>
               </div>
               <div className="flex flex-col gap-2 w-1/2">
@@ -190,7 +201,7 @@ const ProjectCard = ({
           </div>
 
           {/* Progress Section */}
-          <div className="p-3">
+          <div className="p-3 flex-shrink-0">
             <Progress
               value={getProgressPercent(progress)}
               color={
@@ -201,11 +212,12 @@ const ProjectCard = ({
                   : "primary"
               }
               className="h-2"
+              aria-label={`Project progress: ${getProgressPercent(progress)}%`}
             />
           </div>
 
           {/* Team Section */}
-          <div className="p-4 flex justify-between items-center">
+          <div className="p-4 flex justify-between items-center flex-shrink-0">
             <AvatarGroup isBordered max={8}>
               {avatars.map((avatar, index) => (
                 <Avatar key={index} src={avatar} />

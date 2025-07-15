@@ -10,7 +10,7 @@ import TaskForm from "./TaskForm"; // Adjust the import path as needed
 import { Tooltip } from "@heroui/tooltip";
 import { Loader } from "lucide-react";
 
-const TaskList = ({ userPermissions, refreshKey, serviceFilter }) => {
+const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const [tasks, setTasks] = useState([]);
@@ -64,15 +64,23 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter }) => {
     fetchTasks();
   }, [projectId, refreshKey, editRefreshKey]);
 
-  // Filter tasks by service
-  const filteredTasks =
-    serviceFilter && serviceFilter !== "All"
-      ? tasks.filter(
-          (task) =>
-            task.projectService === serviceFilter ||
-            (task.project && task.project.service === serviceFilter)
-        )
-      : tasks;
+  // Enhanced filtering logic - filter tasks by service
+  const filteredTasks = tasks.filter((task) => {
+    if (serviceFilter === "All") return true;
+
+    // Check if task has project service information
+    if (task.projectService) {
+      return task.projectService === serviceFilter;
+    }
+
+    // Check if task has nested project object with service
+    if (task.project && task.project.services) {
+      return task.project.services === serviceFilter;
+    }
+
+    // If no service information is available, don't filter out
+    return true;
+  });
 
   if (loading) {
     return (
@@ -96,9 +104,15 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter }) => {
           </div>
         ) : (
           <div className="text-center py-8">
-            <h4 className="text-gray-500">No tasks found</h4>
+            <h4 className="text-gray-500">
+              {serviceFilter === "All"
+                ? "No tasks found"
+                : `No ${serviceFilter} tasks found`}
+            </h4>
             <p className="text-sm text-gray-400">
-              Create a new task to get started
+              {serviceFilter === "All"
+                ? "Create a new task to get started"
+                : `Create a new ${serviceFilter} task or select a different service filter`}
             </p>
           </div>
         )}
@@ -145,6 +159,8 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
     beforeAttachments = [],
     afterAttachments = [],
     attachements = [],
+    projectService,
+    project,
   } = task;
 
   const getStatusIcon = () => {
@@ -212,8 +228,14 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
   const formattedStartDate = formatDate(startDate);
   const formattedEndDate = formatDate(endDate);
 
+  // Get service name for display
+  const getServiceName = () => {
+    if (projectService) return projectService;
+    if (project && project.services) return project.services;
+    return "Unknown Service";
+  };
   return (
-    <Card className="mb-4 sm:mb-6 bg-[#fff] border border-[#D1D1D1] rounded-xl shadow-none w-full transition-shadow hover:shadow-lg focus-within:shadow-lg group relative pb-10">
+    <Card className="mb-4 sm:mb-6 bg-[#fff] border border-[#D1D1D1] rounded-md shadow-none w-full transition-shadow hover:shadow-lg focus-within:shadow-lg group relative pb-10">
       <div className="flex flex-col sm:flex-row items-start justify-between px-4">
         <div className="flex items-center justify-start py-2 w-full sm:w-auto">
           <div className="items-start"> {getStatusIcon()}</div>
