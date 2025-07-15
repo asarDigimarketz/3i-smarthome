@@ -21,6 +21,7 @@ import {
 import FilterTabs from '../../../components/Common/FilterTabs';
 import ProjectCard from '../../../components/Common/ProjectCard';
 import React, { useState, useEffect } from 'react';
+import { API_CONFIG } from '../../../../config';
 
 const Projects = () => {
   const { selectedService } = useLocalSearchParams();
@@ -42,8 +43,8 @@ const Projects = () => {
   };
 
   // API Configuration
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-  const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
+  const API_BASE_URL = API_CONFIG.API_URL;
+  const API_KEY = API_CONFIG.API_KEY;
 
   const statusOptions = [
     'Status',
@@ -402,7 +403,6 @@ const Projects = () => {
                     name: project.customerName,
                     address: project.address
                   }}
-                  onRefresh={onRefresh}
                 />
               </View>
             ))

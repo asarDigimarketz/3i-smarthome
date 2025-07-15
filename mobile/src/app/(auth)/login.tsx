@@ -259,7 +259,7 @@ export default function Login() {
 
           <TouchableOpacity 
             className={cn(
-              "bg-red-600 rounded-xl py-3.5 items-center w-full mt-2",
+              "bg-[#c00509] rounded-xl py-3.5 items-center w-full mt-2",
               loading && "bg-gray-400"
             )} 
             onPress={handleSubmit} 

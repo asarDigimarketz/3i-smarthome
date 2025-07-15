@@ -1,8 +1,8 @@
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import * as DocumentPicker from "expo-document-picker";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Calendar, ChevronDown, Upload } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Text,
   TouchableOpacity,
@@ -14,16 +14,15 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { TextInput } from "react-native-paper";
 
-const AddProject = () => {
+const EditProject = () => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const router = useRouter();
+  const { id } = useLocalSearchParams();
 
   // API Configuration
   const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
   const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
-
-
 
   const [formData, setFormData] = useState({
     customerName: "",
@@ -44,13 +43,15 @@ const AddProject = () => {
     comment: "",
     projectStatus: "new",
     projectDate: new Date().toISOString().split("T")[0],
-    attachments: [],
+    attachments: [], // existing attachments
   });
   const [selectedFiles, setSelectedFiles] = useState([]); // new files
+  const [removedAttachments, setRemovedAttachments] = useState([]); // removed existing files
   const [errors, setErrors] = useState({});
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const serviceOptions = [
     { value: "Home Cinema", color: "text-purple-600", bg: "bg-purple-50" },
@@ -59,7 +60,6 @@ const AddProject = () => {
     { value: "Outdoor Audio Solution", color: "text-pink-600", bg: "bg-pink-50" },
   ];
 
-  // Update the statusOptions array
   const statusOptions = [
     { value: "New", color: "text-blue-600", bg: "bg-blue-100" },
     { value: "InProgress", color: "text-yellow-600", bg: "bg-yellow-100" },
@@ -67,7 +67,6 @@ const AddProject = () => {
     { value: "Complete", color: "text-purple-600", bg: "bg-purple-100" },
   ];
 
-  // Helper function to map mobile status to server status
   const mapMobileToServerStatus = (mobileStatus) => {
     const statusMap = {
       'New': 'new',
@@ -79,21 +78,59 @@ const AddProject = () => {
     return statusMap[mobileStatus] || 'new';
   };
 
-  // Helper function to format size input
-  const formatSizeInput = (text) => {
-    // Remove all non-numeric, non-dot, non-X, non-space characters
-    let cleaned = text.replace(/[^0-9.xX\s]/g, '');
-    // Replace the first space (or multiple spaces) with 'X'
-    cleaned = cleaned.replace(/\s+/, 'X');
-    // Remove any additional spaces
-    cleaned = cleaned.replace(/\s+/g, '');
-    // Only allow one 'X'
-    const parts = cleaned.split('X');
-    if (parts.length > 2) {
-      cleaned = parts[0] + 'X' + parts.slice(1).join('');
-    }
-    return cleaned;
-  };
+  // Fetch project data by id
+  useEffect(() => {
+    const fetchProject = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': API_KEY,
+          },
+        });
+        if (!response.ok) throw new Error('Failed to fetch project');
+        const data = await response.json();
+        if (data.success && data.data) {
+          const project = data.data;
+          setFormData({
+            customerName: project.customerName || '',
+            contactNumber: project.contactNumber || '',
+            email: project.email || '',
+            address: {
+              addressLine: project.address?.addressLine || '',
+              city: project.address?.city || '',
+              district: project.address?.district || '',
+              state: project.address?.state || '',
+              country: project.address?.country || 'India',
+              pincode: project.address?.pincode || '',
+            },
+            services: project.services || '',
+            projectDescription: project.projectDescription || '',
+            size: project.size || '',
+            projectAmount: project.projectAmount ? String(project.projectAmount) : '',
+            comment: project.comment || '',
+            projectStatus: project.projectStatus === 'new' ? 'New' :
+              project.projectStatus === 'in-progress' ? 'InProgress' :
+              project.projectStatus === 'completed' ? 'Complete' :
+              project.projectStatus === 'done' ? 'Done' : '',
+            projectDate: project.projectDate ? project.projectDate.split('T')[0] : new Date().toISOString().split("T")[0],
+            attachments: project.attachments || [],
+          });
+        } else {
+          Alert.alert('Error', 'Project not found');
+          router.back();
+        }
+      } catch (error) {
+        Alert.alert('Error', error.message || 'Failed to fetch project');
+        router.back();
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetchProject();
+  }, [id]);
 
   const showDatePicker = () => {
     DateTimePickerAndroid.open({
@@ -153,6 +190,13 @@ const AddProject = () => {
   const handleRemoveSelectedFile = (index) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
+  const handleRemoveExistingAttachment = (index) => {
+    setRemovedAttachments((prev) => [...prev, formData.attachments[index]]);
+    setFormData((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index),
+    }));
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -173,94 +217,6 @@ const AddProject = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const retrySubmissionWithoutFile = async () => {
-    console.log('🔄 Retrying project submission without file...');
-    setIsSubmitting(true);
-    
-    try {
-      // Prepare project data (same as main submission but without file handling)
-      const projectData = {
-        customerName: formData.customerName.trim(),
-        contactNumber: formData.contactNumber.trim(),
-        email: formData.email.trim(),
-        address: {
-          addressLine: formData.address.addressLine.trim(),
-          city: formData.address.city.trim(),
-          district: formData.address.district.trim(),
-          state: formData.address.state.trim(),
-          country: formData.address.country.trim(),
-          pincode: formData.address.pincode.trim()
-        },
-        services: formData.services,
-        projectDescription: formData.projectDescription.trim(),
-        projectAmount: parseFloat(formData.projectAmount),
-        size: formData.size.trim(),
-        comment: "",
-        projectStatus: mapMobileToServerStatus(formData.projectStatus),
-        projectDate: formData.projectDate
-      };
-
-      console.log('📤 Retrying with project data (no file):', projectData);
-
-      // Send JSON data without file
-      const response = await fetch(`${API_BASE_URL}/api/projects`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-        },
-        body: JSON.stringify(projectData),
-      });
-
-      console.log('📥 Retry Response Status:', response.status);
-
-      const responseText = await response.text();
-      console.log('📥 Retry Raw Response:', responseText);
-
-      if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = JSON.parse(responseText);
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          } else if (errorData.error) {
-            errorMessage = errorData.error;
-          }
-        } catch (e) {
-          if (responseText) {
-            errorMessage = responseText;
-          }
-        }
-        throw new Error(errorMessage);
-      }
-
-      const responseData = JSON.parse(responseText);
-      console.log('📥 Retry Success Response:', responseData);
-
-      if (responseData.success) {
-        Alert.alert(
-          "Success",
-          "Project created successfully (without attachment)!",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                router.back();
-              }
-            }
-          ]
-        );
-      } else {
-        Alert.alert("Error", responseData.message || "Failed to create project");
-      }
-    } catch (error) {
-      console.error('🚨 Retry Error:', error);
-      Alert.alert("Error", error.message || 'Failed to create project even without file');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const submitProjectToAPI = async () => {
     if (!validateForm()) return;
     setIsSubmitting(true);
@@ -269,9 +225,12 @@ const AddProject = () => {
       Object.keys(formData).forEach((key) => {
         if (key === "address") {
           submitData.append(key, JSON.stringify(formData[key]));
-        } else if (key === "projectStatus") {
-          submitData.append(key, mapMobileToServerStatus(formData[key]));
-        } else if (key !== "attachments") {
+        } else if (key === "attachments") {
+          // Existing attachments (not removed)
+          formData.attachments.forEach((att) => {
+            submitData.append("existingAttachments", typeof att === 'string' ? att : att.url || att.name);
+          });
+        } else {
           submitData.append(key, formData[key]);
         }
       });
@@ -282,34 +241,39 @@ const AddProject = () => {
           name: file.name || 'attachment',
         });
       });
-      const response = await fetch(`${API_BASE_URL}/api/projects`, {
-        method: 'POST',
+      removedAttachments.forEach((att) => {
+        submitData.append("removedAttachments", typeof att === 'string' ? att : att.url || att.name);
+      });
+      const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+        method: 'PUT',
         headers: {
           'x-api-key': API_KEY,
         },
         body: submitData,
       });
       const responseText = await response.text();
-      if (!response.ok) {
-        // If error is about missing directory or ENOENT, retry without file
-        if (responseText.includes('ENOENT') || responseText.includes('no such file or directory')) {
-          await retrySubmissionWithoutFile();
-          return;
-        }
-        throw new Error(responseText);
-      }
+      if (!response.ok) throw new Error(responseText);
       const responseData = JSON.parse(responseText);
       if (responseData.success) {
-        Alert.alert("Success", "Project created successfully!", [{ text: "OK", onPress: () => router.back() }]);
+        Alert.alert("Success", "Project updated successfully!", [{ text: "OK", onPress: () => router.back() }]);
       } else {
-        Alert.alert("Error", responseData.message || "Failed to create project");
+        Alert.alert("Error", responseData.message || "Failed to update project");
       }
     } catch (error) {
-      Alert.alert("Error", error.message || 'Failed to create project');
+      Alert.alert("Error", error.message || 'Failed to update project');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#DC2626" />
+        <Text className="text-gray-600 mt-4">Loading project...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white">
@@ -319,17 +283,15 @@ const AddProject = () => {
           <TouchableOpacity className="mr-3" onPress={() => router.back()}>
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
-          <Text className="text-xl font-bold text-gray-800">Add Project</Text>
+          <Text className="text-xl font-bold text-gray-800">Edit Project</Text>
         </View>
       </View>
-
       <KeyboardAwareScrollView className="flex-1">
         <View className="p-6">
           {/* Customer Details */}
           <Text className="text-lg font-medium text-gray-700 mb-4">
             Customer Details
           </Text>
-
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
@@ -343,7 +305,6 @@ const AddProject = () => {
               />
               {errors.customerName && <Text className="text-red-500 text-xs mt-1">{errors.customerName}</Text>}
             </View>
-
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
                 mode="outlined"
@@ -358,7 +319,6 @@ const AddProject = () => {
               {errors.contactNumber && <Text className="text-red-500 text-xs mt-1">{errors.contactNumber}</Text>}
             </View>
           </View>
-
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
@@ -373,7 +333,6 @@ const AddProject = () => {
               />
               {errors.email && <Text className="text-red-500 text-xs mt-1">{errors.email}</Text>}
             </View>
-
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
                 mode="outlined"
@@ -391,12 +350,10 @@ const AddProject = () => {
               />
             </View>
           </View>
-
           {/* Address Section */}
           <Text className="text-lg font-medium text-gray-700 mb-4 mt-6">
             Address
           </Text>
-
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
@@ -410,7 +367,6 @@ const AddProject = () => {
               />
               {errors["address.addressLine"] && <Text className="text-red-500 text-xs mt-1">{errors["address.addressLine"]}</Text>}
             </View>
-
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
                 mode="outlined"
@@ -424,7 +380,6 @@ const AddProject = () => {
               {errors["address.city"] && <Text className="text-red-500 text-xs mt-1">{errors["address.city"]}</Text>}
             </View>
           </View>
-
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
@@ -438,7 +393,6 @@ const AddProject = () => {
               />
               {errors["address.district"] && <Text className="text-red-500 text-xs mt-1">{errors["address.district"]}</Text>}
             </View>
-
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
                 mode="outlined"
@@ -452,7 +406,6 @@ const AddProject = () => {
               {errors["address.state"] && <Text className="text-red-500 text-xs mt-1">{errors["address.state"]}</Text>}
             </View>
           </View>
-
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
@@ -466,7 +419,6 @@ const AddProject = () => {
               />
               {errors["address.country"] && <Text className="text-red-500 text-xs mt-1">{errors["address.country"]}</Text>}
             </View>
-
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
                 mode="outlined"
@@ -481,12 +433,10 @@ const AddProject = () => {
               {errors["address.pincode"] && <Text className="text-red-500 text-xs mt-1">{errors["address.pincode"]}</Text>}
             </View>
           </View>
-
           {/* Project Details Section */}
           <Text className="text-lg font-medium text-gray-700 mb-4 mt-6">
             Project Details
           </Text>
-
           {/* Service Selection */}
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
@@ -506,7 +456,6 @@ const AddProject = () => {
                   </Text>
                   <ChevronDown size={16} color="#6B7280" />
                 </TouchableOpacity>
-
                 {showServiceDropdown && !isSubmitting && (
                   <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
                     {serviceOptions.map((service) => (
@@ -528,7 +477,6 @@ const AddProject = () => {
               </View>
               {errors.services && <Text className="text-red-500 text-xs mt-1">{errors.services}</Text>}
             </View>
-
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
                 mode="outlined"
@@ -542,25 +490,21 @@ const AddProject = () => {
               {errors.projectDescription && <Text className="text-red-500 text-xs mt-1">{errors.projectDescription}</Text>}
             </View>
           </View>
-
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
                 mode="outlined"
-                label="Size (Length X Width)"
+                label="Size"
                 value={formData.size}
-                onChangeText={(text) => {
-                  const formattedText = formatSizeInput(text);
-                  handleInputChange("size", formattedText);
-                }}
-                right={<TextInput.Affix text="Sq.ft" />}
+                onChangeText={(text) => handleInputChange("size", text)}
+                right={<TextInput.Affix text="Sqt" />}
+                keyboardType="numeric"
                 outlineColor="#E5E7EB"
                 activeOutlineColor="#DC2626"
                 disabled={isSubmitting}
               />
               {errors.size && <Text className="text-red-500 text-xs mt-1">{errors.size}</Text>}
             </View>
-
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
               <TextInput
                 mode="outlined"
@@ -576,7 +520,6 @@ const AddProject = () => {
               {errors.projectAmount && <Text className="text-red-500 text-xs mt-1">{errors.projectAmount}</Text>}
             </View>
           </View>
-
           {/* Status Selection */}
           <View className={`${isTablet ? "flex-row space-x-4" : ""}`}>
             <View className={`${isTablet ? "flex-1" : "mb-4"}`}>
@@ -604,7 +547,6 @@ const AddProject = () => {
                   </Text>
                   <ChevronDown size={16} color="#6B7280" />
                 </TouchableOpacity>
-
                 {showStatusDropdown && !isSubmitting && (
                   <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
                     {statusOptions.map((status) => (
@@ -626,16 +568,10 @@ const AddProject = () => {
               </View>
             </View>
           </View>
-
           {/* Project Attachment Section */}
           <Text className="text-base font-semibold text-gray-700 mb-2 mt-5">
             Project Attachment
           </Text>
-          
-          <Text className="text-sm text-amber-600 mb-4 bg-amber-50 p-3 rounded-lg">
-            📋 Note: If file upload fails due to server configuration, you'll have the option to create the project without the attachment.
-          </Text>
-
           <TouchableOpacity
             className={`${isSubmitting ? 'bg-gray-400' : 'bg-red-600'} h-12 rounded-lg flex-row items-center justify-center mb-2`}
             onPress={!isSubmitting ? handleFileChange : undefined}
@@ -644,14 +580,35 @@ const AddProject = () => {
             <Upload size={20} color="white" className="mr-2" />
             <Text className="text-white font-medium">Upload</Text>
           </TouchableOpacity>
-
+          {formData.attachments.length > 0 && (
+            <View className="bg-gray-50 p-3 rounded-lg mb-2">
+              <Text className="text-gray-800 font-medium mb-2">Existing Attachments:</Text>
+              {formData.attachments.map((att, index) => (
+                <View key={index} className="flex-row items-center justify-between mb-1">
+                  <View className="flex-1">
+                    <Text className="text-gray-800 font-medium" numberOfLines={1}>
+                      {att.name || att.url}
+                    </Text>
+                    <Text className="text-gray-500 text-sm">
+                      {(att.size / 1024).toFixed(2)} KB
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    className="p-2"
+                    onPress={!isSubmitting ? () => handleRemoveExistingAttachment(index) : undefined}
+                    disabled={isSubmitting}
+                  >
+                    <Text className={`${isSubmitting ? 'text-gray-400' : 'text-red-600'}`}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
           {selectedFiles.length > 0 && (
-            <View className="mt-4">
-              <Text className="text-base font-semibold text-gray-700 mb-2">
-                Selected Attachments ({selectedFiles.length})
-              </Text>
+            <View className="bg-gray-50 p-3 rounded-lg mb-2">
+              <Text className="text-gray-800 font-medium mb-2">New Attachments:</Text>
               {selectedFiles.map((file, index) => (
-                <View key={index} className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
+                <View key={index} className="flex-row items-center justify-between mb-1">
                   <View className="flex-1">
                     <Text className="text-gray-800 font-medium" numberOfLines={1}>
                       {file.name}
@@ -671,7 +628,6 @@ const AddProject = () => {
               ))}
             </View>
           )}
-
           {/* Action Buttons */}
           <View className="flex-row justify-center space-x-4 mt-8 gap-4">
             <TouchableOpacity
@@ -681,7 +637,6 @@ const AddProject = () => {
             >
               <Text className={`${isSubmitting ? 'text-gray-500' : 'text-gray-600'} font-medium`}>Cancel</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               className={`${isSubmitting ? 'bg-gray-400' : 'bg-red-600'} px-8 py-3 rounded-lg flex-row items-center`}
               onPress={!isSubmitting ? submitProjectToAPI : undefined}
@@ -703,4 +658,4 @@ const AddProject = () => {
   );
 };
 
-export default AddProject;
+export default EditProject; 

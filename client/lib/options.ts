@@ -177,7 +177,7 @@ export const authOptions: AuthOptions = {
         try {
           // Connect to database first before any database operations
           await connectDb();
-
+          
           const generalData = await General.findOne();
           const { UserEmployee, Role, UserModel } = await getModels();
 

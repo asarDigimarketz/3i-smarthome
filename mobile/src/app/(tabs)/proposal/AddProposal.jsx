@@ -15,9 +15,10 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { TextInput } from 'react-native-paper';
 import axios from 'axios';
+import { API_CONFIG } from '../../../../config';
 
 // 🔧 NETWORK CONFIGURATION - UPDATE WITH YOUR DEVELOPMENT MACHINE'S IP
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL; // ✅ Your actual IP address
+const API_BASE_URL = API_CONFIG.API_URL; // ✅ Your actual IP address
 
 const AddProposal = () => {
   const { width } = useWindowDimensions();
@@ -45,8 +46,6 @@ const AddProposal = () => {
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
-  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
-  const [showStateDropdown, setShowStateDropdown] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -198,13 +197,13 @@ const AddProposal = () => {
       }
 
       console.log('🔗 API URL:', `${API_BASE_URL}/api/proposals`);
-      console.log('🔑 API Key:', process.env.EXPO_PUBLIC_API_KEY ? 'Set' : 'Not Set');
+      console.log('🔑 API Key:', API_CONFIG.API_KEY ? 'Set' : 'Not Set');
       console.log('📤 Sending request...');
 
       const response = await axios.post(`${API_BASE_URL}/api/proposals`, submitData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'x-api-key': process.env.EXPO_PUBLIC_API_KEY
+          'x-api-key': API_CONFIG.API_KEY
         }
       });
 
@@ -271,11 +270,11 @@ const AddProposal = () => {
 
   function formatSizeInput(text) {
     // Remove all non-numeric, non-dot, non-X, non-space characters
-    let cleaned = text.replace(/[^0-9.xX\\s]/g, '');
+    let cleaned = text.replace(/[^0-9.xX\s]/g, '');
     // Replace the first space (or multiple spaces) with 'X'
-    cleaned = cleaned.replace(/\\s+/, 'X');
+    cleaned = cleaned.replace(/\s+/, 'X');
     // Remove any additional spaces
-    cleaned = cleaned.replace(/\\s+/g, '');
+    cleaned = cleaned.replace(/\s+/g, '');
     // Only allow one 'X'
     const parts = cleaned.split('X');
     if (parts.length > 2) {
@@ -517,8 +516,7 @@ const AddProposal = () => {
                   const formattedText = formatSizeInput(text);
                   setFormData({ ...formData, size: formattedText });
                 }}
-                placeholder="1200.36 X 1600.63"
-                right={<TextInput.Affix text="Sqt" />}
+                right={<TextInput.Affix text="Sq.ft" />}
                 outlineColor="#E5E7EB"
                 activeOutlineColor="#DC2626"
               />

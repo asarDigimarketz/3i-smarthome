@@ -5,6 +5,7 @@ import { cn } from "../../lib/utils";
 import General from "./General/General";
 import EmailConfiguration from "./EmailConfiguration/EmailConfiguration";
 import UserManagement from "./RolesResponsiblity/RolesResponsiblity.jsx";
+import FirebaseNotificationSetup from "./FirebaseNotificationSetup";
 import axios from "axios";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import React from "react";
@@ -56,7 +57,7 @@ export default function SettingsInterface() {
     { key: "general", title: "General" },
     { key: "email", title: "Email Configuration" },
     { key: "user-management", title: "User Management" },
-    { key: "firebase", title: "Firebase Notification" }, // Added tab
+    { key: "firebase-notifications", title: "Firebase Notifications" },
   ];
 
   return (
@@ -103,18 +104,7 @@ export default function SettingsInterface() {
           )}
           {selectedTab === "email" && <EmailConfiguration />}
           {selectedTab === "user-management" && <UserManagement />}
-          {selectedTab === "firebase" && (
-            <React.Suspense
-              fallback={<div>Loading Firebase Notification Setup...</div>}
-            >
-              {typeof window !== "undefined" &&
-                (require("./FirebaseNotificationSetup.jsx").default
-                  ? React.createElement(
-                      require("./FirebaseNotificationSetup.jsx").default
-                    )
-                  : null)}
-            </React.Suspense>
-          )}
+          {selectedTab === "firebase-notifications" && <FirebaseNotificationSetup />}
         </div>
       </div>
     </section>

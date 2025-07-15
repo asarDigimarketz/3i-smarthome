@@ -27,13 +27,6 @@ const EmployeeHeader = ({ onMenuPress }) => {
     <View className="bg-white border-b border-gray-200 px-4 py-3">
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
-          <TouchableOpacity 
-            onPress={onMenuPress}
-            className="mr-3 p-2"
-          >
-            <Menu size={24} color="#374151" />
-          </TouchableOpacity>
-          
           <View className="flex-1">
             <Text className="text-xl font-bold text-gray-900">Employee Management</Text>
             {user && (
@@ -47,23 +40,18 @@ const EmployeeHeader = ({ onMenuPress }) => {
           </View>
         </View>
 
-        <TouchableOpacity 
-          onPress={handleLogout}
-          className="bg-red-50 p-2 rounded-lg"
-        >
-          <LogOut size={20} color="#DC2626" />
-        </TouchableOpacity>
+        
       </View>
 
       {/* Permission Status */}
-      {user && user.permissions && (
+      {/* {user && user.permissions && (
         <View className="mt-2 p-2 bg-blue-50 rounded-lg">
           <Text className="text-blue-800 text-xs font-medium mb-1">Your Permissions:</Text>
           <Text className="text-blue-700 text-xs">
             {getUserPermissions() || 'No specific permissions'}
           </Text>
         </View>
-      )}
+      )} */}
     </View>
   );
 };

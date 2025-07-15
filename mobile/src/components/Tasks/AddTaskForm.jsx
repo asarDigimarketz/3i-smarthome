@@ -16,145 +16,40 @@ const AddTaskForm = ({
   showStatusDropdown,
   setShowStatusDropdown,
   statusOptions,
-  removeImage,
   setShowAddTaskForm,
   onCreateTask,
-  creating,
-  setCreating,
-  employees = []
+  employees = [],
+  projectId
 }) => {
   const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const pickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*'], // Allowed file types
-        copyToCacheDirectory: true
-      });
-
-      if (result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        setNewTask(prev => ({
-          ...prev,
-          attachment: {
-            name: asset.name,
-            uri: asset.uri,
-            type: asset.mimeType,
-            size: asset.size
-          }
-        }));
-      }
-    } catch (error) {
-      console.error('Error picking document:', error);
-    }
-  };
-
-  const handleDateChange = (event, selectedDate) => {
-    if (selectedDate) {
-      setNewTask(prev => ({
-        ...prev,
-        [activeDateField]: selectedDate
-      }));
-    }
-    setShowDatePicker(false);
-    setActiveDateField(null);
-  };
-
-  const openDatePicker = (field) => {
-    setActiveDateField(field);
-    setShowDatePicker(true);
-  };
-
+  // --- NEW: Support multiple assignees and multiple attachments ---
+  // Assignees (multi-select)
   const handleAssigneeSelect = (employee) => {
     setNewTask(prev => ({
       ...prev,
-      assignTo: employee.id
+      assignedTo: prev.assignedTo && Array.isArray(prev.assignedTo)
+        ? prev.assignedTo.includes(employee.id)
+          ? prev.assignedTo.filter(id => id !== employee.id)
+          : [...prev.assignedTo, employee.id]
+        : [employee.id]
     }));
-    setShowAssigneeDropdown(false);
   };
 
-  const getSelectedEmployeeName = () => {
-    if (!newTask.assignTo) return 'Select Assignee';
-    const selectedEmployee = employees.find(emp => emp.id === newTask.assignTo);
-    return selectedEmployee ? selectedEmployee.name : 'Select Assignee';
+  const getSelectedEmployeeNames = () => {
+    if (!newTask.assignedTo || newTask.assignedTo.length === 0) return 'Select Assignees';
+    return employees.filter(emp => newTask.assignedTo.includes(emp.id)).map(emp => emp.name).join(', ');
   };
 
-  const handleSubmit = async () => {
-    if (!newTask.title.trim()) {
-      Alert.alert('Validation Error', 'Task title is required');
-      return;
-    }
-    if (!newTask.status) {
-      Alert.alert('Validation Error', 'Please select a status');
-      return;
-    }
+  // Attachments: support multiple for before, after, and general
+  const [beforeImages, setBeforeImages] = useState([]);
+  const [afterImages, setAfterImages] = useState([]);
+  const [attachments, setAttachments] = useState([]);
 
-    try {
-      setCreating(true);
-      const formData = new FormData();
-      formData.append('title', newTask.title);
-      formData.append('comment', newTask.comment || '');
-      formData.append('startDate', newTask.startDate.toISOString());
-      formData.append('endDate', newTask.endDate.toISOString());
-      formData.append('assignedTo', newTask.assignTo || '');
-      formData.append('status', newTask.status);
-
-      // Attach before images
-      if (newTask.beforeImages && newTask.beforeImages.length > 0) {
-        newTask.beforeImages.forEach((uri, idx) => {
-          formData.append('beforeAttachments', {
-            uri,
-            name: `before_${idx}.jpg`,
-            type: 'image/jpeg',
-          });
-        });
-      }
-
-      // Attach after images
-      if (newTask.afterImages && newTask.afterImages.length > 0) {
-        newTask.afterImages.forEach((uri, idx) => {
-          formData.append('afterAttachments', {
-            uri,
-            name: `after_${idx}.jpg`,
-            type: 'image/jpeg',
-          });
-        });
-      }
-
-      // Attach document (PDF)
-      if (newTask.attachment) {
-        formData.append('attachment', {
-          uri: newTask.attachment.uri,
-          name: newTask.attachment.name,
-          type: newTask.attachment.type,
-        });
-      }
-
-      const response = await fetch(`${API_URL}/api/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'x-api-key': API_KEY,
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        Alert.alert('Success', 'Task created successfully');
-        // Optionally: refresh task list here
-        setShowAddTaskForm(false);
-      } else {
-        Alert.alert('Error', data.message || 'Failed to create task');
-      }
-    } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to create task');
-    } finally {
-      setCreating(false);
-    }
-  };
-
+  // Pick images for before/after
   const pickImages = async (field) => {
+    const setImages = field === 'beforeImages' ? setBeforeImages : setAfterImages;
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
@@ -176,10 +71,7 @@ const AddTaskForm = ({
               quality: 1,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
-              setNewTask((prev) => ({
-                ...prev,
-                [field]: [...(prev[field] || []), result.assets[0].uri],
-              }));
+              setImages(prev => [...prev, result.assets[0].uri]);
             }
           } else if (buttonIndex === 2) {
             // Choose from Gallery
@@ -190,16 +82,13 @@ const AddTaskForm = ({
             }
             let result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
+              allowsEditing: false,
               aspect: [4, 3],
               quality: 1,
-              allowsMultipleSelection: true,
+              // allowsMultipleSelection: true, // Only available on iOS SDK 49+, not Android
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
-              setNewTask((prev) => ({
-                ...prev,
-                [field]: [...(prev[field] || []), ...result.assets.map(a => a.uri)],
-              }));
+              setImages(prev => [...prev, ...result.assets.map(a => a.uri)]);
             }
           }
         }
@@ -225,10 +114,7 @@ const AddTaskForm = ({
                 quality: 1,
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
-                setNewTask((prev) => ({
-                  ...prev,
-                  [field]: [...(prev[field] || []), result.assets[0].uri],
-                }));
+                setImages(prev => [...prev, result.assets[0].uri]);
               }
             }
           },
@@ -242,22 +128,166 @@ const AddTaskForm = ({
               }
               let result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 aspect: [4, 3],
                 quality: 1,
-                allowsMultipleSelection: true,
+                // allowsMultipleSelection: true, // Not supported on Android
               });
               if (!result.canceled && result.assets && result.assets.length > 0) {
-                setNewTask((prev) => ({
-                  ...prev,
-                  [field]: [...(prev[field] || []), ...result.assets.map(a => a.uri)],
-                }));
+                setImages(prev => [...prev, ...result.assets.map(a => a.uri)]);
               }
             }
           },
           { text: 'Cancel', style: 'cancel' }
         ]
       );
+    }
+  };
+
+  // TEMP: Test expo-image-picker
+  const testImagePicker = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permission denied');
+      return;
+    }
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    console.log('ImagePicker result:', result);
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      alert('Image picked: ' + result.assets[0].uri);
+    } else {
+      alert('No image picked');
+    }
+  };
+
+  // Remove image
+  const removeImage = (field, index) => {
+    if (field === 'beforeImages') {
+      setBeforeImages(prev => prev.filter((_, i) => i !== index));
+    } else if (field === 'afterImages') {
+      setAfterImages(prev => prev.filter((_, i) => i !== index));
+    } else if (field === 'attachments') {
+      setAttachments(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // Pick document for attachments
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'], // Allowed file types
+        copyToCacheDirectory: true
+      });
+
+      if (result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setAttachments(prev => [...prev, {
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType,
+          size: asset.size
+        }]);
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+    }
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    if (selectedDate) {
+      setNewTask(prev => ({
+        ...prev,
+        [activeDateField]: selectedDate
+      }));
+    }
+    setShowDatePicker(false);
+    setActiveDateField(null);
+  };
+
+  const openDatePicker = (field) => {
+    setActiveDateField(field);
+    setShowDatePicker(true);
+  };
+
+  // --- SUBMIT LOGIC ---
+  const handleSubmit = async () => {
+    // Validation
+    if (!projectId) {
+      Alert.alert('Validation Error', 'Project is required');
+      return;
+    }
+    if (!newTask.title || !newTask.title.trim()) {
+      Alert.alert('Validation Error', 'Task title is required');
+      return;
+    }
+    if (!newTask.status || !['new','inprogress','completed'].includes(newTask.status)) {
+      Alert.alert('Validation Error', 'Please select a valid status');
+      return;
+    }
+    if (!newTask.startDate) {
+      Alert.alert('Validation Error', 'Start date is required');
+      return;
+    }
+    try {
+      setCreating(true);
+      const formData = new FormData();
+      formData.append('projectId', projectId);
+      formData.append('title', newTask.title);
+      formData.append('comment', newTask.comment || '');
+      formData.append('startDate', newTask.startDate.toISOString());
+      if (newTask.endDate) formData.append('endDate', newTask.endDate.toISOString());
+      if (newTask.assignedTo && newTask.assignedTo.length > 0) {
+        newTask.assignedTo.forEach(id => formData.append('assignedTo', id));
+      }
+      formData.append('status', newTask.status);
+      // Attach before images
+      beforeImages.forEach((uri, idx) => {
+        formData.append('beforeAttachments', {
+          uri,
+          name: `before_${idx}.jpg`,
+          type: 'image/jpeg',
+        });
+      });
+      // Attach after images
+      afterImages.forEach((uri, idx) => {
+        formData.append('afterAttachments', {
+          uri,
+          name: `after_${idx}.jpg`,
+          type: 'image/jpeg',
+        });
+      });
+      // Attach general attachments
+      attachments.forEach((file, idx) => {
+        formData.append('attachements', {
+          uri: file.uri,
+          name: file.name,
+          type: file.type,
+        });
+      });
+      const response = await fetch(`${API_URL}/api/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'x-api-key': API_KEY,
+        },
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.success) {
+        Alert.alert('Success', 'Task created successfully');
+        setShowAddTaskForm(false);
+      } else {
+        Alert.alert('Error', data.message || 'Failed to create task');
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to create task');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -294,8 +324,8 @@ const AddTaskForm = ({
           >
             <View className="flex-row items-center flex-1">
               <User size={16} color="#6B7280" />
-              <Text className={`ml-2 ${newTask.assignTo ? 'text-gray-900' : 'text-gray-500'}`}>
-                {getSelectedEmployeeName()}
+              <Text className={`ml-2 ${newTask.assignedTo && newTask.assignedTo.length > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
+                {getSelectedEmployeeNames()}
               </Text>
             </View>
             <ChevronDown size={16} color="#6B7280" />
@@ -307,7 +337,7 @@ const AddTaskForm = ({
                 <TouchableOpacity
                   className="px-4 py-3 border-b border-gray-100 flex-row items-center"
                   onPress={() => {
-                    setNewTask(prev => ({ ...prev, assignTo: '' }));
+                    setNewTask(prev => ({ ...prev, assignedTo: [] }));
                     setShowAssigneeDropdown(false);
                   }}
                 >
@@ -315,7 +345,7 @@ const AddTaskForm = ({
                     <User size={16} color="#6B7280" />
                   </View>
                   <Text className="text-gray-600 text-sm">Unassigned</Text>
-                  {!newTask.assignTo && (
+                  {!newTask.assignedTo || newTask.assignedTo.length === 0 && (
                     <View className="w-2 h-2 rounded-full bg-red-600 ml-auto" />
                   )}
                 </TouchableOpacity>
@@ -343,7 +373,7 @@ const AddTaskForm = ({
                           <Text className="text-gray-500 text-xs">{employee.email}</Text>
                         )}
                       </View>
-                      {newTask.assignTo === employee.id && (
+                      {newTask.assignedTo && newTask.assignedTo.includes(employee.id) && (
                         <View className="w-2 h-2 rounded-full bg-red-600" />
                       )}
                     </TouchableOpacity>
@@ -377,7 +407,7 @@ const AddTaskForm = ({
           >
             <Calendar size={16} color="#6B7280" />
             <Text className="ml-2 text-gray-900 text-sm">
-              {newTask.endDate.toLocaleDateString()}
+              {newTask.endDate ? newTask.endDate.toLocaleDateString() : 'Select End Date'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -440,10 +470,9 @@ const AddTaskForm = ({
           <Camera size={20} color="#3B82F6" />
           <Text className="text-blue-600 ml-2 font-medium">Add Before Images</Text>
         </TouchableOpacity>
-        
-        {newTask.beforeImages && newTask.beforeImages.length > 0 && (
+        {beforeImages && beforeImages.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-            {newTask.beforeImages.map((image, index) => (
+            {beforeImages.map((image, index) => (
               <View key={index} className="relative mr-2">
                 <Image source={{ uri: image }} className="w-16 h-16 rounded-lg" />
                 <TouchableOpacity
@@ -468,9 +497,9 @@ const AddTaskForm = ({
           <Text className="text-green-600 ml-2 font-medium">Add After Images</Text>
         </TouchableOpacity>
         
-        {newTask.afterImages && newTask.afterImages.length > 0 && (
+        {afterImages && afterImages.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-            {newTask.afterImages.map((image, index) => (
+            {afterImages.map((image, index) => (
               <View key={index} className="relative mr-2">
                 <Image source={{ uri: image }} className="w-16 h-16 rounded-lg" />
                 <TouchableOpacity
@@ -495,14 +524,18 @@ const AddTaskForm = ({
           <FileText size={20} color="#8B5CF6" />
           <Text className="text-purple-600 ml-2 font-medium">Add Document or Image</Text>
         </TouchableOpacity>
-        {newTask.attachment && (
-          <View className="flex-row items-center mt-2 bg-gray-50 rounded-lg px-3 py-2">
-            <FileText size={16} color="#6B7280" />
-            <Text className="ml-2 text-gray-700 flex-1">{newTask.attachment.name}</Text>
-            <TouchableOpacity onPress={() => setNewTask(prev => ({ ...prev, attachment: null }))}>
-              <X size={16} color="#DC2626" />
-            </TouchableOpacity>
-          </View>
+        {attachments && attachments.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+            {attachments.map((file, index) => (
+              <View key={index} className="relative mr-2">
+                <FileText size={20} color="#6B7280" />
+                <Text className="ml-2 text-gray-700 flex-1">{file.name}</Text>
+                <TouchableOpacity onPress={() => removeImage('attachments', index)}>
+                  <X size={16} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
         )}
       </View>
 

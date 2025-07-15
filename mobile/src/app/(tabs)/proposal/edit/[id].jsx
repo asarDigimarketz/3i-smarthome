@@ -20,9 +20,10 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { TextInput } from 'react-native-paper';
 import { WebView } from 'react-native-webview';
 import axios from 'axios';
+import { API_CONFIG } from '../../../../../config';
 
 // 🔧 NETWORK CONFIGURATION - UPDATE WITH YOUR DEVELOPMENT MACHINE'S IP
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL; // ✅ Your actual IP address
+const API_BASE_URL = API_CONFIG.API_URL; // ✅ Your actual IP address
 
 const EditProposal = () => {
   const { width } = useWindowDimensions();
@@ -169,6 +170,22 @@ const EditProposal = () => {
     }
   };
 
+  // Helper function to format size input
+  const formatSizeInput = (text) => {
+    // Remove all non-numeric, non-dot, non-X, non-space characters
+    let cleaned = text.replace(/[^0-9.xX\s]/g, '');
+    // Replace the first space (or multiple spaces) with 'X'
+    cleaned = cleaned.replace(/\s+/, 'X');
+    // Remove any additional spaces
+    cleaned = cleaned.replace(/\s+/g, '');
+    // Only allow one 'X'
+    const parts = cleaned.split('X');
+    if (parts.length > 2) {
+      cleaned = parts[0] + 'X' + parts.slice(1).join('');
+    }
+    return cleaned;
+  };
+
   // Function to view/open file in modal
   const handleViewFile = async (fileUrl, filename) => {
     try {
@@ -252,7 +269,7 @@ const EditProposal = () => {
       setLoading(true);
       const response = await axios.get(`${API_BASE_URL}/api/proposals/${id}`, {
         headers: {
-          'x-api-key': process.env.EXPO_PUBLIC_API_KEY // Replace with your actual API key
+          'x-api-key': API_CONFIG.API_KEY // Replace with your actual API key
         }
       });
 
@@ -442,7 +459,7 @@ const EditProposal = () => {
       const response = await axios.put(`${API_BASE_URL}/api/proposals/${id}`, updateData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'x-api-key': process.env.EXPO_PUBLIC_API_KEY // Replace with your actual API key
+          'x-api-key': API_CONFIG.API_KEY // Replace with your actual API key
         }
       });
 
@@ -777,12 +794,10 @@ const EditProposal = () => {
               label="Size (Length X Width)"
               value={formData.size}
               onChangeText={(text) => {
-                // Allow digits, decimal points, spaces, and X
-                const formattedText = text.replace(/[^0-9.X\s]/g, '');
+                const formattedText = formatSizeInput(text);
                 setFormData({...formData, size: formattedText});
               }}
-              placeholder="1200.36 X 1600.63"
-              right={<TextInput.Affix text="Sqt" />}
+              right={<TextInput.Affix text="Sq.ft" />}
               outlineColor="#E5E7EB"
               activeOutlineColor="#DC2626"
             />

@@ -11,34 +11,47 @@ import axios from 'axios';
 
 const EditEmployee = () => {
   const router = useRouter()
-  const { employeeData: employeeDataString } = useLocalSearchParams()
+  const { employeeData: employeeDataString, id: employeeIdParam } = useLocalSearchParams()
   const { width } = useWindowDimensions()
   const isTablet = width >= 768
 
-  // Parse the received data
-  const parsedEmployeeData = employeeDataString ? JSON.parse(employeeDataString) : {}
+  // Helper to ensure address object is always present
+  const ensureAddress = (address) => ({
+    addressLine: address?.addressLine || "",
+    city: address?.city || "",
+    district: address?.district || "",
+    state: address?.state || "",
+    country: address?.country || "",
+    pincode: address?.pincode || "",
+  });
 
-  // Initialize form data with received employee data
+  // State for fetched employee data
+  const [fetchedEmployee, setFetchedEmployee] = useState(null);
+
+  // Parse the received data
+  let parsedEmployeeData = {};
+  if (employeeDataString) {
+    try {
+      parsedEmployeeData = JSON.parse(employeeDataString);
+    } catch (e) {
+      parsedEmployeeData = {};
+    }
+  }
+
+  // Initialize form data with received employee data or fetched data
   const [formData, setFormData] = useState({
-    firstName: parsedEmployeeData.firstName || "",
-    lastName: parsedEmployeeData.lastName || "",
-    email: parsedEmployeeData.email || "",
-    mobileNo: parsedEmployeeData.mobileNo || "",
-    gender: parsedEmployeeData.gender || "",
-    dateOfBirth: parsedEmployeeData.dateOfBirth || "",
-    dateOfHiring: parsedEmployeeData.dateOfHiring || "",
-    role: parsedEmployeeData.role || "",
-    department: parsedEmployeeData.department || "",
-    status: parsedEmployeeData.status || "active",
-    notes: parsedEmployeeData.notes || "",
-    address: {
-      addressLine: parsedEmployeeData.address?.addressLine || "",
-      city: parsedEmployeeData.address?.city || "",
-      district: parsedEmployeeData.address?.district || "",
-      state: parsedEmployeeData.address?.state || "",
-      country: parsedEmployeeData.address?.country || "",
-      pincode: parsedEmployeeData.address?.pincode || "",
-    },
+    firstName: parsedEmployeeData.firstName || fetchedEmployee?.firstName || "",
+    lastName: parsedEmployeeData.lastName || fetchedEmployee?.lastName || "",
+    email: parsedEmployeeData.email || fetchedEmployee?.email || "",
+    mobileNo: parsedEmployeeData.mobileNo || fetchedEmployee?.mobileNo || "",
+    gender: parsedEmployeeData.gender || fetchedEmployee?.gender || "",
+    dateOfBirth: parsedEmployeeData.dateOfBirth || fetchedEmployee?.dateOfBirth || "",
+    dateOfHiring: parsedEmployeeData.dateOfHiring || fetchedEmployee?.dateOfHiring || "",
+    role: parsedEmployeeData.role || fetchedEmployee?.role || "",
+    department: parsedEmployeeData.department || fetchedEmployee?.department || "",
+    status: parsedEmployeeData.status || fetchedEmployee?.status || "active",
+    notes: parsedEmployeeData.notes || fetchedEmployee?.notes || "",
+    address: ensureAddress(parsedEmployeeData.address || fetchedEmployee?.address),
   })
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
@@ -308,6 +321,50 @@ const EditEmployee = () => {
     };
     fetchRoles();
   }, []);
+
+  // Fetch employee data if only id is passed
+  useEffect(() => {
+    if (!employeeDataString && employeeIdParam) {
+      (async () => {
+        try {
+          const res = await axios.get(`${API_CONFIG.API_URL}/api/employeeManagement/${employeeIdParam}`, {
+            headers: { 'x-api-key': API_CONFIG.API_KEY }
+          });
+          if (res.data && res.data.success && res.data.employee) {
+            setFetchedEmployee(res.data.employee);
+            setFormData((prev) => ({
+              ...prev,
+              ...res.data.employee,
+              address: ensureAddress(res.data.employee.address),
+            }));
+          }
+        } catch (e) {
+          // Optionally handle error
+        }
+      })();
+    }
+  }, [employeeDataString, employeeIdParam]);
+
+  // Update formData when fetchedEmployee is loaded
+  useEffect(() => {
+    if (fetchedEmployee) {
+      setFormData((prev) => ({
+        ...prev,
+        firstName: fetchedEmployee.firstName || "",
+        lastName: fetchedEmployee.lastName || "",
+        email: fetchedEmployee.email || "",
+        mobileNo: fetchedEmployee.mobileNo || "",
+        gender: fetchedEmployee.gender || "",
+        dateOfBirth: fetchedEmployee.dateOfBirth ? fetchedEmployee.dateOfBirth.split('T')[0] : "",
+        dateOfHiring: fetchedEmployee.dateOfHiring ? fetchedEmployee.dateOfHiring.split('T')[0] : "",
+        role: fetchedEmployee.role?._id || fetchedEmployee.role || "",
+        department: fetchedEmployee.department?.name || fetchedEmployee.department || "",
+        status: fetchedEmployee.status || "active",
+        notes: fetchedEmployee.notes || "",
+        address: ensureAddress(fetchedEmployee.address),
+      }));
+    }
+  }, [fetchedEmployee]);
 
   return (
     <View className="flex-1 bg-white">

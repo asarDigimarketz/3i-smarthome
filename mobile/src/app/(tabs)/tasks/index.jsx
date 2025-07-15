@@ -1,7 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
-import { ChevronDown, ChevronUp, RefreshCw, Users } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Users, Edit } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, View, ActivityIndicator, Alert, RefreshControl, Button } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import FilterTabs from '../../../components/Common/FilterTabs';
 import AddTaskForm from '../../../components/Tasks/AddTaskForm';
 import EditTaskForm from '../../../components/Tasks/EditTaskForm';
@@ -13,6 +14,7 @@ import { hasPagePermission, getPageActions } from '../../../utils/permissions';
 
 export default function Task() {
   const { user } = useAuth();
+  const { projectId: urlProjectId } = useLocalSearchParams();
   const actions = getPageActions(user, '/dashboard/tasks');
   const [state, setState] = useState(false); // Example, add all your hooks here
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -40,6 +42,8 @@ export default function Task() {
   const [editingTask, setEditingTask] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
 
+
+
   // API Integration States
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +66,8 @@ export default function Task() {
     { value: "inprogress", color: "text-yellow-600", bg: "bg-yellow-50", label: "In Progress" },
     { value: "completed", color: "text-green-600", bg: "bg-green-50", label: "Done" }
   ];
+
+
 
   // Fetch all projects from API (enhanced from desktop version)
   const fetchProjects = async () => {
@@ -173,6 +179,26 @@ export default function Task() {
     fetchEmployees();
   }, []);
 
+  // Handle URL projectId parameter
+  useEffect(() => {
+    if (urlProjectId && projects.length > 0) {
+      const project = projects.find(p => p.id === urlProjectId);
+      if (project) {
+        setSelectedProject(project);
+        setSelectedStatus(project.name); // Set selectedStatus to show project details
+        setSelectedFilter(project.service); // Set filter to match project service
+        setNewTask(prev => ({ 
+          ...prev, 
+          projectId: project.projectData?._id || project.id // Use the actual project ID for API
+        }));
+        
+        // Use the correct project ID for fetching tasks
+        const projectIdForTasks = project.projectData?._id || project.id;
+        fetchTasks(projectIdForTasks);
+      }
+    }
+  }, [urlProjectId, projects]);
+
   // Fetch tasks for selected project
   const fetchTasks = async (projectId, isRefresh = false) => {
     if (!projectId) return;
@@ -211,14 +237,13 @@ export default function Task() {
           statusValue: task.status, // Keep original status for API calls
           note: task.comment || '',
           comment: task.comment || '',
-          beforeImages: task.beforeAttachments ? task.beforeAttachments.map(att => att.url) : [],
-          afterImages: task.afterAttachments ? task.afterAttachments.map(att => att.url) : [],
+          // Keep full attachment objects for proper handling
           beforeAttachments: task.beforeAttachments || [],
           afterAttachments: task.afterAttachments || [],
-          attachment: task.beforeAttachments && task.beforeAttachments.length > 0 ? 
-                     task.beforeAttachments[0].originalName : 
-                     (task.afterAttachments && task.afterAttachments.length > 0 ? 
-                      task.afterAttachments[0].originalName : null),
+          attachements: task.attachements || [], // General attachments
+          // For backward compatibility, also provide image arrays
+          beforeImages: task.beforeAttachments ? task.beforeAttachments.map(att => att.url) : [],
+          afterImages: task.afterAttachments ? task.afterAttachments.map(att => att.url) : [],
           projectId: task.projectId,
           createdAt: task.createdAt,
           updatedAt: task.updatedAt
@@ -247,154 +272,21 @@ export default function Task() {
 
   // Create new task (enhanced with better FormData handling)
   const createTask = async () => {
-    if (!selectedProject || !newTask.title.trim() || !newTask.status) {
-      Alert.alert('Validation Error', 'Please fill in all required fields:\n• Task title\n• Status\n• Project must be selected');
-      return;
-    }
-
-    try {
-      setAddingTask(true);
-
-      // Create FormData for file uploads (from desktop version)
-      const formData = new FormData();
-      formData.append('projectId', selectedProject.projectData._id); // Use actual project ID
-      formData.append('title', newTask.title.trim());
-      formData.append('comment', newTask.comment || '');
-      formData.append('startDate', newTask.startDate.toISOString());
-      if (newTask.endDate) {
-        formData.append('endDate', newTask.endDate.toISOString());
-      }
-      formData.append('status', newTask.status);
-      if (newTask.assignTo) {
-        formData.append('assignedTo', newTask.assignTo);
-      }
-
-      // Add before images
-      if (newTask.beforeImages && newTask.beforeImages.length > 0) {
-        newTask.beforeImages.forEach((imageUri, index) => {
-          formData.append('beforeAttachments', {
-            uri: imageUri,
-            type: 'image/jpeg',
-            name: `before-image-${index}-${Date.now()}.jpg`,
-          });
-        });
-      }
-
-      // Add after images
-      if (newTask.afterImages && newTask.afterImages.length > 0) {
-        newTask.afterImages.forEach((imageUri, index) => {
-          formData.append('afterAttachments', {
-            uri: imageUri,
-            type: 'image/jpeg',
-            name: `after-image-${index}-${Date.now()}.jpg`,
-          });
-        });
-      }
-
-      const response = await fetch(`${API_CONFIG.API_URL}/api/tasks`, {
-        method: 'POST',
-        headers: {
-          'x-api-key': API_CONFIG.API_KEY,
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        Alert.alert('Success', 'Task created successfully');
-        setShowAddTaskForm(false);
-        setNewTask({
-          title: '',
-          assignTo: '',
-          startDate: new Date(),
-          endDate: new Date(),
-          status: '',
-          beforeImages: [],
-          afterImages: [],
-          attachment: null,
-          comment: '',
-          projectId: ''
-        });
-        // Refresh tasks
-        fetchTasks(selectedProject.projectData._id);
-      } else {
-        Alert.alert('Error', data.message || 'Failed to create task');
-      }
-    } catch (error) {
-      console.error('Error creating task:', error);
-      Alert.alert('Error', 'Failed to create task. Please try again.');
-    } finally {
-      setAddingTask(false);
+    // This function is now called by AddTaskForm after successful submission
+    // Just refresh the tasks list
+    if (selectedProject) {
+      const projectIdForTasks = selectedProject.projectData?._id || selectedProject.id;
+      fetchTasks(projectIdForTasks);
     }
   };
 
-  // Update existing task (enhanced error handling)
-  const updateTask = async (taskId, updatedData) => {
-    try {
-      setUpdatingTask(true);
-
-      // Prepare form data for file uploads
-      const formData = new FormData();
-      if (updatedData.title) formData.append('title', updatedData.title.trim());
-      if (updatedData.comment !== undefined) formData.append('comment', updatedData.comment);
-      if (updatedData.startDate) formData.append('startDate', updatedData.startDate.toISOString());
-      if (updatedData.endDate) formData.append('endDate', updatedData.endDate.toISOString());
-      if (updatedData.status) formData.append('status', updatedData.status);
-      if (updatedData.assignedTo) formData.append('assignedTo', updatedData.assignedTo);
-
-      // Add new before images if any
-      if (updatedData.beforeImages && updatedData.beforeImages.length > 0) {
-        updatedData.beforeImages.forEach((imageUri, index) => {
-          if (typeof imageUri === 'string' && imageUri.startsWith('file://')) {
-            formData.append('beforeAttachments', {
-              uri: imageUri,
-              type: 'image/jpeg',
-              name: `before-image-${index}-${Date.now()}.jpg`,
-            });
-          }
-        });
-      }
-
-      // Add new after images if any
-      if (updatedData.afterImages && updatedData.afterImages.length > 0) {
-        updatedData.afterImages.forEach((imageUri, index) => {
-          if (typeof imageUri === 'string' && imageUri.startsWith('file://')) {
-            formData.append('afterAttachments', {
-              uri: imageUri,
-              type: 'image/jpeg',
-              name: `after-image-${index}-${Date.now()}.jpg`,
-            });
-          }
-        });
-      }
-
-      const response = await fetch(`${API_CONFIG.API_URL}/api/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'x-api-key': API_CONFIG.API_KEY,
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        Alert.alert('Success', 'Task updated successfully');
-        setShowEditForm(false);
-        setEditingTask(null);
-        // Refresh tasks
-        fetchTasks(selectedProject.projectData._id);
-      } else {
-        Alert.alert('Error', data.message || 'Failed to update task');
-      }
-    } catch (error) {
-      console.error('Error updating task:', error);
-      Alert.alert('Error', 'Failed to update task. Please try again.');
-    } finally {
-      setUpdatingTask(false);
+  // Update existing task (now just a callback to refresh tasks)
+  const updateTask = async () => {
+    // This function is now called by EditTaskForm after successful submission
+    // Just refresh the tasks list
+    if (selectedProject) {
+      const projectIdForTasks = selectedProject.projectData?._id || selectedProject.id;
+      fetchTasks(projectIdForTasks);
     }
   };
 
@@ -478,7 +370,16 @@ export default function Task() {
         <View className={`mb-4 rounded-xl shadow-xl p-4 ${getBgColor(project.service)}`}>
           {/* Header with Details text and Chevron button */}
           <View className="flex-row justify-between items-center mb-2 px-4">
-            <Text className="text-gray-600 text-base font-medium">Project Details</Text>
+            <View className="flex-row items-center gap-1">
+              <TouchableOpacity
+                className="p-2"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                onPress={() => handleEditProject(project)}
+              >
+                <Edit size={20} color="#c00509" />
+              </TouchableOpacity>
+              <Text className="text-gray-600 text-base font-medium">Project Details</Text>
+            </View>
             <TouchableOpacity
               className="p-2"
               onPress={() => toggleCardExpand(project.id)}
@@ -553,9 +454,11 @@ export default function Task() {
               </View>
 
               {project.attachment && (
-                <View className="ml-4 pr-4">
-                  <Text className="text-gray-600 text-sm mb-1">Attachment</Text>
-                  <Text className="text-gray-900 text-xs">{project.attachment}</Text>
+                <View className="flex-row items-center justify-between ml-4 pr-4">
+                  <View style={{ flex: 1 }}>
+                    <Text className="text-gray-600 text-sm mb-1">Attachment</Text>
+                    <Text className="text-gray-900 text-xs">{project.attachment}</Text>
+                  </View>
                 </View>
               )}
             </View>
@@ -572,7 +475,10 @@ export default function Task() {
       setSelectedFilter(selectedProjectData.service);
       setSelectedStatus(selectedProjectData.name);
       setSelectedProject(selectedProjectData);
-      setNewTask(prev => ({ ...prev, projectId: selectedProjectData.id }));
+      setNewTask(prev => ({ 
+        ...prev, 
+        projectId: selectedProjectData.projectData?._id || selectedProjectData.id 
+      }));
       
       // Fetch tasks for the selected project
       fetchTasks(selectedProjectData.projectData._id);
@@ -584,7 +490,7 @@ export default function Task() {
   const pickImages = async (type) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.IMAGE], // Updated API usage
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 1,
         aspect: [4, 3]
@@ -595,12 +501,12 @@ export default function Task() {
         if (editingTask) {
           setEditingTask(prev => ({
             ...prev,
-            [type]: [...prev[type], ...selectedImages]
+            [type]: [...(prev[type] || []), ...selectedImages]
           }));
         } else {
         setNewTask(prev => ({
           ...prev,
-          [type]: [...prev[type], ...selectedImages]
+          [type]: [...(prev[type] || []), ...selectedImages]
         }));
         }
       }
@@ -630,26 +536,27 @@ export default function Task() {
       ...task,
       startDate: new Date(task.startDate.split('/').reverse().join('-')), // Convert DD/MM/YYYY to Date
       endDate: task.endDate ? new Date(task.endDate.split('/').reverse().join('-')) : new Date(),
-      beforeImages: task.beforeImages || [],
-      afterImages: task.afterImages || [],
+      beforeImages: [], // Initialize as empty to avoid duplication
+      afterImages: [], // Initialize as empty to avoid duplication
       status: task.statusValue || task.status.toLowerCase() // Use API status format
     });
     setShowEditForm(true);
   };
 
   // Add this with other functions
-  const handleUpdateTask = (updatedTask) => {
-    updateTask(updatedTask.id, {
-      title: updatedTask.title,
-      comment: updatedTask.note || updatedTask.comment,
-      startDate: updatedTask.startDate,
-      endDate: updatedTask.endDate,
-      status: updatedTask.status,
-      assignedTo: updatedTask.assignedTo?._id,
-      beforeImages: updatedTask.beforeImages,
-      afterImages: updatedTask.afterImages
-    });
+  const handleUpdateTask = () => {
+    updateTask();
   };
+
+  // Project Edit Functions
+  const handleEditProject = (project) => {
+    // Navigate to EditProject page with project ID
+    const projectData = project.projectData || project;
+    const projectId = projectData._id || project.id;
+    router.push(`/projects/EditProject?projectId=${projectId}`);
+  };
+
+
 
   // Loading skeleton for projects
   const renderProjectsLoading = () => (
@@ -662,6 +569,8 @@ export default function Task() {
       </View>
     </View>
   );
+
+  const router = useRouter();
 
   if (!hasPagePermission(user, '/dashboard/tasks', 'view')) {
     return (
@@ -697,12 +606,6 @@ export default function Task() {
             <View className="flex-row items-center">
               {loading && (
                 <ActivityIndicator size="small" color="#DC2626" className="mr-2" />
-              )}
-              {employeesList.length > 0 && (
-                <View className="flex-row items-center bg-blue-50 px-2 py-1 rounded-full">
-                  <Users size={14} color="#3B82F6" />
-                  <Text className="text-blue-600 text-xs ml-1">{employeesList.length}</Text>
-                </View>
               )}
             </View>
           </View>
@@ -808,11 +711,11 @@ export default function Task() {
                     pickImages={pickImages}
                     removeImage={removeImage}
                     setShowEditForm={setShowEditForm}
-                  onUpdateTask={handleUpdateTask}
-                  updating={updatingTask}
-                  employees={employeesList}
-                />
-              )}
+                    onUpdateTask={handleUpdateTask}
+                    employees={employeesList}
+                    projectId={selectedProject?.projectData?._id || selectedProject?.id}
+                  />
+                )}
 
               {/* Loading State */}
               {loading ? (
@@ -891,7 +794,6 @@ export default function Task() {
                     removeImage={removeImage}
                     setShowAddTaskForm={setShowAddTaskForm}
                   onCreateTask={createTask}
-                  creating={addingTask}
                   employees={employeesList}
                   />
                 )}
@@ -930,6 +832,8 @@ export default function Task() {
             <Text className="text-gray-500 text-sm">Refreshing tasks...</Text>
           </View>
         )}
+
+
       </ScrollView>
     </SafeAreaView>
   );

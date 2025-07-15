@@ -35,23 +35,6 @@ const CustomerView = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [projects, setProjects] = useState([]);
   
-  // Edit form states (similar to add form in index.jsx)
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(false);
-  const [editForm, setEditForm] = useState({
-    customerName: '',
-    contactNumber: '',
-    email: '',
-    addressLine: '',
-    city: '',
-    district: '',
-    state: '',
-    country: 'India',
-    pincode: '',
-    notes: '',
-    status: 'Active'
-  });
-
   // Fetch customer details from API
   const fetchCustomerDetails = async (isRefresh = false) => {
     try {
@@ -89,7 +72,7 @@ const CustomerView = () => {
           phone: customerData.contactNumber,
           email: customerData.email,
           address: customerData.fullAddress || 
-                  `${customerData.address.addressLine}, ${customerData.address.city}, ${customerData.address.state} - ${customerData.address.pincode}`,
+                  `${customerData.address.addressLine}, ${customerData.address.city}, ${customerData.address.state}, ${customerData.address.country} - ${customerData.address.pincode}`,
           addressDetails: customerData.address, // Keep original address structure
           services: customerData.services || [],
           amountSpend: customerData.formattedTotalSpent || `₹${customerData.totalSpent?.toLocaleString('en-IN') || '0'}`,
@@ -143,98 +126,6 @@ const CustomerView = () => {
   // Handle pull-to-refresh
   const onRefresh = () => {
     fetchCustomerDetails(true);
-  };
-
-  // Open edit form with pre-populated data (similar to add form pattern)
-  const handleEditCustomer = () => {
-    if (customer && customer.addressDetails) {
-      setEditForm({
-        customerName: customer.name,
-        contactNumber: customer.phone,
-        email: customer.email,
-        addressLine: customer.addressDetails.addressLine || '',
-        city: customer.addressDetails.city || '',
-        district: customer.addressDetails.district || '',
-        state: customer.addressDetails.state || '',
-        country: customer.addressDetails.country || 'India',
-        pincode: customer.addressDetails.pincode || '',
-        notes: customer.notes || '',
-        status: customer.status || 'Active'
-      });
-      setShowEditForm(true);
-    }
-  };
-
-  // Update customer function (similar to add customer in index.jsx)
-  const updateCustomer = async () => {
-    try {
-      setEditingCustomer(true);
-
-      // Validate required fields
-      if (!editForm.customerName || !editForm.contactNumber || !editForm.email || 
-          !editForm.addressLine || !editForm.city || !editForm.district || 
-          !editForm.state || !editForm.pincode) {
-        Alert.alert('Error', 'Please fill in all required fields');
-        return;
-      }
-
-      // Prepare address object
-      const address = {
-        addressLine: editForm.addressLine,
-        city: editForm.city,
-        district: editForm.district,
-        state: editForm.state,
-        country: editForm.country,
-        pincode: editForm.pincode,
-      };
-
-      const updateData = {
-        customerName: editForm.customerName,
-        contactNumber: editForm.contactNumber,
-        email: editForm.email,
-        address: address,
-        notes: editForm.notes,
-        status: editForm.status,
-      };
-
-      const response = await fetch(`${API_CONFIG.API_URL}/api/customers/${customerId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_CONFIG.API_KEY,
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        Alert.alert('Success', 'Customer updated successfully');
-        setShowEditForm(false);
-        setEditForm({
-          customerName: '',
-          contactNumber: '',
-          email: '',
-          addressLine: '',
-          city: '',
-          district: '',
-          state: '',
-          country: 'India',
-          pincode: '',
-          notes: '',
-          status: 'Active'
-        });
-        // Refresh customer data
-        fetchCustomerDetails();
-      } else {
-        Alert.alert('Error', data.message || 'Failed to update customer');
-      }
-    } catch (error) {
-      console.error('Error updating customer:', error);
-      Alert.alert('Error', 'Failed to update customer. Please try again.');
-    } finally {
-      setEditingCustomer(false);
-    }
   };
 
   // Delete customer
@@ -349,9 +240,9 @@ const CustomerView = () => {
             </View>
             <TouchableOpacity 
               className="bg-white p-2 rounded-lg"
-              onPress={handleEditCustomer}
+              onPress={() => router.push({ pathname: '/(tabs)/customer/EditCustomer', params: { id: customer.id } })}
             >
-              <Edit size={20} color="#666666" />
+              <Edit size={20} color="#c92125" />
             </TouchableOpacity>
           </View>
           
@@ -378,177 +269,6 @@ const CustomerView = () => {
           )}
         </View>
 
-        {/* Edit Customer Form - Using React Native Paper TextInput */}
-        {showEditForm && (
-          <View className="bg-white rounded-xl p-4 mb-6 shadow-lg">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-lg font-bold text-gray-900">Edit Customer</Text>
-              <TouchableOpacity 
-                onPress={() => setShowEditForm(false)}
-                className="p-1"
-              >
-                <X size={20} color="#666666" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
-              {/* Customer Name */}
-              <View className="mb-4">
-                <TextInput
-                  label="Customer Name *"
-                  value={editForm.customerName}
-                  onChangeText={(text) => setEditForm({...editForm, customerName: text})}
-                  mode="outlined"
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-
-              {/* Contact Number */}
-              <View className="mb-4">
-                <TextInput
-                  label="Contact Number *"
-                  value={editForm.contactNumber}
-                  onChangeText={(text) => setEditForm({...editForm, contactNumber: text})}
-                  mode="outlined"
-                  keyboardType="phone-pad"
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-
-              {/* Email */}
-              <View className="mb-4">
-                <TextInput
-                  label="Email *"
-                  value={editForm.email}
-                  onChangeText={(text) => setEditForm({...editForm, email: text})}
-                  mode="outlined"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-
-              {/* Address Line */}
-              <View className="mb-4">
-                <TextInput
-                  label="Address Line *"
-                  value={editForm.addressLine}
-                  onChangeText={(text) => setEditForm({...editForm, addressLine: text})}
-                  mode="outlined"
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-
-              {/* City and District */}
-              <View className="flex-row gap-3 mb-4">
-                <View className="flex-1">
-                  <TextInput
-                    label="City *"
-                    value={editForm.city}
-                    onChangeText={(text) => setEditForm({...editForm, city: text})}
-                    mode="outlined"
-                    theme={{ colors: { primary: '#DC2626' } }}
-                  />
-                </View>
-                <View className="flex-1">
-                  <TextInput
-                    label="District *"
-                    value={editForm.district}
-                    onChangeText={(text) => setEditForm({...editForm, district: text})}
-                    mode="outlined"
-                    theme={{ colors: { primary: '#DC2626' } }}
-                  />
-                </View>
-              </View>
-
-              {/* State and Pincode */}
-              <View className="flex-row gap-3 mb-4">
-                <View className="flex-1">
-                  <TextInput
-                    label="State *"
-                    value={editForm.state}
-                    onChangeText={(text) => setEditForm({...editForm, state: text})}
-                    mode="outlined"
-                    theme={{ colors: { primary: '#DC2626' } }}
-                  />
-                </View>
-                <View className="flex-1">
-                  <TextInput
-                    label="Pincode *"
-                    value={editForm.pincode}
-                    onChangeText={(text) => setEditForm({...editForm, pincode: text})}
-                    mode="outlined"
-                    keyboardType="numeric"
-                    maxLength={6}
-                    theme={{ colors: { primary: '#DC2626' } }}
-                  />
-                </View>
-              </View>
-
-              {/* Status */}
-              <View className="mb-4">
-                <Text className="text-sm font-semibold text-gray-700 mb-2">Status</Text>
-                <View className="flex-row gap-3">
-                  <TouchableOpacity 
-                    className={`flex-1 p-3 rounded-lg border ${editForm.status === 'Active' ? 'bg-green-100 border-green-500' : 'bg-gray-50 border-gray-200'}`}
-                    onPress={() => setEditForm({...editForm, status: 'Active'})}
-                  >
-                    <Text className={`text-center font-semibold ${editForm.status === 'Active' ? 'text-green-800' : 'text-gray-600'}`}>
-                      Active
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    className={`flex-1 p-3 rounded-lg border ${editForm.status === 'Inactive' ? 'bg-gray-100 border-gray-500' : 'bg-gray-50 border-gray-200'}`}
-                    onPress={() => setEditForm({...editForm, status: 'Inactive'})}
-                  >
-                    <Text className={`text-center font-semibold ${editForm.status === 'Inactive' ? 'text-gray-800' : 'text-gray-600'}`}>
-                      Inactive
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Notes */}
-              <View className="mb-4">
-                <TextInput
-                  label="Notes (Optional)"
-                  value={editForm.notes}
-                  onChangeText={(text) => setEditForm({...editForm, notes: text})}
-                  mode="outlined"
-                  multiline
-                  numberOfLines={3}
-                  theme={{ colors: { primary: '#DC2626' } }}
-                />
-              </View>
-            </ScrollView>
-
-            {/* Form Actions */}
-            <View className="flex-row gap-3 mt-4">
-              <TouchableOpacity 
-                className="flex-1 bg-gray-200 py-3 rounded-lg"
-                onPress={() => setShowEditForm(false)}
-                disabled={editingCustomer}
-              >
-                <Text className="text-gray-700 font-semibold text-center">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className="flex-1 bg-red-600 py-3 rounded-lg flex-row justify-center items-center"
-                onPress={updateCustomer}
-                disabled={editingCustomer}
-              >
-                {editingCustomer ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Save size={16} color="#FFFFFF" />
-                    <Text className="text-white font-semibold ml-2">Save Changes</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
         <View className="flex-row gap-3 mb-5">
           <View className="flex-1 bg-white p-4 rounded-xl items-center">
             <Text className="text-sm text-gray-600 mb-2">Total Projects</Text>
@@ -558,30 +278,11 @@ const CustomerView = () => {
             <Text className="text-sm text-gray-600 mb-2">Total Amount Spent</Text>
             <Text className="text-lg font-bold text-gray-900">{customer.amountSpend}</Text>
           </View>
-          <View className="flex-1 bg-white p-4 rounded-xl items-center">
-            <Text className="text-sm text-gray-600 mb-2">Services</Text>
-            <Text className="text-lg font-bold text-gray-900">{customer.services.length}</Text>
-          </View>
         </View>
-
-        {/* Services Used */}
-        {customer.services.length > 0 && (
-          <View className="bg-white rounded-xl p-4 mb-5">
-            <Text className="text-lg font-bold text-gray-900 mb-3">Services Used</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {customer.services.map((service, index) => (
-                <View key={index} className="bg-red-100 px-3 py-2 rounded-lg">
-                  <Text className="text-red-800 text-sm font-medium">{service}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
 
         {/* Projects Section */}
         <View className="mb-5">
-          <Text className="text-lg font-bold text-gray-900 mb-3">Projects ({projects.length})</Text>
-          
+        
           {projects.length === 0 ? (
             <View className="bg-white rounded-xl p-6 items-center">
               <Text className="text-gray-500 text-center">No projects found for this customer</Text>
@@ -601,16 +302,6 @@ const CustomerView = () => {
               />
             ))
           )}
-        </View>
-
-        {/* Action Buttons */}
-        <View className="pb-8">
-          <TouchableOpacity 
-            className="bg-red-600 py-3 rounded-lg mb-3"
-            onPress={handleDeleteCustomer}
-          >
-            <Text className="text-white font-semibold text-center">Delete Customer</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Pull to Refresh Instruction */}

@@ -44,7 +44,7 @@ export default function Header({ onMenuPress }) {
               fullLogoUrl = `${API_CONFIG.API_URL}/${rawLogoUrl}`;
             }
             
-            console.log('✅ Header Logo URL found:', fullLogoUrl);
+          
             setLogoUrl(fullLogoUrl);
           }
         }
