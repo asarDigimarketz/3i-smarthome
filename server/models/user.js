@@ -9,6 +9,12 @@ const userSchema = new mongoose.Schema({
   role: { type: String, default: 'user' },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  pushTokens: [
+    {
+      token: { type: String, required: true },
+      platform: { type: String, enum: ['expo', 'web'], required: true },
+    }
+  ],
 });
 
 module.exports = mongoose.model('User', userSchema);

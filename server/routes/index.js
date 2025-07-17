@@ -8,6 +8,8 @@ const employeeRoutes = require("./employeeManagement/employee");
 const rolesRoutes = require("./rolesAndPermission/roles");
 const settingsRoutes = require("./settings/settingsRoutes.js");
 const authRoutes = require('./auth');
+const notificationsRoutes = require('./notifications');
+const userRoutes = require('./user');
 // Mount routes
 router.use("/api/proposals", proposalRoutes);
 router.use("/api/projects", projectRoutes);
@@ -17,4 +19,6 @@ router.use("/api/employeeManagement", employeeRoutes);
 router.use("/api/rolesAndPermission", rolesRoutes);
 router.use("/api/settings", settingsRoutes);
 router.use('/api/auth', authRoutes);
+router.use('/api/notifications', notificationsRoutes);
+router.use('/api/user', userRoutes);
 module.exports = router;

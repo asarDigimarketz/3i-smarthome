@@ -103,9 +103,9 @@ const createProposal = async (req, res) => {
         mimetype: file.mimetype,
         size: file.size,
         path: file.path,
-        url: `${process.env.BACKEND_URL ? process.env.BACKEND_URL + "/" : ""}${
-          file.path
-        }`,
+        url: `${
+          process.env.BACKEND_URL || "http://localhost:5000"
+        }/assets/images/proposals/${file.filename}`,
       }));
     }
     // If attachments sent as JSON (for edit mode), merge with new files
@@ -436,9 +436,9 @@ const updateProposal = async (req, res) => {
         mimetype: file.mimetype,
         size: file.size,
         path: file.path,
-        url: `${process.env.BACKEND_URL ? process.env.BACKEND_URL + "/" : ""}${
-          file.path
-        }`,
+        url: `${
+          process.env.BACKEND_URL || "http://localhost:5000"
+        }/assets/images/proposals/${file.filename}`,
       }));
       baseAttachments = baseAttachments.concat(newAttachments);
     }

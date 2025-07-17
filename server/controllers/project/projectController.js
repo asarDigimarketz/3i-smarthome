@@ -84,7 +84,9 @@ const createProject = async (req, res) => {
         originalName: file.originalName,
         mimetype: file.mimetype,
         size: file.size,
-        url: `${process.env.BACKEND_URL}/${file.path}`,
+        url: `${
+          process.env.BACKEND_URL || "http://localhost:5000"
+        }/assets/images/projects/attachments/${file.filename}`,
       }));
     }
 
@@ -373,12 +375,12 @@ const updateProject = async (req, res) => {
         const removeList = JSON.parse(req.body.removeAttachments);
         if (Array.isArray(removeList) && project.attachments) {
           project.attachments.forEach((att) => {
-            if (removeList.includes(att.filename) && att.url) {
-              const filePath = att.url.replace(
-                process.env.BACKEND_URL + "/",
-                ""
+            if (removeList.includes(att.filename) && att.filename) {
+              const absPath = path.join(
+                __dirname,
+                "../../public/assets/images/projects/attachments/",
+                att.filename
               );
-              const absPath = path.join(__dirname, "../../", filePath);
               if (fs.existsSync(absPath)) {
                 fs.unlinkSync(absPath);
               }
@@ -413,7 +415,9 @@ const updateProject = async (req, res) => {
         originalName: file.originalName,
         mimetype: file.mimetype,
         size: file.size,
-        url: `${process.env.BACKEND_URL}/${file.path}`,
+        url: `${
+          process.env.BACKEND_URL || "http://localhost:5000"
+        }/assets/images/projects/attachments/${file.filename}`,
       }));
       baseAttachments = baseAttachments.concat(newAttachments);
     }
@@ -425,12 +429,12 @@ const updateProject = async (req, res) => {
         const removeList = JSON.parse(req.body.removeAttachments);
         if (Array.isArray(removeList) && project.attachments) {
           project.attachments.forEach((att) => {
-            if (removeList.includes(att.filename) && att.url) {
-              const filePath = att.url.replace(
-                process.env.BACKEND_URL + "/",
-                ""
+            if (removeList.includes(att.filename) && att.filename) {
+              const absPath = path.join(
+                __dirname,
+                "../../public/assets/images/projects/attachments/",
+                att.filename
               );
-              const absPath = path.join(__dirname, "../../", filePath);
               if (fs.existsSync(absPath)) {
                 fs.unlinkSync(absPath);
               }

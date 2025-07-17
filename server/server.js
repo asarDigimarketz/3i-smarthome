@@ -6,13 +6,14 @@ const apiKeyMiddleware = require("./middleware/apiKeyMiddleware");
 const routes = require("./routes");
 const connectDB = require("./config/db");
 const { errorHandler, notFound } = require("./middleware/errorHandler");
-const admin = require('firebase-admin');
 
 // Load environment variables from .env file
 dotenv.config();
 
 // Connect to MongoDB
 connectDB();
+
+
 
 // Initialize express app
 const app = express();
@@ -95,29 +96,6 @@ app.use((req, res, next) => {
   apiKeyMiddleware(req, res, next);
 });
 
-// Firebase Admin SDK initialization
-let firebaseApp = null;
-
-const initializeFirebase = (serviceAccount, projectId) => {
-  try {
-    if (firebaseApp) {
-      // Delete existing app if already initialized
-      admin.apps.forEach(app => app.delete());
-    }
-   
-    firebaseApp = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: projectId
-    });
-   
-    console.log('Firebase initialized successfully');
-    return true;
-  } catch (error) {
-    console.error('Firebase initialization error:', error);
-    return false;
-  }
-};
-
 // 7. Routes
 // Health check route
 app.get("/", (req, res) => {
@@ -131,136 +109,6 @@ app.get("/", (req, res) => {
 
 // Register all application routes
 app.use(routes);
-
-// Firebase Routes
-app.post('/api/configure-firebase', async (req, res) => {
-  try {
-    const { projectId, serviceAccount } = req.body;
-   
-    if (!projectId || !serviceAccount) {
-      return res.status(400).json({
-        success: false,
-        message: 'Project ID and service account are required'
-      });
-    }
-   
-    // Validate service account structure
-    const requiredFields = ['type', 'project_id', 'private_key', 'client_email'];
-    const missingFields = requiredFields.filter(field => !serviceAccount[field]);
-   
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Missing required fields: ${missingFields.join(', ')}`
-      });
-    }
-   
-    const initialized = initializeFirebase(serviceAccount, projectId);
-   
-    if (initialized) {
-      res.json({
-        success: true,
-        message: 'Firebase configured successfully',
-        projectId: projectId
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to initialize Firebase'
-      });
-    }
-  } catch (error) {
-    console.error('Configuration error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during configuration'
-    });
-  }
-});
-
-// Send single notification
-app.post('/api/send-notification', async (req, res) => {
-  try {
-    if (!firebaseApp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Firebase not configured. Please configure first.'
-      });
-    }
-   
-    const { token, title, body, data = {} } = req.body;
-   
-    if (!token || !title || !body) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token, title, and body are required'
-      });
-    }
-   
-    // Check if this is a test/demo token
-    const isTestToken = token.startsWith('dGVzdF9') || 
-                       token.startsWith('rn_sample_token_') || 
-                       token.includes('mock') ||
-                       token.length < 140; // Real FCM tokens are typically 140+ characters
-   
-    if (isTestToken) {
-      // Handle test tokens - don't actually send notification
-      console.log('Test notification request:', { token: token.substring(0, 20) + '...', title, body });
-      return res.json({
-        success: true,
-        message: 'Test notification processed successfully (demo mode)',
-        messageId: 'test_message_' + Date.now(),
-        note: 'This was a test token - no actual notification sent'
-      });
-    }
-   
-    const message = {
-      notification: {
-        title: title,
-        body: body
-      },
-      data: data,
-      token: token
-    };
-   
-    const response = await admin.messaging().send(message);
-   
-    res.json({
-      success: true,
-      message: 'Notification sent successfully',
-      messageId: response
-    });
-   
-  } catch (error) {
-    console.error('Send notification error:', error);
-    
-    // Provide helpful error messages for common issues
-    let errorMessage = 'Failed to send notification';
-    
-    if (error.code === 'messaging/invalid-argument') {
-      errorMessage = 'Invalid FCM token format. Please use a real FCM token from Firebase SDK, not a mock token.';
-    } else if (error.code === 'messaging/registration-token-not-registered') {
-      errorMessage = 'Token is not registered. The app may have been uninstalled or the token may be expired.';
-    } else if (error.code === 'messaging/invalid-registration-token') {
-      errorMessage = 'Invalid registration token. Please generate a new token.';
-    }
-    
-    res.status(500).json({
-      success: false,
-      message: errorMessage,
-      error: error.message
-    });
-  }
-});
-
-// Get Firebase configuration status
-app.get('/api/firebase-status', (req, res) => {
-  res.json({
-    success: true,
-    configured: firebaseApp !== null,
-    timestamp: new Date().toISOString()
-  });
-});
 
 // 8. Error handling middleware
 // Handle 404 errors for non-existent routes

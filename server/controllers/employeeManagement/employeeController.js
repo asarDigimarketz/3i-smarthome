@@ -4,6 +4,7 @@ const fs = require("fs");
 const employeeSchema = require("../../models/employeeManagement/employeeSchema");
 const UserEmployeeSchema = require("../../models/employeeManagement/UserEmployeeSchema");
 const roleSchema = require("../../models/rolesAndPermission/roleSchema");
+const mongoose = require("mongoose");
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
 
 // Configure multer for avatar uploads
@@ -125,26 +126,86 @@ exports.getEmployees = async (req, res) => {
   try {
     const Employee = employeeSchema;
 
-    // Fetch all employees
-    const employees = await Employee.find().sort({ dateOfHiring: 1, _id: 1 });
+    // Extract query parameters for search and pagination
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      department = "",
+      status = "",
+      sortBy = "dateOfHiring",
+      sortOrder = "desc",
+    } = req.query;
 
-    try {
-      // Update employee IDs
-      await updateEmployeeIds(Employee, employees);
+    // Build search query
+    let query = {};
+
+    // Add search functionality for multiple fields
+    if (search && search.trim()) {
+      query.$or = [
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { mobileNo: { $regex: search, $options: "i" } },
+        { employeeId: { $regex: search, $options: "i" } },
+        { "address.addressLine": { $regex: search, $options: "i" } },
+        { "address.city": { $regex: search, $options: "i" } },
+        { "address.district": { $regex: search, $options: "i" } },
+        { "address.state": { $regex: search, $options: "i" } },
+        { "address.country": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Add department filter
+    if (department && department.trim()) {
+      query.department = { $regex: department, $options: "i" };
+    }
+
+    // Add status filter
+    if (status && status.trim()) {
+      query.status = status;
+    }
+
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+
+    // If no search/filter criteria, update employee IDs first
+    if (!search && !department && !status) {
+      try {
+        const allEmployees = await Employee.find().sort({ dateOfHiring: 1, _id: 1 });
+        await updateEmployeeIds(Employee, allEmployees);
     } catch (error) {
       console.error("Error during ID update:", error);
       // Continue with existing IDs if update fails
     }
+    }
 
-    // Fetch and return the final list of employees
-    const updatedEmployees = await Employee.find().sort({
-      dateOfHiring: 1,
-      _id: 1,
-    });
+    // Fetch employees with pagination and search
+    const employees = await Employee.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum);
+
+    // Get total count for pagination
+    const totalEmployees = await Employee.countDocuments(query);
+    const totalPages = Math.ceil(totalEmployees / limitNum);
 
     res.status(200).json({
       success: true,
-      employees: updatedEmployees,
+      employees: employees,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalEmployees,
+        limit: limitNum,
+        hasNext: parseInt(page) < totalPages,
+        hasPrev: parseInt(page) > 1,
+      },
     });
   } catch (error) {
     console.error("Error fetching employees:", error);
