@@ -11,10 +11,12 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@heroui/badge";
 import Link from "next/link";
+import { usePermissions } from "../../lib/utils";
 
 const Header = () => {
   const { data: session } = useSession();
   const router = useRouter();
+  const { canView } = usePermissions();
 
   const handleLogout = async () => {
     try {
@@ -49,25 +51,27 @@ const Header = () => {
       {/* Right Side - Notifications and User */}
       <div className="flex items-center space-x-2 md:space-x-4 mr-3">
         {/* Notification Bell */}
-        <Link href="/dashboard/notification">
-          <Badge
-            className="bg-white text-primary"
-            content="5+"
-            shape="circle"
-            size="sm"
-          >
-            <Button
-              isIconOnly
-              aria-label="more than 99 notifications"
-              radius="full"
-              variant="light"
-              className="text-white hover:bg-white/10"
-              size="lg"
+        {canView("notifications") && (
+          <Link href="/dashboard/notification">
+            <Badge
+              className="bg-white text-primary"
+              content="5+"
+              shape="circle"
+              size="sm"
             >
-              <Bell size={24} />
-            </Button>
-          </Badge>
-        </Link>
+              <Button
+                isIconOnly
+                aria-label="more than 99 notifications"
+                radius="full"
+                variant="light"
+                className="text-white hover:bg-white/10"
+                size="lg"
+              >
+                <Bell size={24} />
+              </Button>
+            </Badge>
+          </Link>
+        )}
 
         {/* User Dropdown */}
         <Dropdown placement="bottom-end">
@@ -85,13 +89,15 @@ const Header = () => {
             </Button>
           </DropdownTrigger>
           <DropdownMenu aria-label="User menu">
-            <DropdownItem
-              key="settings"
-              startContent={<Settings className="h-4 w-4" />}
-              onPress={() => router.push("/dashboard/settings")}
-            >
-              Settings
-            </DropdownItem>
+            {canView("settings") && (
+              <DropdownItem
+                key="settings"
+                startContent={<Settings className="h-4 w-4" />}
+                onPress={() => router.push("/dashboard/settings")}
+              >
+                Settings
+              </DropdownItem>
+            )}
             <DropdownItem
               key="logout"
               className="text-danger"

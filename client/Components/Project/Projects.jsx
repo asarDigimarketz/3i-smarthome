@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { ProjectStatusDropdown } from "./ProjectStatusDropdown.jsx";
 import ProposalFilters from "../Proposal/ProposalFilters.jsx";
@@ -12,17 +11,19 @@ import { Plus, Search, X } from "lucide-react";
 import { DateRangePicker } from "@heroui/date-picker";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import { Pagination } from "@heroui/pagination";
+import { usePermissions } from "../../lib/utils";
 
 export function ProjectsPage() {
-  const { data: session } = useSession();
+  const { 
+    canCreate, 
+    canEdit, 
+    canDelete, 
+    canView,
+    getUserPermissions 
+  } = usePermissions();
 
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    hasAddPermission: false,
-    hasEditPermission: false,
-    hasDeletePermission: false,
-    hasViewPermission: false,
-  });
+  // Get permissions using the hook
+  const userPermissions = getUserPermissions("projects");
 
   // Filter states
   const [dateRange, setDateRange] = useState(null);
@@ -35,43 +36,8 @@ export function ProjectsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 6; // Show 6 projects per page
 
-  // Check user permissions on component mount
-  useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          hasAddPermission: true,
-          hasEditPermission: true,
-          hasDeletePermission: true,
-          hasViewPermission: true,
-        });
-        return;
-      }
-
-      // Check employee permissions for projects module
-      const permissions = session.user.permissions || [];
-      const projectPermission = permissions.find(
-        (p) => p.page?.toLowerCase() === "projects"
-      );
-
-      if (projectPermission && projectPermission.actions) {
-        setUserPermissions({
-          hasViewPermission: projectPermission.actions.view || false,
-          hasAddPermission: projectPermission.actions.add || false,
-          hasEditPermission: projectPermission.actions.edit || false,
-          hasDeletePermission: projectPermission.actions.delete || false,
-        });
-      }
-    };
-
-    checkUserPermissions();
-  }, [session]);
-
   const handleAddProject = () => {
-    if (!userPermissions.hasAddPermission) {
+    if (!canCreate("projects")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to add projects",
@@ -104,7 +70,7 @@ export function ProjectsPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="w-full md:w-80">
           <Input
-            placeholder="Search customers/Proposal ID ..."
+            placeholder="Search by customer, email, phone, address..."
             startContent={<Search className="text-gray-400" />}
             radius="sm"
             variant="bordered"
@@ -152,7 +118,7 @@ export function ProjectsPage() {
             onChange={handleStatusChange}
           />
 
-          {userPermissions.hasAddPermission ? (
+          {canCreate("projects") ? (
             <Link href="/dashboard/projects/add-project">
               <Button color="primary" radius="sm" startContent={<Plus />}>
                 Add New

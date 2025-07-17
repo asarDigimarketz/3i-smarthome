@@ -2,6 +2,7 @@ import { Card, CardBody } from "@heroui/card";
 
 import NotificationItem from "./NotificationItem";
 import DashboardHeader from "../header/DashboardHeader.jsx";
+import { usePermissions } from "../../lib/utils";
 
 const notifications = [
   {
@@ -28,6 +29,25 @@ const notifications = [
 ];
 
 const NotificationPage = () => {
+  const { canView } = usePermissions();
+
+  // Show access denied if no view permission
+  if (!canView("notifications")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Access Denied
+          </h3>
+          <p className="text-gray-500">
+            You don't have permission to view notifications.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="  text-white">
       <DashboardHeader

@@ -29,6 +29,7 @@ import { ChevronRight, ChevronDown, ArrowRight, Calendar } from "lucide-react";
 import { today, getLocalTimeZone } from "@internationalized/date";
 import axios from "axios";
 import { addToast } from "@heroui/toast";
+import { usePermissions } from "../../lib/utils";
 
 const recentActivities = [
   {
@@ -60,15 +61,7 @@ const recentActivities = [
 const Dashboard = () => {
   const { data: session } = useSession();
   const router = useRouter();
-
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    projects: { hasViewPermission: false },
-    proposals: { hasViewPermission: false },
-    customers: { hasViewPermission: false },
-    employees: { hasViewPermission: false },
-    tasks: { hasViewPermission: false },
-  });
+  const { canView } = usePermissions();
 
   // Dashboard data states
   const [performanceData, setPerformanceData] = useState([]);
@@ -380,43 +373,7 @@ const Dashboard = () => {
     }
   };
 
-  // Check user permissions on component mount
-  useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          projects: { hasViewPermission: true },
-          proposals: { hasViewPermission: true },
-          customers: { hasViewPermission: true },
-          employees: { hasViewPermission: true },
-          tasks: { hasViewPermission: true },
-        });
-        return;
-      }
-
-      // Check employee permissions for each module
-      const permissions = session.user.permissions || [];
-      const modulePermissions = {};
-
-      ["projects", "proposals", "customers", "employees", "tasks"].forEach(
-        (module) => {
-          const permission = permissions.find(
-            (p) => p.page?.toLowerCase() === module
-          );
-          modulePermissions[module] = {
-            hasViewPermission: permission?.actions?.view || false,
-          };
-        }
-      );
-
-      setUserPermissions(modulePermissions);
-    };
-
-    checkUserPermissions();
-  }, [session]);
+  // Removed manual permission checking - now using usePermissions hook
 
   // Fetch dashboard data when component mounts or date range changes
   useEffect(() => {
@@ -882,7 +839,7 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Projects - Only show if user has projects view permission */}
-      {userPermissions.projects.hasViewPermission && (
+      {canView("projects") && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-primary">Recent Projects</h2>
@@ -959,7 +916,7 @@ const Dashboard = () => {
                 progress={project.progress}
                 color={project.color}
                 assignedEmployees={project.assignedEmployees}
-                userPermissions={userPermissions.projects}
+                // userPermissions removed - ProjectCard uses usePermissions hook internally
               />
             ))}
           </div>

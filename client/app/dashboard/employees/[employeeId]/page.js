@@ -1,7 +1,12 @@
 import EmployeeDetail from "../../../../Components/Employees/EmployeeDetails";
+import PermissionGuard from "../../../../Components/auth/PermissionGuard";
 
 const page = () => {
-  return <EmployeeDetail />;
+  return (
+    <PermissionGuard requiredPermission="employees" requiredAction="view">
+      <EmployeeDetail />
+    </PermissionGuard>
+  );
 };
 
 export default page;

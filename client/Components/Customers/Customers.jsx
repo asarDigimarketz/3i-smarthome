@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
@@ -19,7 +19,6 @@ import {
 } from "@heroui/table";
 import { DateRangePicker } from "@heroui/date-picker";
 import { addToast } from "@heroui/toast";
-import { useSession } from "next-auth/react";
 import axios from "axios";
 
 import Link from "next/link";
@@ -34,9 +33,16 @@ import {
   X,
 } from "lucide-react";
 import DashboardHeader from "../header/DashboardHeader";
+import { usePermissions } from "../../lib/utils";
 
 const Customers = () => {
-  const { data: session } = useSession();
+  const { 
+    canCreate, 
+    canEdit, 
+    canDelete, 
+    canView,
+    getUserPermissions 
+  } = usePermissions();
 
   // State for customers data
   const [customers, setCustomers] = useState([]);
@@ -48,20 +54,15 @@ const Customers = () => {
     limit: 10,
   });
 
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    hasAddPermission: false,
-    hasEditPermission: false,
-    hasDeletePermission: false,
-    hasViewPermission: false,
-  });
+  // Get permissions using the hook - memoize to prevent re-renders
+  const userPermissions = getUserPermissions("customers");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [serviceFilter, setServiceFilter] = useState("all");
   const [dateRange, setDateRange] = useState(null);
 
-  // Fetch customers from API
-  const fetchCustomers = async () => {
+  // Memoize the fetchCustomers function to prevent unnecessary re-renders
+  const fetchCustomers = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -108,62 +109,32 @@ const Customers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.currentPage, pagination.limit, searchQuery, serviceFilter]);
 
-  // Check user permissions on component mount
+  // Check permissions once and store result
+  const hasViewPermission = canView("customers");
+
+  // Initial fetch when component mounts or when permissions change
   useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          hasAddPermission: true,
-          hasEditPermission: true,
-          hasDeletePermission: true,
-          hasViewPermission: true,
-        });
-        return;
-      }
-
-      // Check employee permissions for customers module
-      const permissions = session.user.permissions || [];
-      const customerPermission = permissions.find(
-        (p) => p.page?.toLowerCase() === "customers"
-      );
-
-      if (customerPermission && customerPermission.actions) {
-        setUserPermissions({
-          hasViewPermission: customerPermission.actions.view || false,
-          hasAddPermission: customerPermission.actions.add || false,
-          hasEditPermission: customerPermission.actions.edit || false,
-          hasDeletePermission: customerPermission.actions.delete || false,
-        });
-      }
-    };
-
-    checkUserPermissions();
-  }, [session]);
-
-  // Fetch customers when component mounts or filters change
-  useEffect(() => {
-    if (session) {
+    if (hasViewPermission) {
       fetchCustomers();
     }
-  }, [session, searchQuery, serviceFilter, pagination.currentPage]);
+  }, [hasViewPermission, fetchCustomers]);
 
-  // Debounced search
+  // Debounced search - separate useEffect for search/filter changes
   useEffect(() => {
+    if (!hasViewPermission) return;
+
     const timer = setTimeout(() => {
       if (pagination.currentPage !== 1) {
         setPagination((prev) => ({ ...prev, currentPage: 1 }));
-      } else if (session) {
+      } else {
         fetchCustomers();
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, serviceFilter]);
+  }, [searchQuery, serviceFilter, hasViewPermission, pagination.currentPage, fetchCustomers]);
 
   const getServiceIcon = (service) => {
     switch (service) {
@@ -181,7 +152,7 @@ const Customers = () => {
   };
 
   const handleAddCustomer = () => {
-    if (!userPermissions.hasAddPermission) {
+    if (!canCreate("customers")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to add customers",
@@ -190,6 +161,7 @@ const Customers = () => {
       return;
     }
   };
+  
   const handleDateRangeChange = (range) => setDateRange(range);
 
   return (
@@ -200,7 +172,7 @@ const Customers = () => {
           description="View and manage your customers"
         />
 
-        {userPermissions.hasAddPermission && (
+        {canCreate("customers") && (
           <Link href="/dashboard/customers/add-customer">
             <Button
               color="primary"
@@ -216,7 +188,7 @@ const Customers = () => {
       {/* Filters and Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <Input
-          placeholder="Search customers/Contact ..."
+          placeholder="Search by name, email, phone, address..."
           startContent={<Search className="text-default-400" />}
           value={searchQuery}
           onValueChange={setSearchQuery}
@@ -289,8 +261,7 @@ const Customers = () => {
         </div>
       </div>
 
-      {/* Customers Table */}
-      {session ? (
+    
         <Card className="bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
           <CardBody className="p-0">
             <Table
@@ -407,9 +378,7 @@ const Customers = () => {
             </Table>
           </CardBody>
         </Card>
-      ) : (
-        <div className="text-center py-8">Please log in to view customers</div>
-      )}
+      
     </div>
   );
 };

@@ -19,6 +19,7 @@ import { X, FileText, ChevronDown, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { addToast } from "@heroui/toast";
+import { usePermissions } from "../../lib/utils";
 
 const ProposalDetailsModal = ({
   isOpen,
@@ -28,6 +29,7 @@ const ProposalDetailsModal = ({
   onDelete,
 }) => {
   const router = useRouter();
+  const { canEdit, canDelete } = usePermissions();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -255,6 +257,15 @@ const ProposalDetailsModal = ({
   };
   // Handle save
   const handleSave = async () => {
+    if (!canEdit("proposals")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to edit proposals",
+        color: "danger",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -313,12 +324,28 @@ const ProposalDetailsModal = ({
 
   // Handle edit - navigate to edit page
   const handleEdit = () => {
+    if (!canEdit("proposals")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to edit proposals",
+        color: "danger",
+      });
+      return;
+    }
     onClose(); // Close modal first
     router.push(`/dashboard/proposal/edit/${proposalData._id}`);
   };
 
   // Handle delete
   const handleDelete = () => {
+    if (!canDelete("proposals")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to delete proposals",
+        color: "danger",
+      });
+      return;
+    }
     if (confirm("Are you sure you want to delete this proposal?")) {
       onDelete && onDelete(proposalData._id);
       onClose();
@@ -813,24 +840,28 @@ const ProposalDetailsModal = ({
             {/* Modal Footer */}
             <ModalFooter className="px-6 py-4 flex justify-between">
               <div className="flex gap-2">
-                <Button
-                  color="primary"
-                  onPress={handleSave}
-                  className="px-6"
-                  disabled={loading}
-                  radius="md"
-                >
-                  save
-                </Button>
-                <Button
-                  onPress={handleEdit}
-                  className="px-6 bg-[#616161] text-white"
-                  disabled={loading}
-                  radius="md"
-                >
-                  Edit
-                </Button>
-                {formData.status !== "Confirmed" && (
+                {canEdit("proposals") && (
+                  <Button
+                    color="primary"
+                    onPress={handleSave}
+                    className="px-6"
+                    disabled={loading}
+                    radius="md"
+                  >
+                    save
+                  </Button>
+                )}
+                {canEdit("proposals") && (
+                  <Button
+                    onPress={handleEdit}
+                    className="px-6 bg-[#616161] text-white"
+                    disabled={loading}
+                    radius="md"
+                  >
+                    Edit
+                  </Button>
+                )}
+                {formData.status !== "Confirmed" && canDelete("proposals") && (
                   <Button
                     onPress={handleDelete}
                     className="px-6  text-white hover:bg-red-50 bg-[#999999]"
@@ -841,7 +872,7 @@ const ProposalDetailsModal = ({
                   </Button>
                 )}
               </div>
-              {formData.status !== "Confirmed" && (
+              {formData.status !== "Confirmed" && canEdit("proposals") && (
                 <Button
                   color="success"
                   variant="solid"

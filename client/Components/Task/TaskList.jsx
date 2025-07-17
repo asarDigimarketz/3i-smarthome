@@ -14,6 +14,7 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const [tasks, setTasks] = useState([]);
+  const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editRefreshKey, setEditRefreshKey] = useState(0);
@@ -23,34 +24,52 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
   }, [projectId, serviceFilter, refreshKey]);
 
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchTasksAndProject = async () => {
       if (!projectId) {
         setLoading(false);
+        setProject(null);
+        setTasks([]);
         return;
       }
 
       try {
         setLoading(true);
-        const response = await axios.get(
+        
+        // Fetch both tasks and project details
+        const [tasksResponse, projectResponse] = await Promise.all([
+          axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/api/tasks/project/${projectId}`,
           {
             headers: {
               "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
             },
           }
-        );
+          ),
+          axios.get(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`,
+            {
+              headers: {
+                "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+              },
+            }
+          )
+        ]);
 
-        if (response.data.success) {
-          setTasks(response.data.data);
+        if (tasksResponse.data.success) {
+          setTasks(tasksResponse.data.data);
         } else {
           addToast({
             title: "Error",
-            description: response.data.message || "Failed to fetch tasks",
+            description: tasksResponse.data.message || "Failed to fetch tasks",
             color: "danger",
           });
         }
+
+        if (projectResponse.data.success) {
+          setProject(projectResponse.data.data);
+        }
       } catch (error) {
-        console.error("Error fetching tasks:", error);
+        console.error("Error fetching tasks and project:", error);
         addToast({
           title: "Error",
           description: "Failed to fetch tasks",
@@ -61,11 +80,18 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
       }
     };
 
-    fetchTasks();
+    fetchTasksAndProject();
   }, [projectId, refreshKey, editRefreshKey]);
 
-  // Enhanced filtering logic - filter tasks by service
-  const filteredTasks = tasks.filter((task) => {
+  // Check if current project matches the service filter
+  const shouldShowTasks = () => {
+    if (!project) return false;
+    if (serviceFilter === "All") return true;
+    return project.services === serviceFilter;
+  };
+
+  // Enhanced filtering logic - filter tasks by service (only if project matches filter)
+  const filteredTasks = shouldShowTasks() ? tasks.filter((task) => {
     if (serviceFilter === "All") return true;
 
     // Check if task has project service information
@@ -80,7 +106,7 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
 
     // If no service information is available, don't filter out
     return true;
-  });
+  }) : [];
 
   if (loading) {
     return (
@@ -100,6 +126,17 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
             <h4 className="text-gray-500">No project selected</h4>
             <p className="text-sm text-gray-400">
               Please select a project to view tasks
+            </p>
+          </div>
+        ) : !shouldShowTasks() ? (
+          <div className="text-center py-8">
+            <h4 className="text-gray-500">
+              {serviceFilter !== "All" 
+                ? `No ${serviceFilter} project selected`
+                : "Project doesn't match filter"}
+            </h4>
+            <p className="text-sm text-gray-400">
+              Please select a {serviceFilter} project to view tasks
             </p>
           </div>
         ) : (

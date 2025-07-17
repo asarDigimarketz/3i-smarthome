@@ -8,15 +8,11 @@ import { addToast } from "@heroui/toast";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import Image from "next/image";
+import { usePermissions } from "../../../lib/utils";
 
 const General = ({ initialHotelData }) => {
   const { data: session } = useSession();
-
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    hasEditPermission: false,
-    hasViewPermission: false,
-  });
+  const { canEdit, canView } = usePermissions();
 
   const [companyData, setCompanyData] = useState(initialHotelData);
   // const [color, setColor] = useState(initialHotelData.color || "#00569B");
@@ -30,36 +26,7 @@ const General = ({ initialHotelData }) => {
   const [isImageLoading, setIsImageLoading] = useState(false);
   // const colorInputRef = useRef(null);
 
-  // Check user permissions on component mount
-  useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          hasEditPermission: true,
-          hasViewPermission: true,
-        });
-        return;
-      }
-
-      // Check employee permissions for settings module
-      const permissions = session.user.permissions || [];
-      const settingsPermission = permissions.find(
-        (p) => p.page?.toLowerCase() === "settings"
-      );
-
-      if (settingsPermission && settingsPermission.actions) {
-        setUserPermissions({
-          hasViewPermission: settingsPermission.actions.view || false,
-          hasEditPermission: settingsPermission.actions.edit || false,
-        });
-      }
-    };
-
-    checkUserPermissions();
-  }, [session]);
+  // Removed manual permission checking - now using usePermissions hook
 
   useEffect(() => {
     setCompanyData(initialHotelData);
@@ -81,7 +48,7 @@ const General = ({ initialHotelData }) => {
   // };
 
   const handleInputChange = (e) => {
-    if (!userPermissions.hasEditPermission) {
+    if (!canEdit("settings")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to edit settings",
@@ -115,7 +82,7 @@ const General = ({ initialHotelData }) => {
   };
 
   const handleFileChange = async (e) => {
-    if (!userPermissions.hasEditPermission) {
+    if (!canEdit("settings")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to edit settings",
@@ -163,8 +130,19 @@ const General = ({ initialHotelData }) => {
   //   }
   // };
 
+  // Handle form submission with permission check
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!canEdit("settings")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to edit settings",
+        color: "danger",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -310,6 +288,23 @@ const General = ({ initialHotelData }) => {
       </div>
     </div>
   );
+
+  // Show access denied if no view permission
+  if (!canView("settings")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Access Denied
+          </h3>
+          <p className="text-gray-500">
+            You don't have permission to view settings.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section
@@ -583,6 +578,7 @@ const General = ({ initialHotelData }) => {
         </div> */}
 
         <div aria-label="Form Actions" className="flex justify-end">
+          {canEdit("settings") && (
           <Button
             radius="full"
             className=" bg-primary text-white  w-1/6"
@@ -591,6 +587,7 @@ const General = ({ initialHotelData }) => {
           >
             {isLoading ? "Saving..." : "Save"}
           </Button>
+          )}
         </div>
       </form>
     </section>

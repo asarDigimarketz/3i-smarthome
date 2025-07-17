@@ -7,22 +7,23 @@ import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Pagination } from "@heroui/pagination";
 import { addToast } from "@heroui/toast";
-import { useSession } from "next-auth/react";
 import { StatusDropdown } from "./status-dropdown";
 import { Plus, Search, X } from "lucide-react";
 import { DateRangePicker } from "@heroui/date-picker";
 import DashboardHeader from "../header/DashboardHeader.jsx";
+import { usePermissions } from "../../lib/utils";
 
 function App() {
-  const { data: session } = useSession();
+  const { 
+    canCreate, 
+    canEdit, 
+    canDelete, 
+    canView,
+    getUserPermissions 
+  } = usePermissions();
 
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    hasAddPermission: false,
-    hasEditPermission: false,
-    hasDeletePermission: false,
-    hasViewPermission: false,
-  });
+  // Get permissions using the hook
+  const userPermissions = getUserPermissions("proposals");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState(null);
@@ -34,41 +35,6 @@ function App() {
 
   // Debounce search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-
-  // Check user permissions on component mount
-  useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          hasAddPermission: true,
-          hasEditPermission: true,
-          hasDeletePermission: true,
-          hasViewPermission: true,
-        });
-        return;
-      }
-
-      // Check employee permissions for proposals module
-      const permissions = session.user.permissions || [];
-      const proposalPermission = permissions.find(
-        (p) => p.page?.toLowerCase() === "proposals"
-      );
-
-      if (proposalPermission && proposalPermission.actions) {
-        setUserPermissions({
-          hasViewPermission: proposalPermission.actions.view || false,
-          hasAddPermission: proposalPermission.actions.add || false,
-          hasEditPermission: proposalPermission.actions.edit || false,
-          hasDeletePermission: proposalPermission.actions.delete || false,
-        });
-      }
-    };
-
-    checkUserPermissions();
-  }, [session]);
 
   // Debounce search query
   useEffect(() => {
@@ -93,7 +59,7 @@ function App() {
   };
 
   const handleAddProposal = () => {
-    if (!userPermissions.hasAddPermission) {
+    if (!canCreate("proposals")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to add proposals",
@@ -117,7 +83,7 @@ function App() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div className="w-full md:w-80">
               <Input
-                placeholder="Search customers/Proposal ID ..."
+                placeholder="Search by customer, email, phone, address..."
                 startContent={<Search className="text-gray-400" />}
                 radius="sm"
                 variant="bordered"
@@ -161,7 +127,7 @@ function App() {
                 }
               />
               <StatusDropdown onStatusChange={handleStatusChange} />
-              {userPermissions.hasAddPermission ? (
+              {canCreate("proposals") ? (
                 <Link href="/dashboard/proposal/add-proposal">
                   <Button
                     color="primary"

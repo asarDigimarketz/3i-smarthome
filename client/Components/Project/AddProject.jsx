@@ -15,11 +15,13 @@ import Link from "next/link.js";
 import { ProjectStatusSelect } from "./ProjectStatusSelect.jsx";
 import { ServicesSelect } from "../Proposal/ServiceSelect.jsx";
 import DashboardHeader from "../header/DashboardHeader.jsx";
+import { usePermissions } from "../../lib/utils";
 
 export function AddProjectPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
+  const { canCreate, canEdit, canView } = usePermissions();
   const [isLoading, setIsLoading] = useState(false);
   // Use arrays for attachments
   const [selectedFiles, setSelectedFiles] = useState([]); // new files
@@ -46,6 +48,48 @@ export function AddProjectPage() {
     attachments: [], // for existing attachments (edit mode)
   });
   const [errors, setErrors] = useState({});
+
+  // Check permissions on component mount
+  useEffect(() => {
+    const isEdit = !!projectId;
+    
+    if (isEdit && !canEdit("projects")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to edit projects",
+        color: "danger",
+      });
+      router.push("/dashboard/projects");
+      return;
+    }
+    
+    if (!isEdit && !canCreate("projects")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to create projects",
+        color: "danger",
+      });
+      router.push("/dashboard/projects");
+      return;
+    }
+  }, [projectId, canCreate, canEdit, router]);
+
+  // Show access denied if no view permission
+  if (!canView("projects")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Access Denied
+          </h3>
+          <p className="text-gray-500">
+            You don't have permission to view projects.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Customer Autocomplete logic (shared with AddProposal)
   const {
@@ -325,6 +369,7 @@ export function AddProjectPage() {
           "Failed to save project",
         color: "danger",
       });
+      console.log(error.response.data.message);
     } finally {
       setIsLoading(false);
     }

@@ -4,7 +4,6 @@ import { Card } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Divider } from "@heroui/divider";
 import { addToast } from "@heroui/toast";
-import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import ProjectDetails from "./ProjectDetails";
 import TaskList from "./TaskList";
@@ -12,61 +11,65 @@ import TaskForm from "./TaskForm";
 import { Plus } from "lucide-react";
 import ProposalFilters from "../Proposal/ProposalFilters";
 import DashboardHeader from "../header/DashboardHeader";
+import { usePermissions } from "../../lib/utils";
+import axios from "axios";
 
 const Task = () => {
-  const { data: session } = useSession();
+  const { 
+    canView, 
+    canCreate, 
+    canEdit, 
+    canDelete, 
+    getUserPermissions 
+  } = usePermissions();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
 
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    hasAddPermission: false,
-    hasEditPermission: false,
-    hasDeletePermission: false,
-    hasViewPermission: false,
-  });
+  // Get permissions using the hook
+  const userPermissions = getUserPermissions("tasks");
 
   // Service filter state
   const [serviceFilter, setServiceFilter] = useState("All");
+  // Add project state
+  const [project, setProject] = useState(null);
+  const [projectLoading, setProjectLoading] = useState(false);
 
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskListRefreshKey, setTaskListRefreshKey] = useState(0);
 
-  // Check user permissions on component mount
+  // Fetch project details when projectId changes
   useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          hasAddPermission: true,
-          hasEditPermission: true,
-          hasDeletePermission: true,
-          hasViewPermission: true,
-        });
+    const fetchProject = async () => {
+      if (!projectId) {
+        setProject(null);
         return;
       }
 
-      // Check employee permissions for tasks module
-      const permissions = session.user.permissions || [];
-      const taskPermission = permissions.find(
-        (p) => p.page?.toLowerCase() === "tasks"
-      );
+      try {
+        setProjectLoading(true);
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`,
+          {
+            headers: {
+              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            },
+          }
+        );
 
-      if (taskPermission && taskPermission.actions) {
-        setUserPermissions({
-          hasViewPermission: taskPermission.actions.view || false,
-          hasAddPermission: taskPermission.actions.add || false,
-          hasEditPermission: taskPermission.actions.edit || false,
-          hasDeletePermission: taskPermission.actions.delete || false,
-        });
+        if (response.data.success) {
+          setProject(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching project:", error);
+        setProject(null);
+      } finally {
+        setProjectLoading(false);
       }
     };
 
-    checkUserPermissions();
-  }, [session]);
+    fetchProject();
+  }, [projectId]);
 
   // Reset the form when project changes
   useEffect(() => {
@@ -76,6 +79,15 @@ const Task = () => {
   // Handle service filter change
   const handleServiceChange = (service) => {
     setServiceFilter(service);
+    // Close task form when service filter changes
+    setShowTaskForm(false);
+  };
+
+  // Check if current project matches the service filter
+  const shouldAllowTaskActions = () => {
+    if (!project) return false;
+    if (serviceFilter === "All") return true;
+    return project.services === serviceFilter;
   };
 
   const handleAddTask = () => {
@@ -88,7 +100,16 @@ const Task = () => {
       return;
     }
 
-    if (!userPermissions.hasAddPermission) {
+    if (!shouldAllowTaskActions()) {
+      addToast({
+        title: "Project Service Mismatch",
+        description: `Please select a ${serviceFilter} project to add ${serviceFilter} tasks`,
+        color: "warning",
+      });
+      return;
+    }
+
+    if (!canCreate("tasks")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to add tasks",
@@ -107,7 +128,7 @@ const Task = () => {
   const refreshTasks = () => setTaskListRefreshKey((k) => k + 1);
 
   // Show access denied if no view permission
-  if (!userPermissions.hasViewPermission) {
+  if (!canView("tasks")) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center">
@@ -129,7 +150,7 @@ const Task = () => {
       <Card className="w-full mx-auto mt-4 shadow-md md:min-h-[600px] bg-white rounded-md">
         <div className="p-2 sm:p-4 md:p-8">
           <div className="flex items-center justify-between mb-4 md:mb-6">
-            {!userPermissions.hasAddPermission && (
+            {!canCreate("tasks") && (
               <div className="px-3 py-1 bg-warning-100 text-warning-800 rounded-full text-sm">
                 Read Only
               </div>
@@ -153,13 +174,14 @@ const Task = () => {
             <div className="w-full md:w-2/3 bg-white border-1 border-gray-200 p-2 sm:p-4 md:p-8 rounded-lg shadow-sm overflow-x-auto">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                 <h2 className="text-lg sm:text-xl font-semibold">Task</h2>
-                {userPermissions.hasAddPermission && (
+                {canCreate("tasks") && (
                   <Button
                     color="primary"
                     onPress={handleAddTask}
                     startContent={<Plus />}
                     className="rounded-lg w-full sm:w-auto min-h-[44px] text-base px-6"
                     style={{ minWidth: 120 }}
+                    isDisabled={!projectId || !shouldAllowTaskActions()}
                   >
                     Add Task
                   </Button>

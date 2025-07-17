@@ -9,8 +9,10 @@ import FirebaseNotificationSetup from "./FirebaseNotificationSetup";
 import axios from "axios";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import React from "react";
+import { usePermissions } from "../../lib/utils";
 
 export default function SettingsInterface() {
+  const { canView } = usePermissions();
   const [selectedTab, setSelectedTab] = useState("general");
 
   const [hotelData, setHotelData] = useState(null);
@@ -57,7 +59,6 @@ export default function SettingsInterface() {
     { key: "general", title: "General" },
     { key: "email", title: "Email Configuration" },
     { key: "user-management", title: "User Management" },
-    { key: "firebase-notifications", title: "Firebase Notifications" },
   ];
 
   return (
@@ -104,7 +105,6 @@ export default function SettingsInterface() {
           )}
           {selectedTab === "email" && <EmailConfiguration />}
           {selectedTab === "user-management" && <UserManagement />}
-          {selectedTab === "firebase-notifications" && <FirebaseNotificationSetup />}
         </div>
       </div>
     </section>

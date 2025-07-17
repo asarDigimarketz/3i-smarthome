@@ -5,11 +5,11 @@ import { Trash2, Edit, Check, Plus } from "lucide-react";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
-import { useSession } from "next-auth/react";
 import axios from "axios";
 import RolesResponsibilitySkeleton from "./RolesResponsibilitySkeleton";
 import PermissionGuard from "../../auth/PermissionGuard";
 import { DeleteConfirmModal } from "../../ui/delete-confirm-modal.jsx";
+import { usePermissions } from "../../../lib/utils";
 
 // All available pages in the system
 const permissions = [
@@ -25,15 +25,16 @@ const permissions = [
 const actions = ["View", "Create", "Edit", "Delete"];
 
 export default function RolesResponsibility() {
-  const { data: session } = useSession();
+  const { 
+    canCreate, 
+    canEdit, 
+    canDelete, 
+    canView,
+    getUserPermissions 
+  } = usePermissions();
 
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    hasAddPermission: false,
-    hasEditPermission: false,
-    hasDeletePermission: false,
-    hasViewPermission: false,
-  });
+  // Get permissions using the hook
+  const userPermissions = getUserPermissions("settings");
 
   const [role, setRole] = useState("");
   const [permissionsState, setPermissionsState] = useState({});
@@ -44,46 +45,11 @@ export default function RolesResponsibility() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState(null);
 
-  // Check user permissions on component mount
   useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          hasAddPermission: true,
-          hasEditPermission: true,
-          hasDeletePermission: true,
-          hasViewPermission: true,
-        });
-        return;
-      }
-
-      // Check employee permissions for settings/roles
-      const permissions = session.user.permissions || [];
-      const settingsPermission = permissions.find(
-        (p) => p.page?.toLowerCase() === "settings"
-      );
-
-      if (settingsPermission && settingsPermission.actions) {
-        setUserPermissions({
-          hasViewPermission: settingsPermission.actions.view || false,
-          hasAddPermission: settingsPermission.actions.add || false,
-          hasEditPermission: settingsPermission.actions.edit || false,
-          hasDeletePermission: settingsPermission.actions.delete || false,
-        });
-      }
-    };
-
-    checkUserPermissions();
-  }, [session]);
-
-  useEffect(() => {
-    if (userPermissions.hasViewPermission) {
+    if (canView("settings")) {
       fetchRoles();
     }
-  }, [userPermissions.hasViewPermission]);
+  }, []);
 
   const fetchRoles = async () => {
     try {
