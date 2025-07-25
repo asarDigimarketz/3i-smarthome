@@ -4,7 +4,131 @@ const fs = require("fs");
 const employeeSchema = require("../../models/employeeManagement/employeeSchema");
 const UserEmployeeSchema = require("../../models/employeeManagement/UserEmployeeSchema");
 const roleSchema = require("../../models/rolesAndPermission/roleSchema");
+const FCMToken = require("../../models/fcmToken");
+const User = require("../../models/user");
+const { createEmployeeNotification } = require("../../services/notificationService");
+const mongoose = require("mongoose");
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
+
+// Helper function to convert all values to strings for FCM
+function convertToFCMData(data) {
+  const fcmData = {};
+  for (const [key, value] of Object.entries(data)) {
+    fcmData[key] = String(value);
+  }
+  return fcmData;
+}
+
+// Helper function to get admin users
+async function getAllAdminUsers() {
+  try {
+    const adminUsers = await User.find({
+      $or: [
+        { isAdmin: true },
+        { role: { $in: ['admin', 'hotel admin', 'super admin'] } }
+      ]
+    });
+    return adminUsers.map(user => user._id);
+  } catch (error) {
+    console.error('Error getting admin users:', error);
+    return [];
+  }
+}
+
+// Helper function to send FCM notifications for employees
+async function sendEmployeeNotification(userIds, notification) {
+  try {
+    if (!userIds || userIds.length === 0) {
+      console.log('No users to send employee notification to');
+      return;
+    }
+
+    console.log('User IDs for employee notification:', userIds);
+
+    // Save notifications to database first
+    try {
+      const savedNotifications = await createEmployeeNotification({
+        type: notification.type || 'employee',
+        title: notification.title,
+        body: notification.body,
+        data: notification.data || {},
+        priority: notification.priority || 'medium',
+        employeeId: notification.employeeId,
+        triggeredBy: notification.triggeredBy,
+        triggeredByModel: notification.triggeredByModel
+      });
+      console.log(`Saved ${savedNotifications.length} employee notifications to database`);
+    } catch (dbError) {
+      console.error('Error saving employee notifications to database:', dbError);
+      // Continue with FCM sending even if database save fails
+    }
+
+    // Get FCM tokens for the users
+    const tokens = await FCMToken.find({
+      userId: { $in: userIds },
+      isActive: true,
+    });
+
+    if (tokens.length === 0) {
+      console.log(`No active FCM tokens found for User IDs: ${userIds.join(', ')}`);
+      return;
+    }
+
+    const tokenList = tokens.map(t => t.token);
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Send to each token individually
+    for (const token of tokenList) {
+      try {
+        // Convert all data values to strings for FCM compatibility
+        const fcmData = convertToFCMData({
+          type: notification.type || 'employee',
+          employeeId: notification.employeeId || '',
+          ...notification.data,
+        });
+
+        const message = {
+          notification: {
+            title: notification.title,
+            body: notification.body,
+          },
+          data: fcmData,
+          token: token,
+        };
+
+        // Get Firebase Admin instance
+        const admin = require('firebase-admin');
+        await admin.messaging().send(message);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to send to token ${token}:`, error);
+        failureCount++;
+        
+        // Remove failed token
+        await FCMToken.deleteOne({ token });
+      }
+    }
+
+    console.log(`Employee notification sent: ${successCount} successful, ${failureCount} failed`);
+
+    if (failureCount > 0) {
+      console.log(`Removed ${failureCount} failed FCM tokens`);
+    }
+
+    return {
+      success: true,
+      sent: successCount,
+      failed: failureCount
+    };
+  } catch (error) {
+    console.error('Error sending employee FCM notification:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
 
 // Configure multer for avatar uploads
 const avatarStorage = multer.diskStorage({
@@ -125,26 +249,86 @@ exports.getEmployees = async (req, res) => {
   try {
     const Employee = employeeSchema;
 
-    // Fetch all employees
-    const employees = await Employee.find().sort({ dateOfHiring: 1, _id: 1 });
+    // Extract query parameters for search and pagination
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      department = "",
+      status = "",
+      sortBy = "dateOfHiring",
+      sortOrder = "desc",
+    } = req.query;
 
-    try {
-      // Update employee IDs
-      await updateEmployeeIds(Employee, employees);
+    // Build search query
+    let query = {};
+
+    // Add search functionality for multiple fields
+    if (search && search.trim()) {
+      query.$or = [
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { mobileNo: { $regex: search, $options: "i" } },
+        { employeeId: { $regex: search, $options: "i" } },
+        { "address.addressLine": { $regex: search, $options: "i" } },
+        { "address.city": { $regex: search, $options: "i" } },
+        { "address.district": { $regex: search, $options: "i" } },
+        { "address.state": { $regex: search, $options: "i" } },
+        { "address.country": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Add department filter
+    if (department && department.trim()) {
+      query.department = { $regex: department, $options: "i" };
+    }
+
+    // Add status filter
+    if (status && status.trim()) {
+      query.status = status;
+    }
+
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+
+    // If no search/filter criteria, update employee IDs first
+    if (!search && !department && !status) {
+      try {
+        const allEmployees = await Employee.find().sort({ dateOfHiring: 1, _id: 1 });
+        await updateEmployeeIds(Employee, allEmployees);
     } catch (error) {
       console.error("Error during ID update:", error);
       // Continue with existing IDs if update fails
     }
+    }
 
-    // Fetch and return the final list of employees
-    const updatedEmployees = await Employee.find().sort({
-      dateOfHiring: 1,
-      _id: 1,
-    });
+    // Fetch employees with pagination and search
+    const employees = await Employee.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum);
+
+    // Get total count for pagination
+    const totalEmployees = await Employee.countDocuments(query);
+    const totalPages = Math.ceil(totalEmployees / limitNum);
 
     res.status(200).json({
       success: true,
-      employees: updatedEmployees,
+      employees: employees,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalEmployees,
+        limit: limitNum,
+        hasNext: parseInt(page) < totalPages,
+        hasPrev: parseInt(page) > 1,
+      },
     });
   } catch (error) {
     console.error("Error fetching employees:", error);
@@ -251,6 +435,60 @@ exports.createEmployee = async (req, res) => {
     // Save to database
     const employee = new Employee(employeeData);
     await employee.save();
+
+    // Send notifications to users with employee management permissions
+    try {
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployeeSchema.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('employees', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'employee_created',
+          title: 'New Employee Added',
+          body: `A new employee "${req.body.firstName} ${req.body.lastName}" has been added by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            employeeId: employee._id.toString(),
+            employeeName: `${req.body.firstName} ${req.body.lastName}`,
+            email: req.body.email,
+            department: department,
+            role: role.role,
+            createdBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            employeeDetails: {
+              firstName: req.body.firstName,
+              lastName: req.body.lastName,
+              email: req.body.email,
+              mobileNo: req.body.mobileNo,
+              department: department,
+              role: role.role,
+              status: req.body.status
+            }
+          },
+          priority: 'medium',
+          employeeId: employee._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendEmployeeNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending employee notification:', notificationError);
+      // Don't fail the employee creation if notification fails
+    }
 
     res.status(201).json({
       success: true,
@@ -426,6 +664,9 @@ exports.updateEmployee = async (req, res) => {
       }
     }
 
+    // Store original employee data for comparison
+    const originalEmployee = await Employee.findOne({ employeeId });
+
     const updatedEmployee = await Employee.findOneAndUpdate(
       { employeeId },
       employeeData,
@@ -449,6 +690,84 @@ exports.updateEmployee = async (req, res) => {
       },
       { new: true }
     );
+
+    // Send notifications for employee updates
+    try {
+      // Determine what was changed
+      const changes = [];
+      if (employeeData.firstName && employeeData.firstName !== originalEmployee.firstName) changes.push('first name');
+      if (employeeData.lastName && employeeData.lastName !== originalEmployee.lastName) changes.push('last name');
+      if (employeeData.email && employeeData.email !== originalEmployee.email) changes.push('email');
+      if (employeeData.mobileNo && employeeData.mobileNo !== originalEmployee.mobileNo) changes.push('mobile number');
+      if (employeeData.department && JSON.stringify(employeeData.department) !== JSON.stringify(originalEmployee.department)) changes.push('department');
+      if (employeeData.status && employeeData.status !== originalEmployee.status) changes.push('status');
+      if (roleData.role && roleData.role !== originalEmployee.role.role) changes.push('role');
+      
+      const changesText = changes.length > 0 ? changes.join(', ') : 'details';
+      
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployeeSchema.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('employees', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'employee_updated',
+          title: 'Employee Updated',
+          body: `Employee "${updatedEmployee.firstName} ${updatedEmployee.lastName}" ${changesText} has been updated by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            employeeId: updatedEmployee._id.toString(),
+            employeeName: `${updatedEmployee.firstName} ${updatedEmployee.lastName}`,
+            email: updatedEmployee.email,
+            department: updatedEmployee.department,
+            role: updatedEmployee.role.role,
+            updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            changes: {
+              fields: changes,
+              previousData: {
+                firstName: originalEmployee.firstName,
+                lastName: originalEmployee.lastName,
+                email: originalEmployee.email,
+                mobileNo: originalEmployee.mobileNo,
+                department: originalEmployee.department,
+                status: originalEmployee.status,
+                role: originalEmployee.role.role
+              },
+              newData: {
+                firstName: updatedEmployee.firstName,
+                lastName: updatedEmployee.lastName,
+                email: updatedEmployee.email,
+                mobileNo: updatedEmployee.mobileNo,
+                department: updatedEmployee.department,
+                status: updatedEmployee.status,
+                role: updatedEmployee.role.role
+              }
+            }
+          },
+          priority: 'medium',
+          employeeId: updatedEmployee._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendEmployeeNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending employee update notification:', notificationError);
+      // Don't fail the employee update if notification fails
+    }
 
     res.json({
       success: true,

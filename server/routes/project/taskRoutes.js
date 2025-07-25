@@ -8,6 +8,7 @@ const {
   updateTask,
   deleteTask,
 } = require("../../controllers/project/taskController");
+const authenticateToken = require("../../middleware/authMiddleware");
 const fs = require("fs");
 const router = express.Router();
 
@@ -149,12 +150,13 @@ const handleFileUploads = (req, res, next) => {
 };
 
 // Routes
-router.get("/project/:projectId", getTasksByProject);
-router.get("/:id", getTask);
+router.get("/project/:projectId", authenticateToken, getTasksByProject);
+router.get("/:id", authenticateToken, getTask);
 
 // Handle file uploads with custom middleware
 router.post(
   "/",
+  authenticateToken,
   (req, res, next) => {
     // Check if it's a multipart request
     if (req.is("multipart/form-data")) {
@@ -166,8 +168,8 @@ router.post(
   },
   createTask
 );
-router.put("/:id", handleFileUploads, updateTask);
+router.put("/:id", authenticateToken, handleFileUploads, updateTask);
 
-router.delete("/:id", deleteTask);
+router.delete("/:id", authenticateToken, deleteTask);
 
 module.exports = router;

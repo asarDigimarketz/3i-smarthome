@@ -1,7 +1,12 @@
 import CustomerDetail from "../../../../Components/Customers/CustomerDetails";
+import PermissionGuard from "../../../../Components/auth/PermissionGuard";
 
 const page = () => {
-  return <CustomerDetail />;
+  return (
+    <PermissionGuard requiredPermission="customers" requiredAction="view">
+      <CustomerDetail />
+    </PermissionGuard>
+  );
 };
 
 export default page;

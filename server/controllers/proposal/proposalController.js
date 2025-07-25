@@ -1,12 +1,136 @@
 const Proposal = require("../../models/proposal/Proposal");
 const Project = require("../../models/project/Project");
 const Customer = require("../../models/customer/Customer");
+const FCMToken = require("../../models/fcmToken");
+const User = require("../../models/user");
+const UserEmployee = require("../../models/employeeManagement/UserEmployeeSchema");
 const {
   deleteFile,
   getFileUrl,
   handleFileUpdate,
 } = require("../../middleware/upload");
+const { createProposalNotification } = require("../../services/notificationService");
 const path = require("path");
+
+// Helper function to convert all values to strings for FCM
+function convertToFCMData(data) {
+  const fcmData = {};
+  for (const [key, value] of Object.entries(data)) {
+    fcmData[key] = String(value);
+  }
+  return fcmData;
+}
+
+// Helper function to get admin users
+async function getAllAdminUsers() {
+  try {
+    const adminUsers = await User.find({
+      $or: [
+        { isAdmin: true },
+        { role: { $in: ['admin', 'hotel admin', 'super admin'] } }
+      ]
+    });
+    return adminUsers.map(user => user._id);
+  } catch (error) {
+    console.error('Error getting admin users:', error);
+    return [];
+  }
+}
+
+// Helper function to send FCM notifications for proposals
+async function sendProposalNotification(userIds, notification) {
+  try {
+    if (!userIds || userIds.length === 0) {
+      console.log('No users to send proposal notification to');
+      return;
+    }
+
+    console.log('User IDs for proposal notification:', userIds);
+
+    // Save notifications to database first
+    try {
+      const savedNotifications = await createProposalNotification({
+        type: notification.type || 'proposal',
+        title: notification.title,
+        body: notification.body,
+        data: notification.data || {},
+        priority: notification.priority || 'medium',
+        proposalId: notification.proposalId,
+        triggeredBy: notification.triggeredBy,
+        triggeredByModel: notification.triggeredByModel
+      });
+      console.log(`Saved ${savedNotifications.length} proposal notifications to database`);
+    } catch (dbError) {
+      console.error('Error saving proposal notifications to database:', dbError);
+      // Continue with FCM sending even if database save fails
+    }
+
+    // Get FCM tokens for the users
+    const tokens = await FCMToken.find({
+      userId: { $in: userIds },
+      isActive: true,
+    });
+
+    if (tokens.length === 0) {
+      console.log(`No active FCM tokens found for User IDs: ${userIds.join(', ')}`);
+      return;
+    }
+
+    const tokenList = tokens.map(t => t.token);
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Send to each token individually
+    for (const token of tokenList) {
+      try {
+        // Convert all data values to strings for FCM compatibility
+        const fcmData = convertToFCMData({
+          type: notification.type || 'proposal',
+          proposalId: notification.proposalId || '',
+          ...notification.data,
+        });
+
+        const message = {
+          notification: {
+            title: notification.title,
+            body: notification.body,
+          },
+          data: fcmData,
+          token: token,
+        };
+
+        // Get Firebase Admin instance
+        const admin = require('firebase-admin');
+        await admin.messaging().send(message);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to send to token ${token}:`, error);
+        failureCount++;
+        
+        // Remove failed token
+        await FCMToken.deleteOne({ token });
+      }
+    }
+
+    console.log(`Proposal notification sent: ${successCount} successful, ${failureCount} failed`);
+
+    if (failureCount > 0) {
+      console.log(`Removed ${failureCount} failed FCM tokens`);
+    }
+
+    return {
+      success: true,
+      sent: successCount,
+      failed: failureCount
+    };
+  } catch (error) {
+    console.error('Error sending proposal FCM notification:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
 
 /**
  * Proposal Controller
@@ -103,9 +227,9 @@ const createProposal = async (req, res) => {
         mimetype: file.mimetype,
         size: file.size,
         path: file.path,
-        url: `${process.env.BACKEND_URL ? process.env.BACKEND_URL + "/" : ""}${
-          file.path
-        }`,
+        url: `${
+          process.env.BACKEND_URL || "http://localhost:5000"
+        }/assets/images/proposals/${file.filename}`,
       }));
     }
     // If attachments sent as JSON (for edit mode), merge with new files
@@ -125,6 +249,59 @@ const createProposal = async (req, res) => {
 
     // Create proposal
     const proposal = await Proposal.create(proposalData);
+
+    // Send notifications to users with proposal permissions
+    try {
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployee.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('proposals', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'proposal_created',
+          title: 'New Proposal Created',
+          body: `A new proposal "${customerName}" has been created by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            proposalId: proposal._id.toString(),
+            customerName: customerName,
+            projectAmount: parseFloat(projectAmount),
+            services: services,
+            createdBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            proposalDetails: {
+              customerName: customerName,
+              contactNumber: contactNumber,
+              email: email,
+              services: services,
+              projectAmount: parseFloat(projectAmount),
+              size: size,
+              status: status || 'Warm'
+            }
+          },
+          priority: 'medium',
+          proposalId: proposal._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendProposalNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending proposal notification:', notificationError);
+      // Don't fail the proposal creation if notification fails
+    }
 
     // Return success response
     res.status(201).json({
@@ -436,15 +613,18 @@ const updateProposal = async (req, res) => {
         mimetype: file.mimetype,
         size: file.size,
         path: file.path,
-        url: `${process.env.BACKEND_URL ? process.env.BACKEND_URL + "/" : ""}${
-          file.path
-        }`,
+        url: `${
+          process.env.BACKEND_URL || "http://localhost:5000"
+        }/assets/images/proposals/${file.filename}`,
       }));
       baseAttachments = baseAttachments.concat(newAttachments);
     }
     updateData.attachments = baseAttachments;
     // Remove old single attachment field if present
     delete updateData.attachment;
+
+    // Store original proposal data for comparison
+    const originalProposal = await Proposal.findById(req.params.id);
 
     // Update proposal
     proposal = await Proposal.findByIdAndUpdate(req.params.id, updateData, {
@@ -457,6 +637,77 @@ const updateProposal = async (req, res) => {
       for (const oldFile of oldAttachments) {
         await handleFileUpdate(oldFile.path);
       }
+    }
+
+    // Send notifications for proposal updates
+    try {
+      // Determine what was changed
+      const changes = [];
+      if (updateData.customerName && updateData.customerName !== originalProposal.customerName) changes.push('customer name');
+      if (updateData.projectAmount && updateData.projectAmount !== originalProposal.projectAmount) changes.push('project amount');
+      if (updateData.services && updateData.services !== originalProposal.services) changes.push('services');
+      if (updateData.status && updateData.status !== originalProposal.status) changes.push('status');
+      if (updateData.comment !== undefined && updateData.comment !== originalProposal.comment) changes.push('comment');
+      
+      const changesText = changes.length > 0 ? changes.join(', ') : 'details';
+      
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployee.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('proposals', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'proposal_updated',
+          title: 'Proposal Updated',
+          body: `Proposal "${proposal.customerName}" ${changesText} has been updated by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            proposalId: proposal._id.toString(),
+            customerName: proposal.customerName,
+            projectAmount: proposal.projectAmount,
+            services: proposal.services,
+            updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            changes: {
+              fields: changes,
+              previousData: {
+                customerName: originalProposal.customerName,
+                projectAmount: originalProposal.projectAmount,
+                services: originalProposal.services,
+                status: originalProposal.status,
+                comment: originalProposal.comment
+              },
+              newData: {
+                customerName: proposal.customerName,
+                projectAmount: proposal.projectAmount,
+                services: proposal.services,
+                status: proposal.status,
+                comment: proposal.comment
+              }
+            }
+          },
+          priority: 'medium',
+          proposalId: proposal._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendProposalNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending proposal update notification:', notificationError);
+      // Don't fail the proposal update if notification fails
     }
 
     // Check if status changed to "Confirmed" and create project automatically
@@ -622,11 +873,64 @@ const updateProposalField = async (req, res) => {
       updateData[field] = value;
     }
 
+    // Store original proposal data for comparison
+    const originalProposal = await Proposal.findById(req.params.id);
+
     // Update proposal
     proposal = await Proposal.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
+
+    // Send notifications for proposal field updates
+    try {
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployee.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('proposals', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'proposal_field_updated',
+          title: 'Proposal Field Updated',
+          body: `Proposal "${proposal.customerName}" ${field} has been updated to "${value}" by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            proposalId: proposal._id.toString(),
+            customerName: proposal.customerName,
+            field: field,
+            oldValue: originalProposal[field],
+            newValue: value,
+            updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            changes: {
+              field: field,
+              previousValue: originalProposal[field],
+              newValue: value
+            }
+          },
+          priority: 'medium',
+          proposalId: proposal._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendProposalNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending proposal field update notification:', notificationError);
+      // Don't fail the proposal field update if notification fails
+    }
 
     // Check if status changed to "Confirmed" and create project automatically
     if (
@@ -750,6 +1054,15 @@ const deleteProposal = async (req, res) => {
       });
     }
 
+    // Store proposal data before deletion for notification
+    const proposalData = {
+      _id: proposal._id,
+      customerName: proposal.customerName,
+      projectAmount: proposal.projectAmount,
+      services: proposal.services,
+      status: proposal.status
+    };
+
     // Delete associated file if exists
     if (proposal.attachment && proposal.attachment.path) {
       await deleteFile(proposal.attachment.path).catch(console.error);
@@ -757,6 +1070,56 @@ const deleteProposal = async (req, res) => {
 
     // Delete proposal
     await Proposal.findByIdAndDelete(req.params.id);
+
+    // Send notifications for proposal deletion
+    try {
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployee.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('proposals', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'proposal_deleted',
+          title: 'Proposal Deleted',
+          body: `Proposal "${proposalData.customerName}" has been deleted by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            proposalId: proposalData._id.toString(),
+            customerName: proposalData.customerName,
+            projectAmount: proposalData.projectAmount,
+            services: proposalData.services,
+            deletedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            proposalDetails: {
+              customerName: proposalData.customerName,
+              projectAmount: proposalData.projectAmount,
+              services: proposalData.services,
+              status: proposalData.status
+            }
+          },
+          priority: 'high',
+          proposalId: proposalData._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendProposalNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending proposal deletion notification:', notificationError);
+      // Don't fail the proposal deletion if notification fails
+    }
 
     res.status(200).json({
       success: true,

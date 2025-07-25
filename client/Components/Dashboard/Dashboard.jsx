@@ -25,10 +25,13 @@ import {
 import ServiceCard from "./ServiceCard.jsx";
 import ActivityItem from "./ActivityItem.jsx";
 import ProjectCard from "./ProjectCard.jsx";
+import RealTimeActivities from "./RealTimeActivities.jsx";
 import { ChevronRight, ChevronDown, ArrowRight, Calendar } from "lucide-react";
 import { today, getLocalTimeZone } from "@internationalized/date";
 import axios from "axios";
 import { addToast } from "@heroui/toast";
+import { usePermissions } from "../../lib/utils";
+import { getAuthToken } from '../../lib/auth';
 
 const recentActivities = [
   {
@@ -60,15 +63,7 @@ const recentActivities = [
 const Dashboard = () => {
   const { data: session } = useSession();
   const router = useRouter();
-
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    projects: { hasViewPermission: false },
-    proposals: { hasViewPermission: false },
-    customers: { hasViewPermission: false },
-    employees: { hasViewPermission: false },
-    tasks: { hasViewPermission: false },
-  });
+  const { canView } = usePermissions();
 
   // Dashboard data states
   const [performanceData, setPerformanceData] = useState([]);
@@ -138,12 +133,20 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
+      // Get the session token
+      const token = await getAuthToken();
+      if (!token) {
+        console.log("No session token available");
+        return;
+      }
+
       // Fetch project stats
       const projectStatsResponse = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/api/projects/stats`,
         {
           headers: {
             "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            "Authorization": `Bearer ${token}`,
           },
         }
       );
@@ -154,6 +157,7 @@ const Dashboard = () => {
         {
           headers: {
             "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            "Authorization": `Bearer ${token}`,
           },
         }
       );
@@ -166,6 +170,7 @@ const Dashboard = () => {
         {
           headers: {
             "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+            "Authorization": `Bearer ${token}`,
           },
         }
       );
@@ -380,43 +385,7 @@ const Dashboard = () => {
     }
   };
 
-  // Check user permissions on component mount
-  useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          projects: { hasViewPermission: true },
-          proposals: { hasViewPermission: true },
-          customers: { hasViewPermission: true },
-          employees: { hasViewPermission: true },
-          tasks: { hasViewPermission: true },
-        });
-        return;
-      }
-
-      // Check employee permissions for each module
-      const permissions = session.user.permissions || [];
-      const modulePermissions = {};
-
-      ["projects", "proposals", "customers", "employees", "tasks"].forEach(
-        (module) => {
-          const permission = permissions.find(
-            (p) => p.page?.toLowerCase() === module
-          );
-          modulePermissions[module] = {
-            hasViewPermission: permission?.actions?.view || false,
-          };
-        }
-      );
-
-      setUserPermissions(modulePermissions);
-    };
-
-    checkUserPermissions();
-  }, [session]);
+  // Removed manual permission checking - now using usePermissions hook
 
   // Fetch dashboard data when component mounts or date range changes
   useEffect(() => {
@@ -812,77 +781,11 @@ const Dashboard = () => {
           </CardBody>
         </Card>
 
-        <Card className="bg-gradient-to-br from-white via-gray-50/50 to-white border-0 shadow-xl overflow-hidden">
-          <CardBody className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  Recent Activities
-                </h2>
-                <p className="text-gray-500 text-sm mt-1">
-                  Latest project updates and system activities
-                </p>
-              </div>
-              <Link href="/dashboard/notification">
-                <Button
-                  isIconOnly
-                  variant="light"
-                  size="lg"
-                  className="hover:bg-primary/10 text-primary transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </Button>
-              </Link>
-            </div>
-
-            {loading ? (
-              /* Activities Loader */
-              <div className="space-y-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-100">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {recentActivities.map((activity, index) => (
-                  <ActivityItem
-                    key={`${activity.id}-${index}`}
-                    id={activity.id}
-                    type={activity.type}
-                    description={activity.description}
-                    time={activity.time}
-                  />
-                ))}
-
-                {recentActivities.length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                      <ChevronRight className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <p className="text-gray-500 font-medium">
-                      No recent activities
-                    </p>
-                    <p className="text-gray-400 text-sm">
-                      Activities will appear here as they happen
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardBody>
-        </Card>
+        <RealTimeActivities />
       </div>
 
       {/* Recent Projects - Only show if user has projects view permission */}
-      {userPermissions.projects.hasViewPermission && (
+      {canView("projects") && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-primary">Recent Projects</h2>
@@ -959,7 +862,7 @@ const Dashboard = () => {
                 progress={project.progress}
                 color={project.color}
                 assignedEmployees={project.assignedEmployees}
-                userPermissions={userPermissions.projects}
+                // userPermissions removed - ProjectCard uses usePermissions hook internally
               />
             ))}
           </div>

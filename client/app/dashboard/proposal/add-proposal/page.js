@@ -1,10 +1,11 @@
 import { AddProposalPage } from "../../../../Components/Proposal/AddProposal";
+import PermissionGuard from "../../../../Components/auth/PermissionGuard";
 
 const page = () => {
   return (
-    <div>
+    <PermissionGuard requiredPermission="proposals" requiredAction="create">
       <AddProposalPage />
-    </div>
+    </PermissionGuard>
   );
 };
 

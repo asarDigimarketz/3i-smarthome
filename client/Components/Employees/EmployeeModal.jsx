@@ -14,6 +14,7 @@ import { DatePicker } from "@heroui/date-picker";
 import { addToast } from "@heroui/toast";
 import { Plus, Upload, X } from "lucide-react";
 import { parseDate } from "@internationalized/date";
+import { usePermissions } from "../../lib/utils";
 
 export const EmployeeModal = ({
   isOpen,
@@ -22,6 +23,7 @@ export const EmployeeModal = ({
   onSuccess,
 }) => {
   const isEditing = !!employeeData;
+  const { canCreate, canEdit, canView } = usePermissions();
   const fileInputRef = useRef(null);
   const documentInputRef = useRef(null);
 
@@ -314,7 +316,27 @@ export const EmployeeModal = ({
     setExistingDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
+  // Handle form submission with permission check
+  const handleSubmit = async (e) => {
+    // e.preventDefault();
+    if (isEditing && !canEdit("employees")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to edit employees",
+        color: "danger",
+      });
+      return;
+    }
+    
+    if (!isEditing && !canCreate("employees")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to create employees",
+        color: "danger",
+      });
+      return;
+    }
+
     if (!validateForm()) {
       addToast({
         title: "Validation Error",
@@ -513,6 +535,33 @@ export const EmployeeModal = ({
       setLoading(false);
     }
   };
+
+  // Show access denied if no view permission
+  if (!canView("employees")) {
+    return (
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          <ModalHeader>Access Denied</ModalHeader>
+          <ModalBody>
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🔒</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Access Denied
+              </h3>
+              <p className="text-gray-500">
+                You don't have permission to view employee details.
+              </p>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="danger" variant="light" onPress={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -807,7 +856,7 @@ export const EmployeeModal = ({
                     variant="bordered"
                     selectedKeys={[formData.status]}
                     onSelectionChange={(keys) => {
-                      // const selectedKey = Array.from(keys)[0];
+                        const selectedKey = Array.from(keys)[0];
                       handleInputChange("status", selectedKey);
                     }}
                     classNames={{

@@ -11,78 +11,65 @@ import { Button } from "@heroui/button";
 import { Pagination } from "@heroui/pagination";
 import { Skeleton } from "@heroui/skeleton";
 import { addToast } from "@heroui/toast";
-import { useSession } from "next-auth/react";
 import EmployeeCard from "./EmployeeCard.jsx";
 import { ChevronDown, Plus, Search } from "lucide-react";
 import { EmployeeModal } from "./EmployeeModal";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import { Card } from "@heroui/card";
+import { usePermissions } from "../../lib/utils";
 
 const Employees = () => {
-  const { data: session } = useSession();
+  const { 
+    canCreate, 
+    canEdit, 
+    canDelete, 
+    canView,
+    getUserPermissions 
+  } = usePermissions();
 
-  // Permission checks based on user's actual permissions
-  const [userPermissions, setUserPermissions] = useState({
-    hasAddPermission: false,
-    hasEditPermission: false,
-    hasDeletePermission: false,
-    hasViewPermission: false,
-  });
+  // Get permissions using the hook
+  const userPermissions = getUserPermissions("employees");
 
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalEmployees: 0,
+    limit: 6,
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const itemsPerPage = 6;
 
-  // Check user permissions on component mount
-  useEffect(() => {
-    const checkUserPermissions = () => {
-      if (!session?.user) return;
-
-      // Hotel admin has all permissions
-      if (!session.user.isEmployee) {
-        setUserPermissions({
-          hasAddPermission: true,
-          hasEditPermission: true,
-          hasDeletePermission: true,
-          hasViewPermission: true,
-        });
-        return;
-      }
-
-      // Check employee permissions for employees module
-      const permissions = session.user.permissions || [];
-      const employeePermission = permissions.find(
-        (p) => p.page?.toLowerCase() === "employees"
-      );
-
-      if (employeePermission && employeePermission.actions) {
-        setUserPermissions({
-          hasViewPermission: employeePermission.actions.view || false,
-          hasAddPermission: employeePermission.actions.add || false,
-          hasEditPermission: employeePermission.actions.edit || false,
-          hasDeletePermission: employeePermission.actions.delete || false,
-        });
-      }
-    };
-
-    checkUserPermissions();
-  }, [session]);
-
-  // Fetch employees from API
+  // Fetch employees from API with search and pagination
   const fetchEmployees = async () => {
-    if (!userPermissions.hasViewPermission) {
+    if (!canView("employees")) {
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append("page", currentPage.toString());
+      params.append("limit", "6");
+      
+      if (searchQuery.trim()) {
+        params.append("search", searchQuery.trim());
+      }
+      
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+      
+
+
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement?${params.toString()}`,
         {
           headers: {
             "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
@@ -117,6 +104,11 @@ const Employees = () => {
           originalData: emp,
         }));
         setEmployees(transformedEmployees);
+        
+        // Update pagination info
+        if (data.pagination) {
+          setPagination(data.pagination);
+        }
       } else {
         throw new Error(data.message || "Failed to fetch employees");
       }
@@ -132,31 +124,28 @@ const Employees = () => {
     }
   };
 
+  // Fetch employees when filters change
   useEffect(() => {
     if (userPermissions.hasViewPermission) {
       fetchEmployees();
     }
-  }, [userPermissions.hasViewPermission]);
+  }, [userPermissions.hasViewPermission, currentPage, searchQuery, statusFilter,]);
 
-  const filteredEmployees = employees.filter((employee) => {
-    const matchesSearch =
-      employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.role.toLowerCase().includes(searchQuery.toLowerCase());
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchEmployees();
+      }
+    }, 500);
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      employee.status.toLowerCase() === statusFilter.toLowerCase();
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-    return matchesSearch && matchesStatus;
-  });
-
-  const paginatedEmployees = filteredEmployees.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  // No need for client-side filtering as backend handles it
+  const paginatedEmployees = employees;
 
   const handleModalClose = (shouldRefresh = false) => {
     setIsModalOpen(false);
@@ -204,11 +193,11 @@ const Employees = () => {
       {/* Filters and Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <Input
-          placeholder="Search Employees..."
+          placeholder="Search by name, email, phone, address..."
           startContent={<Search className="text-default-400" />}
           value={searchQuery}
           onValueChange={setSearchQuery}
-          className="w-full sm:max-w-xs"
+          className="w-full sm:max-w-sm"
         />
 
         <div className="flex gap-2 ml-auto">
@@ -288,12 +277,13 @@ const Employees = () => {
                   No employees found
                 </h3>
                 <p className="text-gray-500 mb-4">
-                  {searchQuery || statusFilter !== "all"
+                  {searchQuery || statusFilter !== "all" 
                     ? "No employees match your current filters."
                     : "Get started by adding your first employee."}
                 </p>
                 {!searchQuery &&
                   statusFilter === "all" &&
+              
                   userPermissions.hasAddPermission && (
                     <Button
                       color="primary"
@@ -309,10 +299,10 @@ const Employees = () => {
         </div>
       </Card>
       {/* Pagination */}
-      {!loading && totalPages > 1 && (
+      {!loading && pagination.totalPages > 1 && (
         <div className="flex justify-center">
           <Pagination
-            total={totalPages}
+            total={pagination.totalPages}
             page={currentPage}
             onChange={setCurrentPage}
             color="primary"

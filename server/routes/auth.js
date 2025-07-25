@@ -7,9 +7,11 @@ const authenticateToken = require('../middleware/authMiddleware');
 const Role = require('../models/rolesAndPermission/roleSchema');
 const { sendEmail } = require('../utils/sendEmail');
 const crypto = require('crypto');
+const dotenv = require('dotenv');
+dotenv.config();
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // POST /api/auth/mobile-login
 router.post('/mobile-login', async (req, res) => {

@@ -9,6 +9,7 @@ const {
   getProposalStats,
 } = require("../../controllers/proposal/proposalController");
 const { handleProposalUpload } = require("../../middleware/upload");
+const authenticateToken = require("../../middleware/authMiddleware");
 
 /**
  * Proposal Routes
@@ -24,7 +25,7 @@ const router = express.Router();
  * @access  Private
  * @note    Must be before /:id route to avoid conflicts
  */
-router.get("/stats", getProposalStats);
+router.get("/stats", authenticateToken, getProposalStats);
 
 /**
  * @route   GET /api/proposals
@@ -32,7 +33,7 @@ router.get("/stats", getProposalStats);
  * @access  Private
  * @query   page, limit, sortBy, sortOrder, search, status, dateFrom, dateTo, service
  */
-router.get("/", getProposals);
+router.get("/", authenticateToken, getProposals);
 
 /**
  * @route   POST /api/proposals
@@ -41,7 +42,7 @@ router.get("/", getProposals);
  * @body    customerName, contactNumber, email, address, services, projectDescription, projectAmount, size, status, comment, date
  * @file    attachment (optional)
  */
-router.post("/", handleProposalUpload, createProposal);
+router.post("/", authenticateToken, handleProposalUpload, createProposal);
 
 /**
  * @route   GET /api/proposals/:id
@@ -49,7 +50,7 @@ router.post("/", handleProposalUpload, createProposal);
  * @access  Private
  * @param   id - Proposal ID
  */
-router.get("/:id", getProposal);
+router.get("/:id", authenticateToken, getProposal);
 
 /**
  * @route   PUT /api/proposals/:id
@@ -59,7 +60,7 @@ router.get("/:id", getProposal);
  * @body    Any proposal fields to update
  * @file    attachment (optional)
  */
-router.put("/:id", handleProposalUpload, updateProposal);
+router.put("/:id", authenticateToken, handleProposalUpload, updateProposal);
 
 /**
  * @route   PATCH /api/proposals/:id/field
@@ -68,7 +69,7 @@ router.put("/:id", handleProposalUpload, updateProposal);
  * @param   id - Proposal ID
  * @body    field, value
  */
-router.patch("/:id/field", updateProposalField);
+router.patch("/:id/field", authenticateToken, updateProposalField);
 
 /**
  * @route   DELETE /api/proposals/:id
@@ -76,6 +77,6 @@ router.patch("/:id/field", updateProposalField);
  * @access  Private
  * @param   id - Proposal ID
  */
-router.delete("/:id", deleteProposal);
+router.delete("/:id", authenticateToken, deleteProposal);
 
 module.exports = router;

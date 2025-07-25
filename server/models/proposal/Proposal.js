@@ -236,8 +236,14 @@ proposalSchema.statics.getProposalsWithFilters = function (
   if (search) {
     query.$or = [
       { customerName: { $regex: search, $options: "i" } },
-      { "address.city": { $regex: search, $options: "i" } },
       { email: { $regex: search, $options: "i" } },
+      { contactNumber: { $regex: search, $options: "i" } },
+      { "address.addressLine": { $regex: search, $options: "i" } },
+      { "address.city": { $regex: search, $options: "i" } },
+      { "address.district": { $regex: search, $options: "i" } },
+      { "address.state": { $regex: search, $options: "i" } },
+      { "address.country": { $regex: search, $options: "i" } },
+      { "address.pincode": { $regex: search, $options: "i" } },
     ];
   }
 
@@ -280,8 +286,14 @@ proposalSchema.statics.getProposalsCount = function (filters = {}) {
   if (search) {
     query.$or = [
       { customerName: { $regex: search, $options: "i" } },
-      { "address.city": { $regex: search, $options: "i" } },
       { email: { $regex: search, $options: "i" } },
+      { contactNumber: { $regex: search, $options: "i" } },
+      { "address.addressLine": { $regex: search, $options: "i" } },
+      { "address.city": { $regex: search, $options: "i" } },
+      { "address.district": { $regex: search, $options: "i" } },
+      { "address.state": { $regex: search, $options: "i" } },
+      { "address.country": { $regex: search, $options: "i" } },
+      { "address.pincode": { $regex: search, $options: "i" } },
     ];
   }
 

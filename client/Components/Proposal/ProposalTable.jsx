@@ -13,6 +13,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import ProposalDetailsModal from "./ProposalDetailsModal";
 import { addToast } from "@heroui/toast";
+import { usePermissions } from "../../lib/utils";
 
 const ProposalTable = ({
   searchQuery,
@@ -21,8 +22,10 @@ const ProposalTable = ({
   serviceFilter,
   page = 1,
   setTotalPages = () => {},
+  userPermissions = {},
 }) => {
   const router = useRouter();
+  const { canEdit, canView } = usePermissions();
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortDescriptor, setSortDescriptor] = useState();

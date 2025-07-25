@@ -192,6 +192,30 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
       });
       return;
     }
+
+    // Check permissions before submitting
+    if (task && task._id) {
+      // Editing existing task - check edit permission
+      if (!userPermissions.hasEditPermission) {
+        addToast({
+          title: "Access Denied",
+          description: "You don't have permission to edit tasks",
+          color: "danger",
+        });
+        return;
+      }
+    } else {
+      // Creating new task - check add permission
+      if (!userPermissions.hasAddPermission) {
+        addToast({
+          title: "Access Denied",
+          description: "You don't have permission to create tasks",
+          color: "danger",
+        });
+        return;
+      }
+    }
+
     if (!formData.title || !formData.startDate) {
       addToast({
         title: "Error",
@@ -642,18 +666,30 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
           >
             Save
           </Button>
-          <Button
-            color="danger"
-            variant="light"
-            radius="sm"
-            onPress={
-              task && task._id ? () => setShowDeleteModal(true) : onClose
-            }
-            isDisabled={submitting}
-            type="button"
-          >
-            <Trash2 className="text-primary" />
-          </Button>
+          {task && task._id && userPermissions.hasDeletePermission && (
+            <Button
+              color="danger"
+              variant="light"
+              radius="sm"
+              onPress={() => setShowDeleteModal(true)}
+              isDisabled={submitting}
+              type="button"
+            >
+              <Trash2 className="text-primary" />
+            </Button>
+          )}
+          {!task && (
+            <Button
+              color="danger"
+              variant="light"
+              radius="sm"
+              onPress={onClose}
+              isDisabled={submitting}
+              type="button"
+            >
+              <X className="text-primary" />
+            </Button>
+          )}
           <DeleteConfirmModal
             isOpen={showDeleteModal}
             onClose={() => setShowDeleteModal(false)}

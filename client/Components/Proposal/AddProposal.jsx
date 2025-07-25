@@ -15,9 +15,11 @@ import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { addToast } from "@heroui/toast";
+import { usePermissions } from "../../lib/utils";
 
 export function AddProposalPage({ isEdit = false, proposalId = null }) {
   const router = useRouter();
+  const { canCreate, canEdit, canView } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]); // For new uploads (multiple)
   const [removedAttachments, setRemovedAttachments] = useState([]); // For removing existing attachments (edit mode)
@@ -457,6 +459,46 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       setLoading(false);
     }
   };
+
+  // Check permissions on component mount
+  useEffect(() => {
+    if (isEdit && !canEdit("proposals")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to edit proposals",
+        color: "danger",
+      });
+      router.push("/dashboard/proposal");
+      return;
+    }
+    
+    if (!isEdit && !canCreate("proposals")) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to create proposals",
+        color: "danger",
+      });
+      router.push("/dashboard/proposal");
+      return;
+    }
+  }, [isEdit, canCreate, canEdit, router]);
+
+  // Show access denied if no view permission
+  if (!canView("proposals")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Access Denied
+          </h3>
+          <p className="text-gray-500">
+            You don't have permission to view proposals.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="">

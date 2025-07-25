@@ -3,7 +3,132 @@ const path = require("path");
 const Project = require("../../models/project/Project");
 const Proposal = require("../../models/proposal/Proposal");
 const Customer = require("../../models/customer/Customer");
+const FCMToken = require("../../models/fcmToken");
+const User = require("../../models/user");
+const UserEmployee = require("../../models/employeeManagement/UserEmployeeSchema");
 const generateCustomerId = require("../../utils/helpers/customerIdGenerator");
+const { createProjectNotification } = require("../../services/notificationService");
+
+// Helper function to convert all values to strings for FCM
+function convertToFCMData(data) {
+  const fcmData = {};
+  for (const [key, value] of Object.entries(data)) {
+    fcmData[key] = String(value);
+  }
+  return fcmData;
+}
+
+// Helper function to get admin users
+async function getAllAdminUsers() {
+  try {
+    const adminUsers = await User.find({
+      $or: [
+        { isAdmin: true },
+        { role: { $in: ['admin', 'hotel admin', 'super admin'] } }
+      ]
+    });
+    return adminUsers.map(user => user._id);
+  } catch (error) {
+    console.error('Error getting admin users:', error);
+    return [];
+  }
+}
+
+// Helper function to send FCM notifications to users with project permissions
+async function sendProjectNotification(userIds, notification) {
+  try {
+    if (!userIds || userIds.length === 0) {
+      console.log('No users to send project notification to');
+      return;
+    }
+
+    console.log('User IDs for project notification:', userIds);
+
+    // Save notifications to database first
+    try {
+      const savedNotifications = await createProjectNotification({
+        type: notification.type || 'project',
+        title: notification.title,
+        body: notification.body,
+        data: notification.data || {},
+        priority: notification.priority || 'medium',
+        projectId: notification.projectId,
+        triggeredBy: notification.triggeredBy,
+        triggeredByModel: notification.triggeredByModel
+      });
+      console.log(`Saved ${savedNotifications.length} project notifications to database`);
+    } catch (dbError) {
+      console.error('Error saving project notifications to database:', dbError);
+      // Continue with FCM sending even if database save fails
+    }
+
+    // Get FCM tokens for the users
+    const tokens = await FCMToken.find({
+      userId: { $in: userIds },
+      isActive: true,
+    });
+
+    if (tokens.length === 0) {
+      console.log(`No active FCM tokens found for User IDs: ${userIds.join(', ')}`);
+      return;
+    }
+
+    const tokenList = tokens.map(t => t.token);
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Send to each token individually
+    for (const token of tokenList) {
+      try {
+        // Convert all data values to strings for FCM compatibility
+        const fcmData = convertToFCMData({
+          type: notification.type || 'project',
+          projectId: notification.projectId || '',
+          ...notification.data,
+        });
+
+        const message = {
+          notification: {
+            title: notification.title,
+            body: notification.body,
+          },
+          data: fcmData,
+          token: token,
+        };
+
+        // Get Firebase Admin instance
+        const admin = require('firebase-admin');
+        await admin.messaging().send(message);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to send to token ${token}:`, error);
+        failureCount++;
+        
+        // Remove failed token
+        await FCMToken.deleteOne({ token });
+      }
+    }
+
+    console.log(`Project notification sent: ${successCount} successful, ${failureCount} failed`);
+
+    if (failureCount > 0) {
+      console.log(`Removed ${failureCount} failed FCM tokens`);
+    }
+
+    return {
+      success: true,
+      sent: successCount,
+      failed: failureCount
+    };
+  } catch (error) {
+    console.error('Error sending project FCM notification:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 /**
  * Project Controller
  * Handles all CRUD operations for projects
@@ -84,7 +209,9 @@ const createProject = async (req, res) => {
         originalName: file.originalName,
         mimetype: file.mimetype,
         size: file.size,
-        url: `${process.env.BACKEND_URL}/${file.path}`,
+        url: `${
+          process.env.BACKEND_URL || "http://localhost:5000"
+        }/assets/images/projects/attachments/${file.filename}`,
       }));
     }
 
@@ -114,6 +241,38 @@ const createProject = async (req, res) => {
 
     // Update customer statistics
     await customer.updateStatistics();
+
+    // Send notifications to users with project permissions
+    try {
+      await createProjectNotification({
+        type: 'project_created',
+        title: 'New Project Created',
+        body: `A new project "${customerName}" has been created by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+        data: {
+          projectId: project._id.toString(),
+          customerName: customerName,
+          projectAmount: parseFloat(projectAmount),
+          services: services,
+          createdBy: req.user ? req.user.name || req.user.email : 'Unknown',
+          projectDetails: {
+            customerName: customerName,
+            contactNumber: contactNumber,
+            email: email,
+            services: services,
+            projectAmount: parseFloat(projectAmount),
+            size: size,
+            projectStatus: projectStatus || 'new'
+          }
+        },
+        priority: 'medium',
+        projectId: project._id.toString(),
+        triggeredBy: req.user ? req.user.id : null,
+        triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+      });
+    } catch (notificationError) {
+      console.error('Error sending project notification:', notificationError);
+      // Don't fail the project creation if notification fails
+    }
 
     res.status(201).json({
       success: true,
@@ -373,12 +532,12 @@ const updateProject = async (req, res) => {
         const removeList = JSON.parse(req.body.removeAttachments);
         if (Array.isArray(removeList) && project.attachments) {
           project.attachments.forEach((att) => {
-            if (removeList.includes(att.filename) && att.url) {
-              const filePath = att.url.replace(
-                process.env.BACKEND_URL + "/",
-                ""
+            if (removeList.includes(att.filename) && att.filename) {
+              const absPath = path.join(
+                __dirname,
+                "../../public/assets/images/projects/attachments/",
+                att.filename
               );
-              const absPath = path.join(__dirname, "../../", filePath);
               if (fs.existsSync(absPath)) {
                 fs.unlinkSync(absPath);
               }
@@ -413,7 +572,9 @@ const updateProject = async (req, res) => {
         originalName: file.originalName,
         mimetype: file.mimetype,
         size: file.size,
-        url: `${process.env.BACKEND_URL}/${file.path}`,
+        url: `${
+          process.env.BACKEND_URL || "http://localhost:5000"
+        }/assets/images/projects/attachments/${file.filename}`,
       }));
       baseAttachments = baseAttachments.concat(newAttachments);
     }
@@ -425,12 +586,12 @@ const updateProject = async (req, res) => {
         const removeList = JSON.parse(req.body.removeAttachments);
         if (Array.isArray(removeList) && project.attachments) {
           project.attachments.forEach((att) => {
-            if (removeList.includes(att.filename) && att.url) {
-              const filePath = att.url.replace(
-                process.env.BACKEND_URL + "/",
-                ""
+            if (removeList.includes(att.filename) && att.filename) {
+              const absPath = path.join(
+                __dirname,
+                "../../public/assets/images/projects/attachments/",
+                att.filename
               );
-              const absPath = path.join(__dirname, "../../", filePath);
               if (fs.existsSync(absPath)) {
                 fs.unlinkSync(absPath);
               }
@@ -442,7 +603,7 @@ const updateProject = async (req, res) => {
       }
     }
 
-    // Optionally, validate required fields for update (skip if not provided)
+    // Validate required fields only if they are being updated
     const requiredFields = [
       "customerName",
       "contactNumber",
@@ -456,6 +617,8 @@ const updateProject = async (req, res) => {
     for (const field of requiredFields) {
       if (
         field in updateData &&
+        updateData[field] !== undefined &&
+        updateData[field] !== null &&
         (!updateData[field] || updateData[field] === "")
       ) {
         return res.status(400).json({
@@ -465,11 +628,85 @@ const updateProject = async (req, res) => {
       }
     }
 
+    // Store original project data for comparison
+    const originalProject = await Project.findById(req.params.id);
+
     // Update project
     project = await Project.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
+
+    // Send notifications for project updates
+    try {
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployee.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('projects', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        // Determine what was changed
+        const changes = [];
+        if (updateData.customerName && updateData.customerName !== originalProject.customerName) changes.push('customer name');
+        if (updateData.projectAmount && updateData.projectAmount !== originalProject.projectAmount) changes.push('project amount');
+        if (updateData.services && updateData.services !== originalProject.services) changes.push('services');
+        if (updateData.projectStatus && updateData.projectStatus !== originalProject.projectStatus) changes.push('project status');
+        if (updateData.comment !== undefined && updateData.comment !== originalProject.comment) changes.push('comment');
+        
+        const changesText = changes.length > 0 ? changes.join(', ') : 'details';
+        
+        const notification = {
+          type: 'project_updated',
+          title: 'Project Updated',
+          body: `Project "${project.customerName}" ${changesText} has been updated by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            projectId: project._id.toString(),
+            customerName: project.customerName,
+            projectAmount: project.projectAmount,
+            services: project.services,
+            updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            changes: {
+              fields: changes,
+              previousData: {
+                customerName: originalProject.customerName,
+                projectAmount: originalProject.projectAmount,
+                services: originalProject.services,
+                projectStatus: originalProject.projectStatus,
+                comment: originalProject.comment
+              },
+              newData: {
+                customerName: project.customerName,
+                projectAmount: project.projectAmount,
+                services: project.services,
+                projectStatus: project.projectStatus,
+                comment: project.comment
+              }
+            }
+          },
+          priority: 'medium',
+          projectId: project._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendProjectNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending project update notification:', notificationError);
+      // Don't fail the project update if notification fails
+    }
 
     res.status(200).json({
       success: true,
@@ -522,11 +759,64 @@ const updateProjectField = async (req, res) => {
     const updateData = {};
     updateData[field] = value;
 
+    // Store original project data for comparison
+    const originalProject = await Project.findById(req.params.id);
+
     // Update project
     project = await Project.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
+
+    // Send notifications for project field updates
+    try {
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployee.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('projects', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'project_field_updated',
+          title: 'Project Field Updated',
+          body: `Project "${project.customerName}" ${field} has been updated to "${value}" by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            projectId: project._id.toString(),
+            customerName: project.customerName,
+            field: field,
+            oldValue: originalProject[field],
+            newValue: value,
+            updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            changes: {
+              field: field,
+              previousValue: originalProject[field],
+              newValue: value
+            }
+          },
+          priority: 'medium',
+          projectId: project._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendProjectNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending project field update notification:', notificationError);
+      // Don't fail the project field update if notification fails
+    }
 
     res.status(200).json({
       success: true,
@@ -567,8 +857,67 @@ const deleteProject = async (req, res) => {
       });
     }
 
+    // Store project data before deletion for notification
+    const projectData = {
+      _id: project._id,
+      customerName: project.customerName,
+      projectAmount: project.projectAmount,
+      services: project.services,
+      projectStatus: project.projectStatus
+    };
+
     // Delete project
     await Project.findByIdAndDelete(req.params.id);
+
+    // Send notifications for project deletion
+    try {
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployee.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('projects', 'i') },
+            'actions.view': true
+          }
+        }
+      });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId => 
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'project_deleted',
+          title: 'Project Deleted',
+          body: `Project "${projectData.customerName}" has been deleted by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            projectId: projectData._id.toString(),
+            customerName: projectData.customerName,
+            projectAmount: projectData.projectAmount,
+            services: projectData.services,
+            deletedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            projectDetails: {
+              customerName: projectData.customerName,
+              projectAmount: projectData.projectAmount,
+              services: projectData.services,
+              projectStatus: projectData.projectStatus
+            }
+          },
+          priority: 'high',
+          projectId: projectData._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendProjectNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error('Error sending project deletion notification:', notificationError);
+      // Don't fail the project deletion if notification fails
+    }
 
     res.status(200).json({
       success: true,

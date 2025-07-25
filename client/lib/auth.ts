@@ -1,3 +1,4 @@
+import { getSession } from 'next-auth/react';
 
 export async function resendVerificationEmail(email: string) {
     try {
@@ -37,5 +38,29 @@ export async function resendVerificationEmail(email: string) {
       return { success: false, error: "An unexpected error occurred" }
     }
   }
+
+// Get JWT token from NextAuth session for Express API calls
+export async function getAuthToken(): Promise<string | null> {
+  try {
+    const response = await fetch('/api/auth/token', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.token;
+    } else {
+      const errorData = await response.json();
+      console.error('Failed to get auth token:', response.status, errorData);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+}
   
   

@@ -15,7 +15,7 @@ import axios from "axios";
 import { useState } from "react";
 import { Button } from "@heroui/button";
 import { useRouter } from "next/navigation";
-
+import { usePermissions } from "../../lib/utils";
 const ProjectCard = ({
   id,
   customer,
@@ -25,11 +25,11 @@ const ProjectCard = ({
   date,
   address,
   progress,
-
   color,
   assignedEmployees,
 }) => {
   const router = useRouter();
+  const { canView, canEdit } = usePermissions();
   // Generate avatars from assigned employees or use default
   const generateAvatars = (employees) => {
     if (employees && employees.length > 0) {
@@ -78,7 +78,7 @@ const ProjectCard = ({
 
   const [currentStatus, setCurrentStatus] = useState(status);
   const [loading, setLoading] = useState(false);
-
+  
   const handleStatusChange = async (newStatus) => {
     if (newStatus === currentStatus) return;
     setLoading(true);
@@ -111,6 +111,7 @@ const ProjectCard = ({
   };
 
   return (
+      canView("projects") && (
     <div
       className="cursor-pointer"
       onClick={() => router.push(`/dashboard/task?projectId=${id}`)}
@@ -125,6 +126,7 @@ const ProjectCard = ({
           >
             <div className="flex justify-between items-start gap-4">
               <div>
+                {canEdit("projects") && (
                 <Dropdown radius="sm" placement="bottom-start">
                   <DropdownTrigger>
                     <Button
@@ -166,8 +168,9 @@ const ProjectCard = ({
                         {opt.label}
                       </DropdownItem>
                     ))}
-                  </DropdownMenu>
-                </Dropdown>
+                    </DropdownMenu>
+                  </Dropdown>
+                )}
                 <div className=" mt-4 flex items-center gap-3 w-4/5  ">
                   <h3 className="text-2xl font-bold line-clamp-1 overflow-hidden text-ellipsis ">
                     {customer}
@@ -229,8 +232,9 @@ const ProjectCard = ({
           </div>
         </CardBody>
       </Card>
-    </div>
-  );
+    </div>  
+    )
+    );
 };
 
 export default ProjectCard;

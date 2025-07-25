@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 const {
   createProject,
   createProjectFromProposal,
@@ -14,13 +15,24 @@ const {
   updateProjectProgress,
   syncProjectWithTasks,
 } = require("../../controllers/project/projectController");
+const authenticateToken = require("../../middleware/authMiddleware");
 
 const router = express.Router();
+
+// Middleware to ensure uploads directory exists
+const uploadsDir = path.join(__dirname, "../../public/assets/images/projects");
+const attachmentsDir = path.join(uploadsDir, "attachments");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+if (!fs.existsSync(attachmentsDir)) {
+  fs.mkdirSync(attachmentsDir, { recursive: true });
+}
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "public/assets/images/project/attachments/");
+      cb(null, "public/assets/images/projects/attachments/");
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -104,56 +116,56 @@ const handleFileUpload = (req, res, next) => {
 // @route   GET /api/projects/stats
 // @desc    Get project statistics
 // @access  Private
-router.get("/stats", getProjectStats);
+router.get("/stats", authenticateToken, getProjectStats);
 
 // @route   POST /api/projects/from-proposal/:proposalId
 // @desc    Create new project from proposal
 // @access  Private
-router.post("/from-proposal/:proposalId", createProjectFromProposal);
+router.post("/from-proposal/:proposalId", authenticateToken, createProjectFromProposal);
 
 // @route   GET /api/projects
 // @desc    Get all projects with filtering and pagination
 // @access  Private
-router.get("/", getProjects);
+router.get("/", authenticateToken, getProjects);
 
 // @route   GET /api/projects/:id
 // @desc    Get single project
 // @access  Private
-router.get("/:id", getProject);
+router.get("/:id", authenticateToken, getProject);
 
 // @route   POST /api/projects
 // @desc    Create new project
 // @access  Private
-router.post("/", handleFileUpload, createProject);
+router.post("/", authenticateToken, handleFileUpload, createProject);
 
 // @route   PUT /api/projects/:id
 // @desc    Update project
 // @access  Private
-router.put("/:id", handleFileUpload, updateProject);
+router.put("/:id", authenticateToken, handleFileUpload, updateProject);
 
 // @route   PATCH /api/projects/:id/field
 // @desc    Update specific field of project
 // @access  Private
-router.patch("/:id/field", updateProjectField);
+router.patch("/:id/field", authenticateToken, updateProjectField);
 
 // @route   PATCH /api/projects/:id/tasks/:taskId
 // @desc    Update task status
 // @access  Private
-router.patch("/:id/tasks/:taskId", updateTaskStatus);
+router.patch("/:id/tasks/:taskId", authenticateToken, updateTaskStatus);
 
 // @route   PATCH /api/projects/:id/progress
 // @desc    Update project progress manually
 // @access  Private
-router.patch("/:id/progress", updateProjectProgress);
+router.patch("/:id/progress", authenticateToken, updateProjectProgress);
 
 // @route   POST /api/projects/:id/sync-tasks
 // @desc    Sync project with its tasks (progress and assigned employees)
 // @access  Private
-router.post("/:id/sync-tasks", syncProjectWithTasks);
+router.post("/:id/sync-tasks", authenticateToken, syncProjectWithTasks);
 
 // @route   DELETE /api/projects/:id
 // @desc    Delete project
 // @access  Private
-router.delete("/:id", deleteProject);
+router.delete("/:id", authenticateToken, deleteProject);
 
 module.exports = router;

@@ -23,6 +23,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then((registration) => {
+        console.log('Firebase service worker registered:', registration);
+      })
+      .catch((err) => {
+        console.error('Service worker registration failed:', err);
+      });
+  }
   return (
     <html lang="en">
       <body

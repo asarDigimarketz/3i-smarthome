@@ -12,9 +12,11 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { addToast } from "@heroui/toast";
 import DashboardHeader from "../header/DashboardHeader";
+import { usePermissions } from "../../lib/utils";
 
 export function CustomerForm({ isEdit = false, customerId = null }) {
   const router = useRouter();
+  const { canCreate, canEdit } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const [formData, setFormData] = useState({
@@ -247,6 +249,27 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Check permissions before submitting
+    if (isEdit) {
+      if (!canEdit("customers")) {
+        addToast({
+          title: "Access Denied",
+          description: "You don't have permission to edit customers",
+          color: "danger",
+        });
+        return;
+      }
+    } else {
+      if (!canCreate("customers")) {
+        addToast({
+          title: "Access Denied",
+          description: "You don't have permission to create customers",
+          color: "danger",
+        });
+        return;
+      }
+    }
 
     if (!validateForm()) {
       return;

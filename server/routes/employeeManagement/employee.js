@@ -1,25 +1,35 @@
 const express = require("express");
 const router = express.Router();
-const employeeController = require("../../controllers/employeeManagement/employeeController");
+const {
+  getEmployees,
+  getEmployeeById,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee,
+  uploadFiles,
+} = require("../../controllers/employeeManagement/employeeController");
+const authMiddleware = require("../../middleware/authMiddleware");
 
 // Get all employees
-router.get("/", employeeController.getEmployees);
+router.get("/", authMiddleware, getEmployees);
 
 // Create new employee with file upload
 router.post(
   "/",
-  employeeController.uploadFiles,
-  employeeController.createEmployee
+  authMiddleware,
+  uploadFiles,
+  createEmployee
 );
 
 // Get employee by ID
-router.get("/:employeeId", employeeController.getEmployeeById);
+router.get("/:employeeId", authMiddleware, getEmployeeById);
 
 // Update employee by ID
 router.put(
   "/:employeeId",
-  employeeController.uploadFiles,
-  employeeController.updateEmployee
+  authMiddleware,
+  uploadFiles,
+  updateEmployee
 );
 
 module.exports = router;
