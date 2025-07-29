@@ -17,8 +17,8 @@ export function ProjectsPage() {
   const { 
     canCreate, 
     canEdit, 
-    canDelete, 
-    canView,
+    
+   
     getUserPermissions 
   } = usePermissions();
 
@@ -36,16 +36,7 @@ export function ProjectsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 6; // Show 6 projects per page
 
-  const handleAddProject = () => {
-    if (!canCreate("projects")) {
-      addToast({
-        title: "Access Denied",
-        description: "You don't have permission to add projects",
-        color: "danger",
-      });
-      return;
-    }
-  };
+   
 
   // Handlers for filters
   const handleServiceChange = (service) => setServiceFilter(service);
@@ -118,22 +109,13 @@ export function ProjectsPage() {
             onChange={handleStatusChange}
           />
 
-          {canCreate("projects") ? (
+         
             <Link href="/dashboard/projects/add-project">
-              <Button color="primary" radius="sm" startContent={<Plus />}>
+              <Button color="primary" radius="sm" startContent={<Plus />} disabled={!canCreate("projects")}>
                 Add New
               </Button>
             </Link>
-          ) : (
-            <Button
-              color="primary"
-              radius="sm"
-              startContent={<Plus />}
-              onPress={handleAddProject}
-            >
-              Add New
-            </Button>
-          )}
+       
         </div>
       </div>
       <div className="space-y-6 bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">

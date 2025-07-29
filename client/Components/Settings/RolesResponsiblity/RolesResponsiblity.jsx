@@ -5,7 +5,7 @@ import { Trash2, Edit, Check, Plus } from "lucide-react";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
-import axios from "axios";
+import apiClient from "../../../lib/axios";
 import RolesResponsibilitySkeleton from "./RolesResponsibilitySkeleton";
 import PermissionGuard from "../../auth/PermissionGuard";
 import { DeleteConfirmModal } from "../../ui/delete-confirm-modal.jsx";
@@ -19,7 +19,6 @@ const permissions = [
   "Projects",
   "Proposals",
   "Tasks",
-  "Notifications",
 ];
 
 const actions = ["View", "Create", "Edit", "Delete"];
@@ -54,15 +53,7 @@ export default function RolesResponsibility() {
   const fetchRoles = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/rolesAndPermission`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/rolesAndPermission`);
       setRoles(response.data.roles);
     } catch (error) {
       console.error("Error fetching roles:", error);
@@ -195,32 +186,14 @@ export default function RolesResponsibility() {
 
     try {
       if (isEditing) {
-        await axios.put(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/rolesAndPermission`,
-          { ...roleData, id: editId },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        await apiClient.put(`/api/rolesAndPermission`, { ...roleData, id: editId });
         addToast({
           title: "Success",
           description: "Role updated successfully!",
           color: "success",
         });
       } else {
-        await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/rolesAndPermission`,
-          roleData,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        await apiClient.post(`/api/rolesAndPermission`, roleData);
         addToast({
           title: "Success",
           description: "Role added successfully!",
@@ -286,16 +259,7 @@ export default function RolesResponsibility() {
     if (!roleToDelete) return;
 
     try {
-      await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/rolesAndPermission`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-          data: { id: roleToDelete._id },
-        }
-      );
+      await apiClient.delete(`/api/rolesAndPermission`, { data: { id: roleToDelete._id } });
       addToast({
         title: "Success",
         description: "Role deleted successfully!",

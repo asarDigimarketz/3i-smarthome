@@ -12,8 +12,11 @@ import ProjectCard from "../Dashboard/ProjectCard.jsx";
 import { useState, useEffect } from "react";
 import { EmployeeModal } from "./EmployeeModal";
 import { Pagination } from "@heroui/pagination";
+import apiClient from "../../lib/axios";
+import { usePermissions } from "../../lib/utils";
 
 const EmployeeDetail = () => {
+  const { canEdit } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const employeeId = params?.employeeId;
@@ -32,42 +35,21 @@ const EmployeeDetail = () => {
     try {
       setLoading(true);
       // 1. Fetch employee details
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement/${employeeId}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/employeeManagement/${employeeId}`);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch employee data");
-      }
-
-      const data = await response.json();
-      if (!data.success)
-        throw new Error(data.message || "Failed to fetch employee data");
-      const emp = data.employee;
+      if (!response.data.success)
+        throw new Error(response.data.message || "Failed to fetch employee data");
+      const emp = response.data.employee;
 
       // 2. Fetch projects assigned to this employee
       let projects = [];
       let completed = 0;
       let ongoing = 0;
       if (emp && emp._id) {
-        const projectsRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/projects?assignedEmployees=${emp._id}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
-        if (projectsRes.ok) {
-          const projectsData = await projectsRes.json();
-          if (projectsData.success && Array.isArray(projectsData.data)) {
+        const projectsRes = await apiClient.get(`/api/projects?assignedEmployees=${emp._id}`);
+        if (projectsRes.data.success && Array.isArray(projectsRes.data.data)) {
             // Only include projects where assignedEmployees includes this employee
-            projects = projectsData.data
+            projects = projectsRes.data.data
               .filter(
                 (proj) =>
                   Array.isArray(proj.assignedEmployees) &&
@@ -114,7 +96,6 @@ const EmployeeDetail = () => {
                   assignedEmployees: proj.assignedEmployees || [],
                 };
               });
-          }
         }
       }
 
@@ -278,6 +259,7 @@ const EmployeeDetail = () => {
             color="primary"
             startContent={<Edit />}
             onPress={() => setIsModalOpen(true)}
+            disabled={!canEdit("employees")}
           >
             Edit
           </Button>

@@ -17,7 +17,7 @@ import { Input, Textarea } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import { X, FileText, ChevronDown, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { usePermissions } from "../../lib/utils";
 
@@ -213,48 +213,6 @@ const ProposalDetailsModal = ({
     { key: "Scrap", label: "Scrap", color: "default" },
     { key: "Confirmed", label: "Confirmed", color: "success" },
   ];
-  const handleFixAmount = async () => {
-    try {
-      setLoading(true);
-
-      // Update the project amount in the API
-      const response = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalData._id}/field`,
-        {
-          field: "projectAmount",
-          value: formData.projectAmount,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        // Make status editable by enabling editing mode
-        setIsEditing(true);
-        addToast({
-          title: "Success",
-          description: "Amount fixed and status is now editable",
-          color: "success",
-        });
-        // Refresh parent component if callback provided
-        onUpdate && onUpdate();
-        // Do NOT close the modal here
-      }
-    } catch (error) {
-      console.error("Error fixing amount:", error);
-      addToast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to fix amount",
-        color: "danger",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
   // Handle save
   const handleSave = async () => {
     if (!canEdit("proposals")) {
@@ -289,16 +247,11 @@ const ProposalDetailsModal = ({
         submitData.append("attachments", selectedFile);
       }
 
-      const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalData._id}`,
-        submitData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.put(`/api/proposals/${proposalData._id}`, submitData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.data.success) {
         addToast({
@@ -356,36 +309,20 @@ const ProposalDetailsModal = ({
   const handleProjectConfirmed = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Starting project confirmation for proposal:', proposalData._id);
 
       // First, update proposal status to Confirmed
-      const statusResponse = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalData._id}/field`,
-        {
-          field: "status",
-          value: "Confirmed",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const statusResponse = await apiClient.patch(`/api/proposals/${proposalData._id}/field`, {
+        field: "status",
+        value: "Confirmed",
+      });
+
+      console.log('✅ Status update response:', statusResponse.data);
 
       if (statusResponse.data.success) {
-        // Then create project from proposal
-        const projectResponse = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/projects/from-proposal/${proposalData._id}`,
-          {},
-          {
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
-
-        if (projectResponse.data.success) {
+        // Check if the status update response indicates a project was already created
+        if (statusResponse.data.message?.includes("project created automatically")) {
+          console.log('✅ Project was created automatically during status update');
           addToast({
             title: "Success",
             description: "Project confirmed and created successfully!",
@@ -393,31 +330,73 @@ const ProposalDetailsModal = ({
           });
           onUpdate && onUpdate(); // Refresh the table
           onClose();
-        } else {
-          addToast({
-            title: "Warning",
-            description: "Proposal confirmed but failed to create project",
-            color: "warning",
-          });
+          return;
         }
-      }
-    } catch (error) {
-      console.error("Error confirming project:", error);
-      if (error.response?.data?.message?.includes("already exists")) {
-        addToast({
-          title: "Info",
-          description:
-            "Project confirmed! (Project already exists for this proposal)",
-          color: "primary",
-        });
+
+        // Only try to create project if it wasn't created automatically
+        console.log('🏗️ Project not created automatically, creating manually...');
+        try {
+          const projectResponse = await apiClient.post(`/api/projects/from-proposal/${proposalData._id}`, {});
+
+          console.log('✅ Project creation response:', projectResponse.data);
+
+          if (projectResponse.data.success) {
+            addToast({
+              title: "Success",
+              description: "Project confirmed and created successfully!",
+              color: "success",
+            });
+            onUpdate && onUpdate(); // Refresh the table
+            onClose();
+          } else {
+            addToast({
+              title: "Warning",
+              description: "Proposal confirmed but failed to create project",
+              color: "warning",
+            });
+          }
+        } catch (projectError) {
+          console.error('❌ Error creating project from proposal:', projectError.response?.data);
+          
+          // Handle specific error cases
+          if (projectError.response?.data?.message?.includes("already exists")) {
+            console.log('✅ Project already exists - treating as success');
+            addToast({
+              title: "Success",
+              description: "Project confirmed! (Project already exists for this proposal)",
+              color: "success",
+            });
+            onUpdate && onUpdate(); // Refresh the table
+            onClose();
+          } else if (projectError.response?.data?.message?.includes("Only confirmed proposals")) {
+            addToast({
+              title: "Error",
+              description: "Proposal status update failed. Please try again.",
+              color: "danger",
+            });
+          } else {
+            addToast({
+              title: "Error",
+              description: projectError.response?.data?.message || "Failed to create project from proposal",
+              color: "danger",
+            });
+          }
+        }
       } else {
+        console.error('❌ Status update failed:', statusResponse.data);
         addToast({
           title: "Error",
-          description:
-            error.response?.data?.error || "Failed to confirm project",
+          description: "Failed to update proposal status",
           color: "danger",
         });
       }
+    } catch (error) {
+      console.error("❌ Error confirming project:", error.response?.data);
+      addToast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to confirm project",
+        color: "danger",
+      });
     } finally {
       setLoading(false);
     }
@@ -496,10 +475,11 @@ const ProposalDetailsModal = ({
               color="primary"
               className="px-3"
               onPress={() => setShowAmountInput(true)} // Show input to add new amount
+              disabled={!canEdit("proposals")}
             >
               Add
             </Button>
-            <Button
+            {/* <Button
               size="sm"
               color="primary"
               className="px-3"
@@ -509,7 +489,7 @@ const ProposalDetailsModal = ({
               disabled={loading}
             >
               {loading ? "Fixing..." : "Fix"}
-            </Button>
+            </Button> */}
           </>
         )}
       </div>
@@ -840,32 +820,32 @@ const ProposalDetailsModal = ({
             {/* Modal Footer */}
             <ModalFooter className="px-6 py-4 flex justify-between">
               <div className="flex gap-2">
-                {canEdit("proposals") && (
+               
                   <Button
                     color="primary"
                     onPress={handleSave}
                     className="px-6"
-                    disabled={loading}
+                    disabled={loading || !canEdit("proposals")}
                     radius="md"
                   >
                     save
                   </Button>
-                )}
-                {canEdit("proposals") && (
+              
+               
                   <Button
                     onPress={handleEdit}
                     className="px-6 bg-[#616161] text-white"
-                    disabled={loading}
+                    disabled={loading || !canEdit("proposals")}
                     radius="md"
                   >
                     Edit
                   </Button>
-                )}
-                {formData.status !== "Confirmed" && canDelete("proposals") && (
+               
+                {formData.status !== "Confirmed" && (
                   <Button
                     onPress={handleDelete}
                     className="px-6  text-white hover:bg-red-50 bg-[#999999]"
-                    disabled={loading}
+                    disabled={loading || !canDelete("proposals")}
                     radius="md"
                   >
                     Delete

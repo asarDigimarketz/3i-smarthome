@@ -1,6 +1,6 @@
 // Shared customer autocomplete logic for AddProject and AddProposal
 import { useState, useCallback } from "react";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 
 export function useCustomerAutocomplete() {
   const [customerOptions, setCustomerOptions] = useState([]);
@@ -26,16 +26,7 @@ export function useCustomerAutocomplete() {
     }
     setIsSearching(true);
     try {
-      const response = await axios.get(
-        `${
-          process.env.NEXT_PUBLIC_API_URL
-        }/api/customers?search=${encodeURIComponent(search)}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/customers?search=${encodeURIComponent(search)}`);
       let customers = response.data.data?.customers || [];
       // Filter for matches in either field
       let filtered = customers.filter(
@@ -114,22 +105,23 @@ export function useCustomerAutocomplete() {
   };
 
   // Handle input changes
-  const handleEmailInputChange = (value, setFormData) => {
+  const handleEmailInputChange = useCallback((value, setFormData) => {
     setEmailInput(value);
     setFormData((prev) => ({ ...prev, email: value }));
     if (selectedCustomer && selectedCustomer.email !== value) {
       setSelectedCustomer(null);
     }
     debouncedFetchCustomers(value);
-  };
-  const handleContactInputChange = (value, setFormData) => {
+  }, [selectedCustomer, debouncedFetchCustomers]);
+
+  const handleContactInputChange = useCallback((value, setFormData) => {
     setContactInput(value);
     setFormData((prev) => ({ ...prev, contactNumber: value }));
     if (selectedCustomer && selectedCustomer.contactNumber !== value) {
       setSelectedCustomer(null);
     }
     debouncedFetchCustomers(value);
-  };
+  }, [selectedCustomer, debouncedFetchCustomers]);
 
   return {
     customerOptions,

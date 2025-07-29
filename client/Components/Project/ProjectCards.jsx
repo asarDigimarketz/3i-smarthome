@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@heroui/card";
 import { Progress } from "@heroui/progress";
 import { Phone } from "lucide-react";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { Avatar, AvatarGroup } from "@heroui/avatar";
 import {
   Dropdown,
@@ -25,13 +25,14 @@ export function ProjectCards({
   page = 1,
   pageSize = 6,
   setTotalPages,
+  userPermissions = {},
 }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusLoading, setStatusLoading] = useState({});
   const [projectStatuses, setProjectStatuses] = useState({});
   const router = useRouter();
-
+  const { hasEditPermission } = userPermissions;
   // Build query params for backend filtering
   const buildQueryParams = () => {
     const params = [];
@@ -41,8 +42,35 @@ export function ProjectCards({
       params.push(`service=${encodeURIComponent(serviceFilter)}`);
     if (statusFilter) params.push(`status=${encodeURIComponent(statusFilter)}`);
     if (dateRange && dateRange.start && dateRange.end) {
-      params.push(`startDate=${encodeURIComponent(dateRange.start)}`);
-      params.push(`endDate=${encodeURIComponent(dateRange.end)}`);
+      try {
+        // Convert DateRangePicker format to Date objects
+        // DateRangePicker returns { year, month, day } format
+        const startDate = new Date(
+          dateRange.start.year,
+          dateRange.start.month - 1, // Month is 0-indexed in Date constructor
+          dateRange.start.day
+        );
+        
+        const endDate = new Date(
+          dateRange.end.year,
+          dateRange.end.month - 1, // Month is 0-indexed in Date constructor
+          dateRange.end.day
+        );
+        
+        // Set start time to beginning of day (00:00:00)
+        startDate.setHours(0, 0, 0, 0);
+        
+        // Set end time to end of day (23:59:59.999) for same day filtering
+        endDate.setHours(23, 59, 59, 999);
+        
+       
+        
+        params.push(`startDate=${encodeURIComponent(startDate.toISOString())}`);
+        params.push(`endDate=${encodeURIComponent(endDate.toISOString())}`);
+      } catch (dateError) {
+        console.error('Error converting project date range:', dateError);
+        // Continue without date filtering if date conversion fails
+      }
     }
     params.push(`page=${page}`);
     params.push(`limit=${pageSize}`);
@@ -54,14 +82,7 @@ export function ProjectCards({
     setLoading(true);
     try {
       const query = buildQueryParams();
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/projects${query}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/projects${query}`);
       if (response.data.success) {
         // Transform backend data to match the UI structure
         const transformedProjects = response.data.data.map(
@@ -245,11 +266,10 @@ export function ProjectCards({
   const handleStatusChange = async (projectId, newStatus) => {
     setStatusLoading((prev) => ({ ...prev, [projectId]: true }));
     try {
-      const res = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/field`,
-        { field: "projectStatus", value: newStatus },
-        { headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY } }
-      );
+      const res = await apiClient.patch(`/api/projects/${projectId}/field`, { 
+        field: "projectStatus", 
+        value: newStatus 
+      });
       if (res.data.success) {
         setProjectStatuses((prev) => ({ ...prev, [projectId]: newStatus }));
         // Optionally show success toast
@@ -307,7 +327,7 @@ export function ProjectCards({
                     <DropdownTrigger>
                       <Button
                         className={`px-3 py-1 rounded-sm border border-white/10 text-white text-sm font-medium bg-opacity-80 bg-white/20 hover:bg-white/20`}
-                        disabled={statusLoading[project.id]}
+                        disabled={statusLoading[project.id] || !hasEditPermission}
                         type="button"
                         variant="faded"
                         size="sm"

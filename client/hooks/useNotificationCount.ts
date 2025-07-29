@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { getAuthToken } from '../lib/auth';
+import apiClient from '../lib/axios';
 
 export const useNotificationCount = () => {
   const { data: session } = useSession();
@@ -12,26 +12,10 @@ export const useNotificationCount = () => {
 
     try {
       setLoading(true);
-      const token = await getAuthToken();
-      if (!token) {
-        console.log("No session token available");
-        return;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications/stats`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || '',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setUnreadCount(data.data.unread || 0);
-        }
+      const response = await apiClient.get(`/api/notifications/stats`);
+      
+      if (response.data.success) {
+        setUnreadCount(response.data.data.unread || 0);
       }
     } catch (error) {
       console.error('Error fetching unread count:', error);
@@ -51,8 +35,8 @@ export const useNotificationCount = () => {
   useEffect(() => {
     if (!session?.user) return;
 
-    // Poll every 10 seconds for real-time updates
-    const interval = setInterval(fetchUnreadCount, 10000);
+    // Poll every 60 seconds for real-time updates
+    const interval = setInterval(fetchUnreadCount, 60000);
     
     return () => clearInterval(interval);
   }, [session, fetchUnreadCount]);

@@ -10,12 +10,13 @@ import { Textarea } from "@heroui/input";
 import { Divider } from "@heroui/divider";
 import { addToast } from "@heroui/toast";
 import { useRouter, useSearchParams } from "next/navigation";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import Link from "next/link.js";
 import { ProjectStatusSelect } from "./ProjectStatusSelect.jsx";
 import { ServicesSelect } from "../Proposal/ServiceSelect.jsx";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import { usePermissions } from "../../lib/utils";
+import axios from "axios";
 
 export function AddProjectPage() {
   const router = useRouter();
@@ -107,10 +108,7 @@ export function AddProjectPage() {
   useEffect(() => {
     if (projectId) {
       setIsLoading(true);
-      axios
-        .get(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`, {
-          headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY },
-        })
+      apiClient.get(`/api/projects/${projectId}`)
         .then((res) => {
           if (res.data.success && res.data.data) {
             const p = res.data.data;
@@ -137,6 +135,20 @@ export function AddProjectPage() {
                 new Date(p.projectDate).toISOString().split("T")[0],
               attachments: Array.isArray(p.attachments) ? p.attachments : [],
             });
+            
+            // Update input values for autocomplete fields
+            // Use a separate effect to avoid infinite loops
+            if (p.email || p.contactNumber) {
+              // Use setTimeout to ensure this runs after the current render cycle
+              setTimeout(() => {
+                if (p.email) {
+                  handleEmailInputChange(p.email, setFormData);
+                }
+                if (p.contactNumber) {
+                  handleContactInputChange(p.contactNumber, setFormData);
+                }
+              }, 100);
+            }
           }
         })
         .catch(() => {
@@ -148,7 +160,7 @@ export function AddProjectPage() {
         })
         .finally(() => setIsLoading(false));
     }
-  }, [projectId]);
+  }, [projectId]); // Keep only projectId as dependency
 
   const handleInputChange = (field, value) => {
     if (field.includes(".")) {
@@ -324,27 +336,17 @@ export function AddProjectPage() {
 
       let response;
       if (projectId) {
-        response = await axios.put(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`,
-          submitData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        response = await apiClient.put(`/api/projects/${projectId}`, submitData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
       } else {
-        response = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/projects`,
-          submitData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        response = await apiClient.post(`/api/projects`, submitData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
       }
 
       if (response.data.success) {

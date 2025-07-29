@@ -58,16 +58,7 @@ function App() {
     setCurrentPage(1); // Reset to first page when filter changes
   };
 
-  const handleAddProposal = () => {
-    if (!canCreate("proposals")) {
-      addToast({
-        title: "Access Denied",
-        description: "You don't have permission to add proposals",
-        color: "danger",
-      });
-      return;
-    }
-  };
+ 
 
   return (
     <div className="flex bg-gray-50 min-h-screen overflow-x-auto">
@@ -127,27 +118,20 @@ function App() {
                 }
               />
               <StatusDropdown onStatusChange={handleStatusChange} />
-              {canCreate("proposals") ? (
+              
                 <Link href="/dashboard/proposal/add-proposal">
                   <Button
                     color="primary"
                     radius="sm"
                     startContent={<Plus />}
                     size="md"
+                    disabled={!canCreate("proposals")}
                   >
                     Add New
                   </Button>
                 </Link>
-              ) : (
-                <Button
-                  color="primary"
-                  radius="sm"
-                  startContent={<Plus />}
-                  onPress={handleAddProposal}
-                >
-                  Add New
-                </Button>
-              )}
+             
+            
             </div>
           </div>
 

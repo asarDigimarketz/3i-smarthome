@@ -6,11 +6,13 @@ import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import ProjectCard from "../Dashboard/ProjectCard.jsx";
 import { ArrowLeft, Edit2, Mail, MapPin, Phone, Plus } from "lucide-react";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import { Pagination } from "@heroui/pagination";
+import { usePermissions } from "../../lib/utils";
 
 const CustomerDetail = () => {
+  const { canEdit,  } = usePermissions();
   const { id } = useParams();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,14 +24,7 @@ const CustomerDetail = () => {
   const fetchCustomer = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/customers/${id}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/customers/${id}`);
 
       if (response.data.success) {
         setCustomer(response.data.data.customer);
@@ -96,9 +91,7 @@ const CustomerDetail = () => {
           >
             Back
           </Button>
-          <Button color="primary" startContent={<Plus />}>
-            Add
-          </Button>
+       
         </div>
       </div>
       <div className="bg-white rounded-xl shadow-lg p-6">
@@ -130,7 +123,7 @@ const CustomerDetail = () => {
               </div>
 
               <Link href={`/dashboard/customers/${id}/edit`}>
-                <Button isIconOnly variant="light" className="self-start">
+                <Button isIconOnly variant="light" className="self-start" disabled={!canEdit("customers")}>
                   <Edit2 width={18} />
                 </Button>
               </Link>

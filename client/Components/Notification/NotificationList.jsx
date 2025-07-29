@@ -4,11 +4,20 @@ import { useState, useEffect } from 'react';
 import { Card, CardBody } from '@heroui/card';
 import { Button } from '@heroui/button';
 import { Avatar } from '@heroui/avatar';
-import { Check, Trash2, RefreshCw } from 'lucide-react';
+import { Check, Trash2, RefreshCw, CheckCheck, Trash2Icon } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { addToast } from '@heroui/toast';
 import { getAuthToken } from '../../lib/auth';
 import { useNotificationCount } from '../../hooks/useNotificationCount';
+import apiClient from '../../lib/axios';
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+} from '@heroui/modal';
 
 const NotificationList = () => {
   const { data: session } = useSession();
@@ -18,6 +27,12 @@ const NotificationList = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { 
+    isOpen: isMarkAllOpen, 
+    onOpen: onMarkAllOpen, 
+    onClose: onMarkAllClose 
+  } = useDisclosure();
 
   const fetchNotifications = async (pageNum = 1, isRefresh = false) => {
     if (!session?.user) return;
@@ -29,26 +44,8 @@ const NotificationList = () => {
         setLoading(true);
       }
 
-      const token = await getAuthToken();
-      if (!token) {
-        console.log("No session token available");
-        return;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications?page=${pageNum}&limit=20`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY,
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch notifications');
-      }
-
-      const data = await response.json();
+      const response = await apiClient.get(`/api/notifications?page=${pageNum}&limit=20`);
+      const data = response.data;
       
       if (data.success && data.data) {
         if (isRefresh || pageNum === 1) {
@@ -74,22 +71,9 @@ const NotificationList = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      const token = await getAuthToken();
-      if (!token) {
-        console.log("No session token available");
-        return;
-      }
+      const response = await apiClient.put(`/api/notifications/${notificationId}/read`);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY,
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
+      if (response.data.success) {
         setNotifications(prev => 
           prev.map(notif => 
             notif._id === notificationId 
@@ -119,22 +103,9 @@ const NotificationList = () => {
 
   const deleteNotification = async (notificationId) => {
     try {
-      const token = await getAuthToken();
-      if (!token) {
-        console.log("No session token available");
-        return;
-      }
+      const response = await apiClient.delete(`/api/notifications/${notificationId}`);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${notificationId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY,
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
+      if (response.data.success) {
         setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
         
         // Refresh the notification badge count
@@ -154,6 +125,62 @@ const NotificationList = () => {
         color: 'danger',
       });
     }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const response = await apiClient.put('/api/notifications/read-all');
+
+      if (response.data.success) {
+        setNotifications(prev => 
+          prev.map(notif => ({ ...notif, isRead: true }))
+        );
+        
+        // Refresh the notification badge count
+        refreshCount();
+        
+        addToast({
+          title: 'Success',
+          description: `Marked ${response.data.data.updatedCount} notifications as read`,
+          color: 'success',
+        });
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      addToast({
+        title: 'Error',
+        description: 'Failed to mark notifications as read',
+        color: 'danger',
+      });
+    }
+    onMarkAllClose();
+  };
+
+  const deleteAllNotifications = async () => {
+    try {
+      const response = await apiClient.delete('/api/notifications/delete-all');
+
+      if (response.data.success) {
+        setNotifications([]);
+        
+        // Refresh the notification badge count
+        refreshCount();
+        
+        addToast({
+          title: 'Success',
+          description: `Deleted ${response.data.data.deletedCount} notifications`,
+          color: 'success',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting all notifications:', error);
+      addToast({
+        title: 'Error',
+        description: 'Failed to delete notifications',
+        color: 'danger',
+      });
+    }
+    onClose();
   };
 
   const formatTimeAgo = (dateString) => {
@@ -250,17 +277,41 @@ const NotificationList = () => {
 
   return (
     <div className="space-y-4">
-      {/* Refresh Button */}
+      {/* Header with Actions */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Notifications</h2>
-        <Button
-          isIconOnly
-          variant="light"
-          onPress={onRefresh}
-          isLoading={refreshing}
-        >
-          <RefreshCw size={20} />
-        </Button>
+        <div className="flex items-center gap-2">
+          {notifications.length > 0 && (
+            <>
+              <Button
+                size="sm"
+                variant="light"
+                color="primary"
+                onPress={onMarkAllOpen}
+                startContent={<CheckCheck size={16} />}
+              >
+                Mark All Read
+              </Button>
+              <Button
+                size="sm"
+                variant="light"
+                color="danger"
+                onPress={onOpen}
+                startContent={<Trash2Icon size={16} />}
+              >
+                Delete All
+              </Button>
+            </>
+          )}
+          <Button
+            isIconOnly
+            variant="light"
+            onPress={onRefresh}
+            isLoading={refreshing}
+          >
+            <RefreshCw size={20} />
+          </Button>
+        </div>
       </div>
 
       {/* Notifications List */}
@@ -353,6 +404,50 @@ const NotificationList = () => {
           )}
         </div>
       )}
+
+      {/* Delete All Confirmation Modal */}
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            Delete All Notifications
+          </ModalHeader>
+          <ModalBody>
+            <p>
+              Are you sure you want to delete all notifications? This action cannot be undone.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="default" variant="light" onPress={onClose}>
+              Cancel
+            </Button>
+            <Button color="danger" onPress={deleteAllNotifications}>
+              Delete All
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Mark All as Read Confirmation Modal */}
+      <Modal isOpen={isMarkAllOpen} onClose={onMarkAllClose}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            Mark All as Read
+          </ModalHeader>
+          <ModalBody>
+            <p>
+              Are you sure you want to mark all notifications as read? This will update all unread notifications.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="default" variant="light" onPress={onMarkAllClose}>
+              Cancel
+            </Button>
+            <Button color="primary" onPress={markAllAsRead}>
+              Mark All Read
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

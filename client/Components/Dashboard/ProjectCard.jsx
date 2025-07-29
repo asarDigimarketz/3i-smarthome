@@ -11,7 +11,7 @@ import {
   DropdownItem,
 } from "@heroui/dropdown";
 import { addToast } from "@heroui/toast";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { useState } from "react";
 import { Button } from "@heroui/button";
 import { useRouter } from "next/navigation";
@@ -83,11 +83,10 @@ const ProjectCard = ({
     if (newStatus === currentStatus) return;
     setLoading(true);
     try {
-      const res = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${id}/field`,
-        { field: "projectStatus", value: newStatus },
-        { headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY } }
-      );
+      const res = await apiClient.patch(`/api/projects/${id}/field`, { 
+        field: "projectStatus", 
+        value: newStatus 
+      });
       if (res.data.success) {
         setCurrentStatus(newStatus);
         addToast({
@@ -126,17 +125,17 @@ const ProjectCard = ({
           >
             <div className="flex justify-between items-start gap-4">
               <div>
-                {canEdit("projects") && (
+              
                 <Dropdown radius="sm" placement="bottom-start">
                   <DropdownTrigger>
                     <Button
                       className={`px-3 py-1 rounded-sm border border-white/10 text-white text-sm font-medium bg-opacity-80 bg-white/20 hover:bg-white/20`}
-                      disabled={loading}
+                      disabled={loading || !canEdit("projects")}
                       type="button"
                       variant="faded"
                       size="sm"
                       endContent={<ChevronDown className="w-4 h-4" />}
-                      onClick={(e) => {
+                      onPress={(e) => {
                         if (e.stopPropagation) e.stopPropagation();
                       }}
                     >
@@ -170,7 +169,7 @@ const ProjectCard = ({
                     ))}
                     </DropdownMenu>
                   </Dropdown>
-                )}
+              
                 <div className=" mt-4 flex items-center gap-3 w-4/5  ">
                   <h3 className="text-2xl font-bold line-clamp-1 overflow-hidden text-ellipsis ">
                     {customer}

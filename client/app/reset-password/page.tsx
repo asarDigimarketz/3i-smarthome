@@ -21,16 +21,16 @@ const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
 )
 
 const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
-  <div className="fixed inset-0 backdrop-blur-xl bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-purple-900/95 flex flex-col items-center justify-center z-50">
+  <div className="fixed inset-0 backdrop-blur-xl bg-gradient-to-br from-slate-900/95 via-red-900/90 to-red-800/95 flex flex-col items-center justify-center z-50">
     <div className="relative w-40 h-40 mb-8">
       {/* Animated tech rings */}
-      <div className="absolute inset-0 border-2 border-blue-400/60 rounded-full animate-pulse"></div>
-      <div className="absolute inset-4 border-2 border-purple-400/40 rounded-full animate-spin-slow"></div>
-      <div className="absolute inset-8 border-2 border-cyan-400/30 rounded-full animate-spin-reverse"></div>
+      <div className="absolute inset-0 border-2 border-red-400/60 rounded-full animate-pulse"></div>
+      <div className="absolute inset-4 border-2 border-red-500/40 rounded-full animate-spin-slow"></div>
+      <div className="absolute inset-8 border-2 border-red-600/30 rounded-full animate-spin-reverse"></div>
 
       {/* Glowing center */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full animate-pulse flex items-center justify-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-500 rounded-full animate-pulse flex items-center justify-center">
           {hotelLogo ? (
             <div className="relative w-10 h-10">
               <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain" />
@@ -42,7 +42,7 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
       </div>
     </div>
 
-    <h3 className="text-3xl font-bold text-white mb-3 animate-fade-in bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+    <h3 className="text-3xl font-bold text-white mb-3 animate-fade-in bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
       Resetting Password
     </h3>
     <p className="text-gray-300 text-center max-w-md animate-fade-in-delay text-lg">
@@ -50,7 +50,7 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
     </p>
 
     <div className="w-80 h-2 bg-slate-800/50 rounded-full mt-8 overflow-hidden backdrop-blur-sm">
-      <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 rounded-full animate-progress-infinite"></div>
+      <div className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 rounded-full animate-progress-infinite"></div>
     </div>
   </div>
 )
@@ -191,14 +191,14 @@ const ResetPasswordContent = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 relative overflow-hidden">
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-red-800 relative overflow-hidden">
       {loading && <LoadingOverlay hotelLogo={hotelLogo} />}
 
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute top-20 left-20 w-72 h-72 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-red-600/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-400/5 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
 
       {/* Left Section - Password Reset Features */}
@@ -207,12 +207,12 @@ const ResetPasswordContent = () => {
           <div className="text-center mb-12">
             {hotelLogo && (
               <div className="mb-8 flex justify-center">
-                <div className="relative w-24 h-24 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-2xl p-4 backdrop-blur-sm border border-white/10">
+                <div className="relative w-24 h-24 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-2xl p-4 backdrop-blur-sm border border-white/10">
                   <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-2" />
                 </div>
               </div>
             )}
-            <h1 className="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
               Hotel Management
             </h1>
             <p className="text-xl text-gray-300 mb-8">Secure Your Account</p>
@@ -224,19 +224,19 @@ const ResetPasswordContent = () => {
                 icon: <Lock className="w-6 h-6" />,
                 title: "New Password",
                 description: "Create a strong, secure password",
-                gradient: "from-blue-500 to-cyan-500",
+                gradient: "from-red-500 to-red-600",
               },
               {
                 icon: <Shield className="w-6 h-6" />,
                 title: "Enhanced Security",
                 description: "Advanced password validation",
-                gradient: "from-purple-500 to-pink-500",
+                gradient: "from-red-600 to-red-700",
               },
               {
                 icon: <User className="w-6 h-6" />,
                 title: "Account Access",
                 description: "Regain access to your dashboard",
-                gradient: "from-green-500 to-emerald-500",
+                gradient: "from-red-700 to-red-800",
               },
             ].map((feature, index) => (
               <div
@@ -267,7 +267,7 @@ const ResetPasswordContent = () => {
             {/* Mobile logo */}
             {hotelLogo && (
               <div className="mb-8 flex justify-center lg:hidden">
-                <div className="relative w-20 h-20 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
+                <div className="relative w-20 h-20 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
                   <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-1" />
                 </div>
               </div>
@@ -289,12 +289,12 @@ const ResetPasswordContent = () => {
                     variant="bordered"
                     radius="lg"
                     size="lg"
-                    startContent={<Lock className="text-blue-400" />}
+                    startContent={<Lock className="text-red-400" />}
                     endContent={
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="text-blue-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-blue-400/20"
+                        className="text-red-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-red-400/20"
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -304,9 +304,9 @@ const ResetPasswordContent = () => {
                     onChange={handlePasswordChange}
                     classNames={{
                       inputWrapper: `bg-transparent ${
-                        passwordErrors.length > 0 ? "border-red-500/40" : "border-blue-400/40"
-                      } focus:border-blue-500 h-[50px]`,
-                      input: "text-white placeholder:text-blue-100",
+                        passwordErrors.length > 0 ? "border-red-500/40" : "border-red-400/40"
+                      } focus:border-red-500 h-[50px]`,
+                      input: "text-white placeholder:text-red-100",
                     }}
                     className="mb-4"
                   />
@@ -338,12 +338,12 @@ const ResetPasswordContent = () => {
                     variant="bordered"
                     radius="lg"
                     size="lg"
-                    startContent={<Lock className="text-blue-400" />}
+                    startContent={<Lock className="text-red-400" />}
                     endContent={
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="text-blue-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-blue-400/20"
+                        className="text-red-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-red-400/20"
                       >
                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -352,8 +352,8 @@ const ResetPasswordContent = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     classNames={{
-                      inputWrapper: "bg-transparent border-blue-400/40 focus:border-blue-500 h-[50px]",
-                      input: "text-white placeholder:text-blue-100",
+                      inputWrapper: "bg-transparent border-red-400/40 focus:border-red-500 h-[50px]",
+                      input: "text-white placeholder:text-red-100",
                     }}
                     className="mb-4"
                   />
@@ -363,9 +363,9 @@ const ResetPasswordContent = () => {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="h-12 w-full bg-gradient-to-r from-blue-500 to-purple-600 
-                  hover:from-blue-600 hover:to-purple-700 text-white font-semibold 
-                  rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all 
+                className="h-12 w-full bg-gradient-to-r from-red-500 to-red-600 
+                  hover:from-red-600 hover:to-red-700 text-white font-semibold 
+                  rounded-xl shadow-lg hover:shadow-red-500/25 transition-all 
                   duration-200 disabled:opacity-50 disabled:cursor-not-allowed border-0"
                 disabled={loading}
               >
@@ -384,7 +384,7 @@ const ResetPasswordContent = () => {
                   Remember your password?{" "}
                   <Link
                     href="/login"
-                    className="text-blue-400 hover:text-blue-300 font-medium transition-colors hover:underline decoration-2 underline-offset-4"
+                    className="text-red-400 hover:text-red-300 font-medium transition-colors hover:underline decoration-2 underline-offset-4"
                   >
                     Back to Login
                   </Link>
@@ -404,10 +404,10 @@ export default function ResetPassword() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900">
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-red-900 to-red-800">
           <div className="relative">
-            <div className="w-12 h-12 border-4 border-blue-400/30 rounded-full animate-spin border-t-blue-400"></div>
-            <div className="absolute inset-0 w-12 h-12 border-4 border-purple-400/30 rounded-full animate-spin-reverse border-t-purple-400"></div>
+            <div className="w-12 h-12 border-4 border-red-400/30 rounded-full animate-spin border-t-red-400"></div>
+            <div className="absolute inset-0 w-12 h-12 border-4 border-red-500/30 rounded-full animate-spin-reverse border-t-red-500"></div>
           </div>
         </div>
       }

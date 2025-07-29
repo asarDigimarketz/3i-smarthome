@@ -4,13 +4,12 @@ import { Sidebar, SidebarBody, SidebarLink } from "@/Components/ui/sidebar";
 import {
   IconClipboardCheck, // Proposal
   IconHome, // Dashboard
-  IconSpray, // Projects
   IconPackage, // Customers
-  IconCash, // Tasks
   IconUserCircle, // Settings
   IconUsersGroup, // Customers
   IconUser, // Employee
   IconCalendar, // Tasks
+  IconBell, // Notification
 } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 
@@ -24,35 +23,35 @@ import { cn } from "@/lib/utils";
 import "./sidebarr.css";
 
 import { motion } from "framer-motion";
+import apiClient from "../../lib/axios";
 
 export function SidebarDemo() {
   const { data: session } = useSession();
   const [hotelData, setHotelData] = useState(null);
   const [visibleLinks, setVisibleLinks] = useState([]);
-  // useEffect(() => {
-  //   const fetchGeneralData = async () => {
-  //     try {
-  //       const response = await fetch(
-  //         `${process.env.NEXT_PUBLIC_API_URL}/api/general`,
-  //         {
-  //           method: "GET",
-  //           headers: {
-  //             "Content-Type": "application/json",
-  //             "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-  //           },
-  //         }
-  //       );
-  //       const data = await response.json();
-  //       if (data.success) {
-  //         setHotelData(data.data);
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching hotel data:", error);
-  //     }
-  //   };
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  //   fetchGeneralData();
-  // }, []);
+  useEffect(() => {
+    const fetchHotelData = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get(`/api/settings/general`);
+        if (response.data.success) {
+          const hotelData = response.data.generalData;
+          setHotelData(hotelData);
+        } else {
+          setError(response.data.message || "Failed to fetch hotel data.");
+        }
+      } catch (err) {
+        setError(err.message || "An error occurred.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHotelData();
+  }, []);
 
   // All possible navigation links
   const allLinks = [
@@ -105,11 +104,20 @@ export function SidebarDemo() {
       ),
     },
     {
+      label: "Notification",
+      href: "/dashboard/notification",
+      permission: "notification",
+      icon: (
+        <IconBell className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+      ),
+    },
+    {
       label: "Settings",
       href: "/dashboard/settings",
       permission: "settings",
       icon: (
         <IconUserCircle className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+
       ),
     },
   ];

@@ -19,7 +19,7 @@ import {
 } from "@heroui/table";
 import { DateRangePicker } from "@heroui/date-picker";
 import { addToast } from "@heroui/toast";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 
 import Link from "next/link";
 import {
@@ -38,8 +38,7 @@ import { usePermissions } from "../../lib/utils";
 const Customers = () => {
   const { 
     canCreate, 
-    canEdit, 
-    canDelete, 
+     
     canView,
     getUserPermissions 
   } = usePermissions();
@@ -72,14 +71,40 @@ const Customers = () => {
         service: serviceFilter,
       });
 
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/customers?${params}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
+      // Add date range parameters if date range is selected
+      if (dateRange && dateRange.start && dateRange.end) {
+        try {
+          // Convert DateRangePicker format to Date objects
+          // DateRangePicker returns { year, month, day } format
+          const startDate = new Date(
+            dateRange.start.year,
+            dateRange.start.month - 1, // Month is 0-indexed in Date constructor
+            dateRange.start.day
+          );
+          
+          const endDate = new Date(
+            dateRange.end.year,
+            dateRange.end.month - 1, // Month is 0-indexed in Date constructor
+            dateRange.end.day
+          );
+          
+          // Set start time to beginning of day (00:00:00)
+          startDate.setHours(0, 0, 0, 0);
+          
+          // Set end time to end of day (23:59:59.999) for same day filtering
+          endDate.setHours(23, 59, 59, 999);
+          
+          
+          
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        } catch (dateError) {
+          console.error('Error converting date range:', dateError);
+          // Continue without date filtering if date conversion fails
         }
-      );
+      }
+
+      const response = await apiClient.get(`/api/customers?${params}`);
 
       if (response.data.success) {
         // Ensure customers is always an array
@@ -109,32 +134,17 @@ const Customers = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.currentPage, pagination.limit, searchQuery, serviceFilter]);
+  }, [pagination.currentPage, pagination.limit, searchQuery, serviceFilter, dateRange]);
 
-  // Check permissions once and store result
-  const hasViewPermission = canView("customers");
-
-  // Initial fetch when component mounts or when permissions change
+  // Fetch customers when component mounts or when filters change
   useEffect(() => {
-    if (hasViewPermission) {
-      fetchCustomers();
-    }
-  }, [hasViewPermission, fetchCustomers]);
+    fetchCustomers();
+  }, [fetchCustomers]);
 
-  // Debounced search - separate useEffect for search/filter changes
+  // Reset pagination when filters change
   useEffect(() => {
-    if (!hasViewPermission) return;
-
-    const timer = setTimeout(() => {
-      if (pagination.currentPage !== 1) {
-        setPagination((prev) => ({ ...prev, currentPage: 1 }));
-      } else {
-        fetchCustomers();
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, serviceFilter, hasViewPermission, pagination.currentPage, fetchCustomers]);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  }, [searchQuery, serviceFilter, dateRange]);
 
   const getServiceIcon = (service) => {
     switch (service) {
@@ -154,7 +164,7 @@ const Customers = () => {
   const handleAddCustomer = () => {
     if (!canCreate("customers")) {
       addToast({
-        title: "Access Denied",
+        title: "Permission Denied",
         description: "You don't have permission to add customers",
         color: "danger",
       });
@@ -162,7 +172,9 @@ const Customers = () => {
     }
   };
   
-  const handleDateRangeChange = (range) => setDateRange(range);
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+  };
 
   return (
     <div className="space-y-6">
@@ -172,17 +184,18 @@ const Customers = () => {
           description="View and manage your customers"
         />
 
-        {canCreate("customers") && (
+        
           <Link href="/dashboard/customers/add-customer">
             <Button
               color="primary"
               startContent={<Plus />}
               onPress={handleAddCustomer}
+              disabled={!canCreate("customers")}
             >
               Add Customer
             </Button>
           </Link>
-        )}
+        
       </div>
 
       {/* Filters and Search */}

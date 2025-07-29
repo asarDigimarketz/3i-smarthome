@@ -51,8 +51,8 @@ const RealTimeActivities = () => {
     if (session?.user) {
       fetchRecentNotifications();
       
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchRecentNotifications, 30000);
+      // Refresh every 60 seconds
+      const interval = setInterval(fetchRecentNotifications, 60000);
       return () => clearInterval(interval);
     }
   }, [session]);

@@ -9,7 +9,7 @@ import { Divider } from "@heroui/divider";
 import { Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import DashboardHeader from "../header/DashboardHeader";
 import { usePermissions } from "../../lib/utils";
@@ -55,14 +55,7 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
   const fetchCustomerData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/customers/${customerId}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/customers/${customerId}`);
 
       if (response.data.success) {
         const customer = response.data.data.customer;
@@ -100,16 +93,7 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
 
       // Check for contact number duplicates in projects
       if (contactNumber?.trim()) {
-        const contactResponse = await axios.get(
-          `${
-            process.env.NEXT_PUBLIC_API_URL
-          }/api/projects?search=${encodeURIComponent(contactNumber)}&limit=10`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        const contactResponse = await apiClient.get(`/api/projects?search=${encodeURIComponent(contactNumber)}&limit=10`);
 
         if (
           contactResponse.data.success &&
@@ -131,16 +115,7 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
 
       // Check for email duplicates in projects
       if (email?.trim()) {
-        const emailResponse = await axios.get(
-          `${
-            process.env.NEXT_PUBLIC_API_URL
-          }/api/projects?search=${encodeURIComponent(email)}&limit=10`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        const emailResponse = await apiClient.get(`/api/projects?search=${encodeURIComponent(email)}&limit=10`);
 
         if (emailResponse.data.success && emailResponse.data.data.length > 0) {
           const matchingProjects = emailResponse.data.data.filter(

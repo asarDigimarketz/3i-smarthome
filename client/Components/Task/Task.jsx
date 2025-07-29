@@ -12,7 +12,7 @@ import { Plus } from "lucide-react";
 import ProposalFilters from "../Proposal/ProposalFilters";
 import DashboardHeader from "../header/DashboardHeader";
 import { usePermissions } from "../../lib/utils";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 
 const Task = () => {
   const { 
@@ -48,14 +48,7 @@ const Task = () => {
 
       try {
         setProjectLoading(true);
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        const response = await apiClient.get(`/api/projects/${projectId}`);
 
         if (response.data.success) {
           setProject(response.data.data);
@@ -174,18 +167,18 @@ const Task = () => {
             <div className="w-full md:w-2/3 bg-white border-1 border-gray-200 p-2 sm:p-4 md:p-8 rounded-lg shadow-sm overflow-x-auto">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                 <h2 className="text-lg sm:text-xl font-semibold">Task</h2>
-                {canCreate("tasks") && (
+                
                   <Button
                     color="primary"
                     onPress={handleAddTask}
                     startContent={<Plus />}
                     className="rounded-lg w-full sm:w-auto min-h-[44px] text-base px-6"
                     style={{ minWidth: 120 }}
-                    isDisabled={!projectId || !shouldAllowTaskActions()}
+                    disabled={!projectId || !shouldAllowTaskActions() || !canCreate("tasks")}
                   >
                     Add Task
                   </Button>
-                )}
+                
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-4">
                 <TaskList

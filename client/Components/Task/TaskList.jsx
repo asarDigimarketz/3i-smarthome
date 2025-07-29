@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Edit, Circle, File, Check } from "lucide-react";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { useSearchParams } from "next/navigation";
 import TaskForm from "./TaskForm"; // Adjust the import path as needed
@@ -37,22 +37,8 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
         
         // Fetch both tasks and project details
         const [tasksResponse, projectResponse] = await Promise.all([
-          axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/tasks/project/${projectId}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-          ),
-          axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`,
-            {
-              headers: {
-                "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-              },
-            }
-          )
+          apiClient.get(`/api/tasks/project/${projectId}`),
+          apiClient.get(`/api/projects/${projectId}`)
         ]);
 
         if (tasksResponse.data.success) {
@@ -246,7 +232,7 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
             className="bg-[#CACACA] text-[#181818] text-xs px-4 py-1 rounded-full font-semibold tracking-tight"
             style={{ fontSize: "13px", letterSpacing: 0 }}
           >
-            New Task
+            New
           </span>
         );
     }
@@ -328,11 +314,12 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
               >
                 {attachment.mimetype &&
                 attachment.mimetype.startsWith("image") ? (
-                  <img
+                <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="w-full h-full object-cover">  <img
                     src={attachment.url}
                     alt={`Attachment ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
+                  </a>
                 ) : (
                   <File className="text-gray-400" size={24} />
                 )}
@@ -353,11 +340,12 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
               >
                 {attachment.mimetype &&
                 attachment.mimetype.startsWith("image") ? (
-                  <img
+                    <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="w-full h-full object-cover">  <img
                     src={attachment.url}
                     alt={`Attachment ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
+                  </a>
                 ) : (
                   <File className="text-gray-400" size={24} />
                 )}
@@ -394,6 +382,7 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
             size="xs"
             onPress={onEditTask}
             tabIndex={0}
+            disabled={!userPermissions.hasEditPermission}        
           >
             <Edit className="text-[#6E6E6E] w-4 h-4 " />
           </Button>

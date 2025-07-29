@@ -15,6 +15,7 @@ import { addToast } from "@heroui/toast";
 import { Plus, Upload, X } from "lucide-react";
 import { parseDate } from "@internationalized/date";
 import { usePermissions } from "../../lib/utils";
+import apiClient from "../../lib/axios";
 
 export const EmployeeModal = ({
   isOpen,
@@ -62,20 +63,10 @@ export const EmployeeModal = ({
   // Fetch roles from API
   const fetchRoles = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/rolesAndPermission`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/rolesAndPermission`);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setRoles(data.roles);
-        }
+      if (response.data.success) {
+        setRoles(response.data.roles);
       }
     } catch (error) {
       console.error("Error fetching roles:", error);
@@ -102,7 +93,7 @@ export const EmployeeModal = ({
             ? parseDate(emp.dateOfHiring.split("T")[0])
             : null,
           role: emp.role?._id || "",
-          department: emp.department?.name || "",
+          department: emp.department || "",
           status: emp.status || "active",
           notes: emp.notes || "",
           address: {
@@ -414,23 +405,22 @@ export const EmployeeModal = ({
         );
       }
 
-      const url = isEditing
-        ? `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement/${employeeData.id}`
-        : `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement`;
+      let response;
+      if (isEditing) {
+        response = await apiClient.put(`/api/employeeManagement/${employeeData.id}`, formDataToSend, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        response = await apiClient.post(`/api/employeeManagement`, formDataToSend, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      }
 
-      const method = isEditing ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-        },
-        body: formDataToSend,
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (response.data.success) {
         addToast({
           title: "Success",
           description: `Employee ${
@@ -672,6 +662,7 @@ export const EmployeeModal = ({
                     labelPlacement={"outside"}
                     variant="bordered"
                     type="email"
+                    disabled={isEditing ? true : false}
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     isInvalid={!!errors.email}

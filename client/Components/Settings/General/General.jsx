@@ -6,7 +6,7 @@ import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
 import { useSession } from "next-auth/react";
-import axios from "axios";
+import apiClient from "../../../lib/axios";
 import Image from "next/image";
 import { usePermissions } from "../../../lib/utils";
 
@@ -171,16 +171,11 @@ const General = ({ initialHotelData }) => {
         console.log(key, value);
       }
 
-      const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/settings/general`,
-        formData,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await apiClient.put(`/api/settings/general`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.data.success) {
         const updatedData = response.data.generalData;

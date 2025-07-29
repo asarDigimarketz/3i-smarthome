@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Select, SelectItem } from "@heroui/select";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import axios from "axios";
+import apiClient from "../../../lib/axios";
 import { addToast } from "@heroui/toast";
 
 const emailProviders = [
@@ -166,14 +166,7 @@ const EmailConfiguration = () => {
     const fetchEmailConfig = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/settings/emailConfiguration`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        const response = await apiClient.get(`/api/settings/emailConfiguration`);
         if (response.data.success && response.data.emailConfig) {
           setFormData(response.data.emailConfig);
         }
@@ -211,15 +204,7 @@ const EmailConfiguration = () => {
     e.preventDefault();
     try {
       setSaveLoading(true);
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/settings/emailConfiguration`,
-        formData,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.post(`/api/settings/emailConfiguration`, formData);
       if (response.data.success) {
         addToast({
           title: "Success",
@@ -252,18 +237,10 @@ const EmailConfiguration = () => {
     try {
       setTestLoading(true);
       setError(null);
-      const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/settings/emailConfiguration`,
-        {
-          testEmail: testData.email,
-          message: testData.message,
-        },
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.put(`/api/settings/emailConfiguration`, {
+        testEmail: testData.email,
+        message: testData.message,
+      });
       if (response.data.success) {
         setError(null);
         addToast({

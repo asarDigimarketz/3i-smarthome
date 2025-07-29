@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -23,42 +23,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import ServiceCard from "./ServiceCard.jsx";
-import ActivityItem from "./ActivityItem.jsx";
 import ProjectCard from "./ProjectCard.jsx";
 import RealTimeActivities from "./RealTimeActivities.jsx";
-import { ChevronRight, ChevronDown, ArrowRight, Calendar } from "lucide-react";
+import {  ChevronDown, ArrowRight, Calendar } from "lucide-react";
 import { today, getLocalTimeZone } from "@internationalized/date";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { usePermissions } from "../../lib/utils";
-import { getAuthToken } from '../../lib/auth';
 
-const recentActivities = [
-  {
-    id: "PROJ01",
-    type: "Project Status Changed",
-    description: "#Arun- Site Visit - Completed",
-    time: "10:30 AM",
-  },
-  {
-    id: "PROJ05",
-    type: "New Project Created",
-    description: "#Admin- Home Automation Project Created",
-    time: "09:45 AM",
-  },
-  {
-    id: "PROJ03",
-    type: "Project Status Changed",
-    description: "#Bala-Has been marked as Complete",
-    time: "09:15 AM",
-  },
-  {
-    id: "PROJ03",
-    type: "Project Status Changed",
-    description: "#Bala-Has been marked as Complete",
-    time: "09:15 AM",
-  },
-];
 
 const Dashboard = () => {
   const { data: session } = useSession();
@@ -129,51 +101,77 @@ const Dashboard = () => {
   ];
 
   // Fetch dashboard data from API
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Get the session token
-      const token = await getAuthToken();
-      if (!token) {
-        console.log("No session token available");
-        return;
+      // Fetch project stats
+      let projectStatsResponse;
+      if (dateRange && dateRange.start && dateRange.end) {
+        try {
+          // Convert DateRangePicker format to Date objects
+          // DateRangePicker returns { year, month, day } format
+          const startDate = new Date(
+            dateRange.start.year,
+            dateRange.start.month - 1, // Month is 0-indexed in Date constructor
+            dateRange.start.day
+          );
+          
+          const endDate = new Date(
+            dateRange.end.year,
+            dateRange.end.month - 1, // Month is 0-indexed in Date constructor
+            dateRange.end.day
+          );
+          
+          // Set start time to beginning of day (00:00:00)
+          startDate.setHours(0, 0, 0, 0);
+          
+          // Set end time to end of day (23:59:59.999) for same day filtering
+          endDate.setHours(23, 59, 59, 999);
+          
+          projectStatsResponse = await apiClient.get(`/api/projects/stats?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
+        } catch (dateError) {
+          console.error('Error converting dashboard stats date range:', dateError);
+          // Continue without date filtering if date conversion fails
+          projectStatsResponse = await apiClient.get(`/api/projects/stats`);
+        }
+      } else {
+        projectStatsResponse = await apiClient.get(`/api/projects/stats`);
       }
 
-      // Fetch project stats
-      const projectStatsResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/projects/stats`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            "Authorization": `Bearer ${token}`,
-          },
-        }
-      );
-
       // Fetch recent projects
-      const projectsResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/projects?limit=4&sortBy=createdAt&sortOrder=desc`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            "Authorization": `Bearer ${token}`,
-          },
+      let projectsResponse;
+      if (dateRange && dateRange.start && dateRange.end) {
+        try {
+          // Convert DateRangePicker format to Date objects
+          // DateRangePicker returns { year, month, day } format
+          const startDate = new Date(
+            dateRange.start.year,
+            dateRange.start.month - 1, // Month is 0-indexed in Date constructor
+            dateRange.start.day
+          );
+          
+          const endDate = new Date(
+            dateRange.end.year,
+            dateRange.end.month - 1, // Month is 0-indexed in Date constructor
+            dateRange.end.day
+          );
+          
+          // Set start time to beginning of day (00:00:00)
+          startDate.setHours(0, 0, 0, 0);
+          
+          // Set end time to end of day (23:59:59.999) for same day filtering
+          endDate.setHours(23, 59, 59, 999);
+          
+          projectsResponse = await apiClient.get(`/api/projects?limit=4&sortBy=createdAt&sortOrder=desc&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
+        } catch (dateError) {
+          console.error('Error converting dashboard recent projects date range:', dateError);
+          // Continue without date filtering if date conversion fails
+          projectsResponse = await apiClient.get(`/api/projects?limit=4&sortBy=createdAt&sortOrder=desc`);
         }
-      );
-
-      // Fetch projects with date range for performance chart
-      const performanceResponse = await axios.get(
-        `${
-          process.env.NEXT_PUBLIC_API_URL
-        }/api/projects?startDate=${dateRange.start.toString()}&endDate=${dateRange.end.toString()}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            "Authorization": `Bearer ${token}`,
-          },
-        }
-      );
+      } else {
+        projectsResponse = await apiClient.get(`/api/projects?limit=4&sortBy=createdAt&sortOrder=desc`);
+      }
 
       // Process service stats
       if (projectStatsResponse.data.success) {
@@ -210,13 +208,18 @@ const Dashboard = () => {
           },
         ];
         setServiceStats(transformedServiceStats);
-      }
-
-      // Process performance data
-      if (performanceResponse.data.success) {
-        const projects = performanceResponse.data.data || [];
-        const monthlyData = processProjectsByMonth(projects);
-        setPerformanceData(monthlyData);
+        
+        // Use the same service data for chart to ensure consistency
+        const chartData = [
+          {
+            month: selectedPreset === "Custom" ? "Selected Period" : selectedPreset,
+            "Home Cinema": serviceData.find((s) => s._id === "Home Cinema")?.count || 0,
+            "Home Automation": serviceData.find((s) => s._id === "Home Automation")?.count || 0,
+            "Security System": serviceData.find((s) => s._id === "Security System")?.count || 0,
+            "Outdoor Audio Solution": serviceData.find((s) => s._id === "Outdoor Audio Solution")?.count || 0,
+          }
+        ];
+        setPerformanceData(chartData);
       }
 
       // Process recent projects
@@ -287,7 +290,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange, selectedPreset]);
 
   // Helper functions
   const getStatusDisplayName = (status) => {
@@ -316,64 +319,6 @@ const Dashboard = () => {
     }
   };
 
-  const processProjectsByMonth = (projects) => {
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const monthlyData = {};
-
-    // Initialize months within date range
-    const startDate = new Date(
-      dateRange.start.year,
-      dateRange.start.month - 1,
-      dateRange.start.day
-    );
-    const endDate = new Date(
-      dateRange.end.year,
-      dateRange.end.month - 1,
-      dateRange.end.day
-    );
-
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      const monthKey = monthNames[currentDate.getMonth()];
-      if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = {
-          month: monthKey,
-          "Home Cinema": 0,
-          "Home Automation": 0,
-          "Security System": 0,
-          "Outdoor Audio Solution": 0,
-        };
-      }
-      currentDate.setMonth(currentDate.getMonth() + 1);
-    }
-
-    // Process projects
-    projects.forEach((project) => {
-      const projectDate = new Date(project.projectDate);
-      const monthKey = monthNames[projectDate.getMonth()];
-
-      if (monthlyData[monthKey] && project.services) {
-        monthlyData[monthKey][project.services] =
-          (monthlyData[monthKey][project.services] || 0) + 1;
-      }
-    });
-
-    return Object.values(monthlyData);
-  };
-
   const handlePresetSelect = (preset) => {
     if (preset.label === "Custom") {
       // For custom preset, just update the selected preset label
@@ -390,9 +335,14 @@ const Dashboard = () => {
   // Fetch dashboard data when component mounts or date range changes
   useEffect(() => {
     if (session) {
-      fetchDashboardData();
+      // Add a small delay to prevent excessive API calls
+      const timeoutId = setTimeout(() => {
+        fetchDashboardData();
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [session, dateRange]);
+  }, [session, dateRange, selectedPreset, fetchDashboardData]);
 
   useEffect(() => {
     if (!session) {
@@ -540,47 +490,12 @@ const Dashboard = () => {
                           ? performanceData
                           : [
                               {
-                                month: "Jan",
-                                "Home Cinema": 7,
-                                "Home Automation": 8,
-                                "Security System": 2,
-                                "Outdoor Audio Solution": 1,
-                              },
-                              {
-                                month: "Feb",
-                                "Home Cinema": 5,
-                                "Home Automation": 6,
-                                "Security System": 3,
-                                "Outdoor Audio Solution": 3,
-                              },
-                              {
-                                month: "Mar",
-                                "Home Cinema": 11,
-                                "Home Automation": 4,
-                                "Security System": 6,
-                                "Outdoor Audio Solution": 9,
-                              },
-                              {
-                                month: "Apr",
-                                "Home Cinema": 7,
-                                "Home Automation": 3,
-                                "Security System": 2,
-                                "Outdoor Audio Solution": 1,
-                              },
-                              {
-                                month: "May",
-                                "Home Cinema": 11,
-                                "Home Automation": 6,
-                                "Security System": 4,
-                                "Outdoor Audio Solution": 2,
-                              },
-                              {
-                                month: "Jun",
-                                "Home Cinema": 2,
-                                "Home Automation": 1,
-                                "Security System": 1,
+                                month: "No Data",
+                                "Home Cinema": 0,
+                                "Home Automation": 0,
+                                "Security System": 0,
                                 "Outdoor Audio Solution": 0,
-                              },
+                              }
                             ]
                       }
                       margin={{

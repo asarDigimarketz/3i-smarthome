@@ -5,7 +5,7 @@ import { cn } from "../../lib/utils";
 import General from "./General/General";
 import EmailConfiguration from "./EmailConfiguration/EmailConfiguration";
 import UserManagement from "./RolesResponsiblity/RolesResponsiblity.jsx";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import React from "react";
 import { usePermissions } from "../../lib/utils";
@@ -22,14 +22,7 @@ export default function SettingsInterface() {
     const fetchHotelData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/settings/general`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        const response = await apiClient.get(`/api/settings/general`);
         if (response.data.success) {
           const hotelData = response.data.generalData;
           setHotelData(hotelData);

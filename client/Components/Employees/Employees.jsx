@@ -17,6 +17,7 @@ import { EmployeeModal } from "./EmployeeModal";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import { Card } from "@heroui/card";
 import { usePermissions } from "../../lib/utils";
+import apiClient from "../../lib/axios";
 
 const Employees = () => {
   const { 
@@ -68,21 +69,10 @@ const Employees = () => {
       
 
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement?${params.toString()}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/employeeManagement?${params.toString()}`);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch employees");
-      }
-
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
+        const data = response.data;
         // Transform backend data to match frontend format
         const transformedEmployees = data.employees.map((emp) => ({
           id: emp.employeeId,
@@ -228,7 +218,7 @@ const Employees = () => {
             </DropdownMenu>
           </Dropdown>
         </div>
-        {userPermissions.hasAddPermission && (
+       
           <Button
             color="primary"
             radius="sm"
@@ -236,10 +226,11 @@ const Employees = () => {
             size="lg"
             startContent={<Plus />}
             onPress={handleAddEmployee}
+            disabled={!canCreate("employees")}
           >
             Add Employee
           </Button>
-        )}
+      
       </div>
 
       {/* Employee Cards */}

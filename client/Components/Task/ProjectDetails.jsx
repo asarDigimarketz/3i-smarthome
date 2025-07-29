@@ -3,14 +3,16 @@ import { useEffect, useState } from "react";
 import { Card } from "@heroui/card";
 import { Divider } from "@heroui/divider";
 import { Calendar, ChevronDown, Edit, File, Download } from "lucide-react";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectItem } from "@heroui/select";
 import { Button } from "@heroui/button";
 import Link from "next/link";
+import { usePermissions } from "../../lib/utils";
 
 const ProjectDetails = ({ serviceFilter = "All" }) => {
+  const { canView, canEdit } = usePermissions();
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
@@ -24,14 +26,7 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
     const fetchProjects = async () => {
       try {
         setLoadingProjects(true);
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/projects`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        const response = await apiClient.get(`/api/projects`);
 
         if (response.data.success) {
           setProjects(response.data.data || []);
@@ -58,14 +53,7 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
 
       try {
         setLoading(true);
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        const response = await apiClient.get(`/api/projects/${projectId}`);
 
         if (response.data.success) {
           setProject(response.data.data);
@@ -124,6 +112,7 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
         onSelectionChange={(keys) => handleProjectChange(Array.from(keys)[0])}
         isLoading={loadingProjects}
         className="w-full"
+        disabled={!canView("tasks")}
       >
         {filteredProjects && filteredProjects.length > 0 ? (
           filteredProjects.map((proj) => (
@@ -335,8 +324,9 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
         <div className="p-2 sm:p-4 flex justify-end ">
           <Link
             href={`/dashboard/projects/add-project?projectId=${project._id}`}
+            disabled={!canEdit("projects")}
           >
-            <Button className="bg-[#EAEAEA] rounded-lg p-2" size="xs">
+            <Button className="bg-[#EAEAEA] rounded-lg p-2" size="xs" disabled={!canEdit("projects")}>
               <Edit className="text-[#6E6E6E] w-4 h-4 " />
             </Button>
           </Link>

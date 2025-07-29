@@ -6,7 +6,7 @@ import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { Avatar } from "@heroui/avatar";
 import { Calendar, Image, Plus, Trash2, X } from "lucide-react";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { useSearchParams } from "next/navigation";
 import { DeleteConfirmModal } from "../ui/delete-confirm-modal";
@@ -39,19 +39,13 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/employeeManagement`,
-          {
-            headers: {
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        const response = await apiClient.get(`/api/employeeManagement`);
         if (response.data.success) {
-          // Transform the employee data for the dropdown
+          // Transform the employee data for the dropdown and filter only active employees
           const employeesList = response.data.employees || [];
+          const activeEmployees = employeesList.filter(emp => emp.status === 'active');
           setEmployees(
-            employeesList.map((emp) => ({
+            activeEmployees.map((emp) => ({
               _id: emp._id,
               name: `${emp.firstName} ${emp.lastName}`,
               avatar: emp.avatar, // include avatar
@@ -265,27 +259,17 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
       }
       let response;
       if (task && task._id) {
-        response = await axios.put(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/tasks/${task._id}`,
-          formDataObj,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        response = await apiClient.put(`/api/tasks/${task._id}`, formDataObj, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
       } else {
-        response = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/tasks`,
-          formDataObj,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-            },
-          }
-        );
+        response = await apiClient.post(`/api/tasks`, formDataObj, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
       }
       if (response.data.success) {
         addToast({
@@ -332,14 +316,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
     if (!task || !task._id) return;
     setSubmitting(true);
     try {
-      const response = await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/tasks/${task._id}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.delete(`/api/tasks/${task._id}`);
       if (response.data.success) {
         addToast({
           title: "Deleted",
@@ -433,7 +410,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4">
           <Select
             label={formData.assignedTo.length ? "" : "Assign To"}
             placeholder="Select assignees"
@@ -451,7 +428,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             }
             className="rounded-lg border-gray-200 w-full"
             classNames={{
-              base: "max-w-xs",
+              base: "max-w-full",
               trigger: "bg-[#EEEEEE] h-12",
             }}
             items={employees}
@@ -663,16 +640,18 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             radius="sm"
             isLoading={submitting}
             isDisabled={submitting || !projectId}
+            disabled={!userPermissions.hasEditPermission}
           >
             Save
           </Button>
-          {task && task._id && userPermissions.hasDeletePermission && (
+          {task && task._id && (
             <Button
               color="danger"
               variant="light"
               radius="sm"
               onPress={() => setShowDeleteModal(true)}
               isDisabled={submitting}
+              disabled={!userPermissions.hasDeletePermission}
               type="button"
             >
               <Trash2 className="text-primary" />

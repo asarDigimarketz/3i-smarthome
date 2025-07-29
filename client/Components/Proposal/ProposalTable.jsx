@@ -9,7 +9,7 @@ import {
 } from "@heroui/table";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { useRouter } from "next/navigation";
 import ProposalDetailsModal from "./ProposalDetailsModal";
 import { addToast } from "@heroui/toast";
@@ -52,8 +52,35 @@ const ProposalTable = ({
 
       // Add date range filter
       if (dateRange && dateRange.start && dateRange.end) {
-        params.append("dateFrom", dateRange.start.toString());
-        params.append("dateTo", dateRange.end.toString());
+        try {
+          // Convert DateRangePicker format to Date objects
+          // DateRangePicker returns { year, month, day } format
+          const startDate = new Date(
+            dateRange.start.year,
+            dateRange.start.month - 1, // Month is 0-indexed in Date constructor
+            dateRange.start.day
+          );
+          
+          const endDate = new Date(
+            dateRange.end.year,
+            dateRange.end.month - 1, // Month is 0-indexed in Date constructor
+            dateRange.end.day
+          );
+          
+          // Set start time to beginning of day (00:00:00)
+          startDate.setHours(0, 0, 0, 0);
+          
+          // Set end time to end of day (23:59:59.999) for same day filtering
+          endDate.setHours(23, 59, 59, 999);
+          
+         
+          
+          params.append("dateFrom", startDate.toISOString());
+          params.append("dateTo", endDate.toISOString());
+        } catch (dateError) {
+          console.error('Error converting proposal date range:', dateError);
+          // Continue without date filtering if date conversion fails
+        }
       }
 
       // Add service filter
@@ -64,14 +91,7 @@ const ProposalTable = ({
       // Add pagination
       params.append("page", page);
       params.append("limit", "5"); // Get more records for table
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals?${params.toString()}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/proposals?${params.toString()}`);
       if (response.data.success) {
         setProposals(response.data.data.proposals);
         if (setTotalPages && response.data.data.pagination) {
@@ -139,16 +159,7 @@ const ProposalTable = ({
         }
       }
 
-      const response = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${item._id}/field`,
-        updateData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.patch(`/api/proposals/${item._id}/field`, updateData);
 
       if (response.data.success) {
         // Update local state
@@ -199,14 +210,7 @@ const ProposalTable = ({
     }
 
     try {
-      const response = await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalId}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.delete(`/api/proposals/${proposalId}`);
 
       if (response.data.success) {
         // Remove from local state

@@ -12,7 +12,7 @@ import DashboaardHeader from "../header/DashboardHeader.jsx";
 import { Upload, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete";
-import axios from "axios";
+import apiClient from "../../lib/axios";
 import { useRouter } from "next/navigation";
 import { addToast } from "@heroui/toast";
 import { usePermissions } from "../../lib/utils";
@@ -69,16 +69,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
 
     setIsSearching(true);
     try {
-      const response = await axios.get(
-        `${
-          process.env.NEXT_PUBLIC_API_URL
-        }/api/customers?search=${encodeURIComponent(search)}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/customers?search=${encodeURIComponent(search)}`);
 
       let customers = response.data.data?.customers || [];
 
@@ -196,14 +187,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
   const fetchProposalData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalId}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get(`/api/proposals/${proposalId}`);
       if (response.data.success) {
         const proposal = response.data.data.proposal;
         setFormData((prev) => ({
@@ -412,18 +396,20 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       }
 
       // Make API call
-      const url = isEdit
-        ? `${process.env.NEXT_PUBLIC_API_URL}/api/proposals/${proposalId}`
-        : `${process.env.NEXT_PUBLIC_API_URL}/api/proposals`;
-
-      const method = isEdit ? "put" : "post";
-
-      const response = await axios[method](url, submitData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
-        },
-      });
+      let response;
+      if (isEdit) {
+        response = await apiClient.put(`/api/proposals/${proposalId}`, submitData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        response = await apiClient.post(`/api/proposals`, submitData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      }
 
       if (response.data.success) {
         let message = isEdit
