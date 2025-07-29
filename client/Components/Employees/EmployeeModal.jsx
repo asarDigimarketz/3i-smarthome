@@ -384,6 +384,9 @@ export const EmployeeModal = ({
       // Avatar file
       if (avatar) {
         formDataToSend.append("avatar", avatar);
+      } else if (avatarPreview && isEditing) {
+        // If no new avatar is selected but we have an existing one, send the existing avatar URL
+        formDataToSend.append("existingAvatar", avatarPreview);
       }
 
       // Documents
@@ -401,7 +404,7 @@ export const EmployeeModal = ({
       if (existingDocuments.length > 0) {
         formDataToSend.append(
           "existingDocuments",
-          JSON.stringify(existingDocuments.map((a) => a._id || a.url))
+          JSON.stringify(existingDocuments)
         );
       }
 

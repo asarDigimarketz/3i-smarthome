@@ -417,18 +417,34 @@ exports.createEmployee = async (req, res) => {
     // Handle avatar upload
     if (req.files && req.files.avatar) {
       const avatar = req.files.avatar[0];
-      employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${avatar.filename}`;
+      // Use originalname if available, otherwise use filename
+      const avatarFilename = avatar.originalname || avatar.filename || `avatar_${Date.now()}.jpg`;
+      const safeAvatarFilename = avatarFilename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      
+      
+      
+      employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${safeAvatarFilename}`;
     }
 
     // Handle documents upload (array of objects)
     if (req.files && req.files.documents) {
-      employeeData.documents = req.files.documents.map((file) => ({
-        url: `${BACKEND_URL}/assets/images/employees/documents/${file.filename}`,
-        originalName: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-        uploadedAt: new Date(),
-      }));
+      employeeData.documents = req.files.documents.map((file) => {
+        // Generate a proper filename if originalname is not available
+        const filename = file.originalname || file.filename || `document_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pdf`;
+        
+        // Ensure the filename is safe and unique
+        const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+        
+      
+        
+        return {
+          url: `${BACKEND_URL}/assets/images/employees/documents/${safeFilename}`,
+          originalName: file.originalname || safeFilename,
+          mimetype: file.mimetype,
+          size: file.size,
+          uploadedAt: new Date(),
+        };
+      });
     }
 
     // Save to database
@@ -603,7 +619,13 @@ exports.updateEmployee = async (req, res) => {
     // Handle avatar upload
     if (req.files?.avatar) {
       const avatar = req.files.avatar[0];
-      employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${avatar.filename}`;
+      // Use originalname if available, otherwise use filename
+      const avatarFilename = avatar.originalname || avatar.filename || `avatar_${Date.now()}.jpg`;
+      const safeAvatarFilename = avatarFilename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      
+    
+      
+      employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${safeAvatarFilename}`;
     } else if (req.body.existingAvatar) {
       employeeData.avatar = req.body.existingAvatar;
     }
@@ -613,7 +635,8 @@ exports.updateEmployee = async (req, res) => {
     if (req.body.existingDocuments) {
       try {
         baseDocuments = JSON.parse(req.body.existingDocuments);
-      } catch {
+      } catch (error) {
+        console.error('❌ Error parsing existing documents:', error);
         baseDocuments = [];
       }
     }
@@ -622,14 +645,25 @@ exports.updateEmployee = async (req, res) => {
           typeof doc === "object" ? doc : { url: doc }
         )
       : [];
+    
+    
     if (req.files && req.files.documents) {
-      const newFiles = req.files.documents.map((file) => ({
-        url: `${BACKEND_URL}/assets/images/employees/documents/${file.filename}`,
-        originalName: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-        uploadedAt: new Date(),
-      }));
+      const newFiles = req.files.documents.map((file) => {
+        // Generate a proper filename if originalname is not available
+        const filename = file.originalname || file.filename || `document_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pdf`;
+        
+        // Ensure the filename is safe and unique
+        const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+        
+          
+        return {
+          url: `${BACKEND_URL}/assets/images/employees/documents/${safeFilename}`,
+          originalName: file.originalname || safeFilename,
+          mimetype: file.mimetype,
+          size: file.size,
+          uploadedAt: new Date(),
+        };
+      });
       employeeData.documents.push(...newFiles);
     }
     // Remove deleted documents from disk

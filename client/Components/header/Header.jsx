@@ -44,7 +44,7 @@ const Header = () => {
 
   return (
     <header
-      className="w-full flex items-center justify-end"
+      className="w-full flex items-center justify-end sticky top-0 z-50"
       style={{
         background: "linear-gradient(356.27deg, #4E0E10 1.61%, #000000 77.8%)",
       }}
