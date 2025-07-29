@@ -116,7 +116,7 @@ const ProjectCard = ({
       onClick={() => router.push(`/dashboard/task?projectId=${id}`)}
     >
       <Card
-        className="overflow-hidden hover:scale-105 transition-transform h-80"
+        className="overflow-hidden hover:scale-105 transition-transform h-[330px]"
         onClick={(e) => e.stopPropagation()}
       >
         <CardBody className="p-0 h-full flex flex-col overflow-hidden">
@@ -188,7 +188,7 @@ const ProjectCard = ({
               <div className="flex flex-col gap-2 w-1/2">
                 <div className="mt-6">
                   <div className="text-sm text-white/80">Service</div>
-                  <div className="font-medium">{service}</div>
+                  <div className="font-medium line-clamp-2 overflow-hidden text-ellipsis">{service}</div>
                 </div>
                 <div>
                   <div className="text-sm text-white/80">Amount</div>

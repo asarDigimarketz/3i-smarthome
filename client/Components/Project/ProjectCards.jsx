@@ -317,100 +317,104 @@ export function ProjectCards({
           className="cursor-pointer"
           onClick={() => router.push(`/dashboard/task?projectId=${project.id}`)}
         >
-          <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-            <div
-              className={`p-6 ${project.color} bg-gradient-to-br from-opacity-80 to-opacity-100 text-white`}
-            >
-              <div className="flex justify-between items-start gap-4">
-                <div>
-                  <Dropdown radius="sm" placement="bottom-start">
-                    <DropdownTrigger>
-                      <Button
-                        className={`px-3 py-1 rounded-sm border border-white/10 text-white text-sm font-medium bg-opacity-80 bg-white/20 hover:bg-white/20`}
-                        disabled={statusLoading[project.id] || !hasEditPermission}
-                        type="button"
-                        variant="faded"
-                        size="sm"
-                        endContent={<ChevronDown className="w-4 h-4" />}
-                        onClick={(e) => {
-                          if (e.stopPropagation) e.stopPropagation();
-                        }}
-                      >
-                        {statusLoading[project.id]
-                          ? "Updating..."
-                          : statusOptions.find(
-                              (opt) =>
-                                opt.value ===
-                                (projectStatuses[project.id] ||
-                                  project.status.toLowerCase())
-                            )?.label || project.status}
-                      </Button>
-                    </DropdownTrigger>
-                    <DropdownMenu
-                      aria-label="Project Status"
-                      className="w-48 rounded-sm mt-1"
-                      radius="sm"
-                    >
-                      {statusOptions.map((opt) => (
-                        <DropdownItem
-                          key={opt.value}
+          <Card className="overflow-hidden hover:shadow-lg transition-shadow h-[330px]">
+            <div className="p-0 h-full flex flex-col overflow-hidden">
+              <div
+                className={`p-6 ${project.color} bg-gradient-to-br from-opacity-80 to-opacity-100 text-white flex-1 flex flex-col overflow-hidden`}
+              >
+                <div className="flex justify-between items-start gap-4">
+                  <div>
+                    <Dropdown radius="sm" placement="bottom-start">
+                      <DropdownTrigger>
+                        <Button
+                          className={`px-3 py-1 rounded-sm border border-white/10 text-white text-sm font-medium bg-opacity-80 bg-white/20 hover:bg-white/20`}
+                          disabled={statusLoading[project.id] || !hasEditPermission}
+                          type="button"
+                          variant="faded"
+                          size="sm"
+                          endContent={<ChevronDown className="w-4 h-4" />}
                           onClick={(e) => {
                             if (e.stopPropagation) e.stopPropagation();
-                            handleStatusChange(project.id, opt.value);
                           }}
-                          endContent={
-                            (projectStatuses[project.id] ||
-                              project.status.toLowerCase()) === opt.value ? (
-                              <Check className="w-4 h-4" />
-                            ) : null
-                          }
                         >
-                          {opt.label}
-                        </DropdownItem>
-                      ))}
-                    </DropdownMenu>
-                  </Dropdown>
-                  <h3 className="text-2xl font-bold mt-4 flex items-center gap-3">
-                    {project.customerName} <Phone className="w-5 h-5 mt-1" />
-                  </h3>
-                  <div className="flex items-center gap-1  text-white/80 text-sm w-4/5 mt-4">
-                    <p>{project.location}</p>
+                          {statusLoading[project.id]
+                            ? "Updating..."
+                            : statusOptions.find(
+                                (opt) =>
+                                  opt.value ===
+                                  (projectStatuses[project.id] ||
+                                    project.status.toLowerCase())
+                              )?.label || project.status}
+                        </Button>
+                      </DropdownTrigger>
+                      <DropdownMenu
+                        aria-label="Project Status"
+                        className="w-48 rounded-sm mt-1"
+                        radius="sm"
+                      >
+                        {statusOptions.map((opt) => (
+                          <DropdownItem
+                            key={opt.value}
+                            onClick={(e) => {
+                              if (e.stopPropagation) e.stopPropagation();
+                              handleStatusChange(project.id, opt.value);
+                            }}
+                            endContent={
+                              (projectStatuses[project.id] ||
+                                project.status.toLowerCase()) === opt.value ? (
+                                <Check className="w-4 h-4" />
+                              ) : null
+                            }
+                          >
+                            {opt.label}
+                          </DropdownItem>
+                        ))}
+                      </DropdownMenu>
+                    </Dropdown>
+                    <h3 className="text-2xl font-bold mt-4 flex items-center gap-3">
+                      {project.customerName} <Phone className="w-5 h-5 mt-1" />
+                    </h3>
+                    <div className="flex items-center gap-1 text-white/80 text-sm w-4/5 mt-4">
+                      <p>{project.location}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-2 w-1/2">
-                  <div className="mt-6">
-                    <div className="text-sm text-white/80">Service</div>
-                    <div className="font-medium">{project.service}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-white/80">Amount</div>
-                    <div className="font-medium">{project.amount}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-white/80">Date</div>
-                    <div className="font-medium">{project.date}</div>
+                  <div className="flex flex-col gap-2 w-1/2">
+                    <div className="mt-6">
+                      <div className="text-sm text-white/80">Service</div>
+                      <div className="font-medium">{project.service}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-white/80">Amount</div>
+                      <div className="font-medium">{project.amount}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-white/80">Date</div>
+                      <div className="font-medium">{project.date}</div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="p-3">
-              {" "}
-              <Progress
-                value={getProgressPercent(project.progress)}
-                color="primary"
-                className="h-2"
-                aria-label="Project progress"
-              />
-            </div>
 
-            <div className="p-4 flex justify-between items-center">
-              <AvatarGroup isBordered max={8}>
-                {project.avatars.map((avatar, index) => (
-                  <Avatar key={index} src={avatar} />
-                ))}
-              </AvatarGroup>
-              <div className="text-[#272523] text-lg font-medium">
-                {project.completedTasks || 0} / {project.totalTasks || 0}{" "}
+              {/* Progress Section */}
+              <div className="p-3 flex-shrink-0">
+                <Progress
+                  value={getProgressPercent(project.progress)}
+                  color="primary"
+                  className="h-2"
+                  aria-label="Project progress"
+                />
+              </div>
+
+              {/* Team Section */}
+              <div className="p-4 flex justify-between items-center flex-shrink-0">
+                <AvatarGroup isBordered max={8}>
+                  {project.avatars.map((avatar, index) => (
+                    <Avatar key={index} src={avatar} />
+                  ))}
+                </AvatarGroup>
+                <div className="text-[#272523] text-lg font-medium">
+                  {project.completedTasks || 0} / {project.totalTasks || 0}{" "}
+                </div>
               </div>
             </div>
           </Card>
