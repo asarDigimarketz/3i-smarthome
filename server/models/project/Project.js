@@ -329,7 +329,13 @@ projectSchema.statics.getProjectsWithFilters = function (
       query.projectDate.$gte = new Date(startDate);
     }
     if (endDate) {
-      query.projectDate.$lte = new Date(endDate);
+      // If start and end dates are the same, set end time to end of day
+      const endDateObj = new Date(endDate);
+      if (startDate && new Date(startDate).toDateString() === endDateObj.toDateString()) {
+        // Same day - set to end of day (23:59:59.999)
+        endDateObj.setHours(23, 59, 59, 999);
+      }
+      query.projectDate.$lte = endDateObj;
     }
   }
 
@@ -391,7 +397,13 @@ projectSchema.statics.getProjectsCount = function (filters = {}) {
       query.projectDate.$gte = new Date(startDate);
     }
     if (endDate) {
-      query.projectDate.$lte = new Date(endDate);
+      // If start and end dates are the same, set end time to end of day
+      const endDateObj = new Date(endDate);
+      if (startDate && new Date(startDate).toDateString() === endDateObj.toDateString()) {
+        // Same day - set to end of day (23:59:59.999)
+        endDateObj.setHours(23, 59, 59, 999);
+      }
+      query.projectDate.$lte = endDateObj;
     }
   }
 

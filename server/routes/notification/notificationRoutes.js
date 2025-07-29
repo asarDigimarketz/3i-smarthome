@@ -6,6 +6,7 @@ const {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
+  deleteAllNotifications,
   getNotificationStats
 } = require('../../controllers/notification/notificationController');
 const authenticateToken = require('../../middleware/authMiddleware');
@@ -27,6 +28,9 @@ router.put('/read-all', markAllNotificationsAsRead);
 
 // DELETE /api/notifications/:id - Delete notification
 router.delete('/:id', deleteNotification);
+
+// DELETE /api/notifications/delete-all - Delete all notifications
+router.delete('/delete-all', deleteAllNotifications);
 
 // POST /api/notifications - Create notification (for internal use)
 router.post('/', createNotification);

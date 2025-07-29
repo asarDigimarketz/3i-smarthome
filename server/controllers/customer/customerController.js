@@ -18,6 +18,8 @@ const getCustomers = async (req, res) => {
       search = "",
       service = "",
       status = "",
+      startDate = "",
+      endDate = "",
       sortBy = "createdAt",
       sortOrder = "desc",
     } = req.query;
@@ -28,6 +30,8 @@ const getCustomers = async (req, res) => {
       search,
       service,
       status,
+      startDate,
+      endDate,
       sortBy,
       sortOrder,
     };
@@ -40,6 +44,8 @@ const getCustomers = async (req, res) => {
       search,
       service,
       status,
+      startDate,
+      endDate,
     });
 
     const totalPages = Math.ceil(totalCustomers / limit);

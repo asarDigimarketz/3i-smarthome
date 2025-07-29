@@ -40,41 +40,38 @@ const storage = multer.diskStorage({
   },
 });
 
-const fileFilter = (req, file, cb) => {
-  // Allow only specific file types
-  const allowedTypes = [
-    "application/pdf",
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ];
+// const fileFilter = (req, file, cb) => {
+//   // Allow only specific file types
+//   const allowedTypes = [
+//     "application/pdf",
+//     "image/jpeg",
+//     "image/jpg",
+//     "image/png",
+//     "application/msword",
+//     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+//   ];
 
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(
-      new Error(
-        "Invalid file type. Only PDF, JPEG, PNG, DOC, and DOCX files are allowed."
-      ),
-      false
-    );
-  }
-};
+//   if (allowedTypes.includes(file.mimetype)) {
+//     cb(null, true);
+//   } else {
+//     cb(
+//       new Error(
+//         "Invalid file type. Only PDF, JPEG, PNG, DOC, and DOCX files are allowed."
+//       ),
+//       false
+//     );
+//   }
+// };
 
 // Change multer to accept multiple files
 const upload = multer({
   storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB per file
-  },
-  fileFilter: fileFilter,
+ 
 });
 
 // File upload middleware for multiple attachments
 const handleFileUpload = (req, res, next) => {
-  upload.array("attachments", 10)(req, res, (err) => {
+  upload.array("attachments")(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       if (err.code === "LIMIT_FILE_SIZE") {
         return res.status(400).json({

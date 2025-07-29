@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const emailConfigurationSchema = require("../../../models/settings/emailConfiguration/emailConfigurationSchema");
+const { getEmailConfig } = require("../../../utils/sendEmail");
 
 // Get email configuration
 exports.getEmailConfiguration = async (req, res) => {
@@ -64,61 +65,33 @@ exports.updateEmailConfiguration = async (req, res) => {
   }
 };
 
-// Test email configuration
+// Test email configuration with dynamic settings
 exports.testEmailConfiguration = async (req, res) => {
   try {
-    const EmailConfig = emailConfigurationSchema;
     const { testEmail, message } = req.body;
 
-    // Validate test email
     if (!testEmail || !testEmail.includes("@")) {
       return res.status(400).json({
         success: false,
-        message: "Valid test email is required",
+        message: "Please provide a valid test email address",
       });
     }
 
-    const config = await EmailConfig.findOne();
-
-    if (!config) {
-      return res.status(400).json({
-        success: false,
-        message: "Email configuration not found",
-      });
-    }
-
-    // Validate SMTP configuration
-    if (
-      !config.smtpHost ||
-      !config.smtpPort ||
-      !config.smtpUsername ||
-      !config.smtpPassword
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Incomplete SMTP configuration",
-      });
-    }
+    // Get dynamic email configuration (database first, then environment variables)
+    const emailConfig = await getEmailConfig();
+    
+    console.log('🧪 Testing email configuration with:', {
+      host: emailConfig.host,
+      port: emailConfig.port,
+      user: emailConfig.auth.user,
+      from: emailConfig.from
+    });
 
     try {
-      const transporter = nodemailer.createTransport({
-        host: config.smtpHost,
-        port: parseInt(config.smtpPort),
-        secure: parseInt(config.smtpPort) === 465,
-        auth: {
-          user: config.smtpUsername,
-          pass: config.smtpPassword,
-        },
-        tls: {
-          rejectUnauthorized: false,
-          ciphers: "SSLv3",
-        },
-        debug: true,
-        logger: true,
-      });
+      const transporter = nodemailer.createTransport(emailConfig);
 
       // Add specific error handling for Gmail
-      if (config.smtpHost.includes("gmail")) {
+      if (emailConfig.host.includes("gmail")) {
         try {
           await transporter.verify();
         } catch (gmailError) {
@@ -136,7 +109,7 @@ exports.testEmailConfiguration = async (req, res) => {
 
       // Send test email
       const mailOptions = {
-        from: config.senderEmail,
+        from: emailConfig.from,
         to: testEmail,
         subject: "Test Email Configuration",
         text:
@@ -148,6 +121,7 @@ exports.testEmailConfiguration = async (req, res) => {
       return res.json({
         success: true,
         message: "Test email sent successfully",
+        configSource: emailConfig.host === process.env.SMTP_HOST ? "Environment Variables" : "Database Settings"
       });
     } catch (emailError) {
       return res.status(500).json({

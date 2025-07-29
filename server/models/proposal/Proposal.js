@@ -256,7 +256,15 @@ proposalSchema.statics.getProposalsWithFilters = function (
   if (dateFrom || dateTo) {
     query.date = {};
     if (dateFrom) query.date.$gte = new Date(dateFrom);
-    if (dateTo) query.date.$lte = new Date(dateTo);
+    if (dateTo) {
+      // If start and end dates are the same, set end time to end of day
+      const endDateObj = new Date(dateTo);
+      if (dateFrom && new Date(dateFrom).toDateString() === endDateObj.toDateString()) {
+        // Same day - set to end of day (23:59:59.999)
+        endDateObj.setHours(23, 59, 59, 999);
+      }
+      query.date.$lte = endDateObj;
+    }
   }
 
   const skip = (page - 1) * limit;
@@ -306,7 +314,15 @@ proposalSchema.statics.getProposalsCount = function (filters = {}) {
   if (dateFrom || dateTo) {
     query.date = {};
     if (dateFrom) query.date.$gte = new Date(dateFrom);
-    if (dateTo) query.date.$lte = new Date(dateTo);
+    if (dateTo) {
+      // If start and end dates are the same, set end time to end of day
+      const endDateObj = new Date(dateTo);
+      if (dateFrom && new Date(dateFrom).toDateString() === endDateObj.toDateString()) {
+        // Same day - set to end of day (23:59:59.999)
+        endDateObj.setHours(23, 59, 59, 999);
+      }
+      query.date.$lte = endDateObj;
+    }
   }
 
   return this.countDocuments(query);

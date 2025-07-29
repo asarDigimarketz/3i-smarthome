@@ -119,7 +119,7 @@ async function sendTaskNotification(userIds, notification) {
       return;
     }
 
-    console.log('Original Employee IDs for notification:', userIds);
+    // console.log('Original Employee IDs for notification:', userIds);
     
     // Map Employee IDs to UserEmployee IDs
     const userEmployeeIds = await mapEmployeeToUserEmployeeIds(userIds);
@@ -129,7 +129,7 @@ async function sendTaskNotification(userIds, notification) {
       return;
     }
     
-    console.log('Mapped UserEmployee IDs for notification:', userEmployeeIds);
+    // console.log('Mapped UserEmployee IDs for notification:', userEmployeeIds);
 
     // Save notifications to database first
     try {
@@ -414,8 +414,8 @@ const getTask = async (req, res) => {
  */
 const createTask = async (req, res) => {
   try {
-    console.log('🔧 Creating task with body:', req.body);
-    console.log('🔧 User info:', req.user);
+    // console.log('🔧 Creating task with body:', req.body);
+    // console.log('🔧 User info:', req.user);
     
     const {
       projectId,
@@ -498,9 +498,9 @@ const createTask = async (req, res) => {
         const projectAssignees = await getProjectAssignees(projectId);
         const adminUsers = await getAllAdminUsers();
         
-        console.log('Task assignees:', taskAssignees);
-        console.log('Project assignees:', projectAssignees);
-        console.log('Admin users:', adminUsers);
+        // console.log('Task assignees:', taskAssignees);
+        // console.log('Project assignees:', projectAssignees);
+        // console.log('Admin users:', adminUsers);
         
         // Convert all IDs to strings for proper comparison
         const currentUserIdStr = currentUserId ? currentUserId.toString() : null;
@@ -522,9 +522,9 @@ const createTask = async (req, res) => {
           ? [] // Admin won't get notifications when they create/update
           : adminUsersStr.filter(id => id !== currentUserIdStr); // Non-admin users will notify admins
         
-        console.log('Task assignee recipients (excluding current user):', taskAssigneeRecipients);
-        console.log('Admin recipients (excluding current user):', adminRecipients);
-        console.log('Is current user admin?', isCurrentUserAdmin);
+        // console.log('Task assignee recipients (excluding current user):', taskAssigneeRecipients);
+        // console.log('Admin recipients (excluding current user):', adminRecipients);
+        // console.log('Is current user admin?', isCurrentUserAdmin);
       
       // Send task assignment notification to task assignees (excluding current user)
       if (taskAssigneeRecipients.length > 0) {
@@ -625,9 +625,9 @@ const createTask = async (req, res) => {
  */
 const updateTask = async (req, res) => {
   try {
-    console.log('🔧 Updating task with body:', req.body);
-    console.log('🔧 User info:', req.user);
-    console.log('🔧 Task ID:', req.params.id);
+    // console.log('🔧 Updating task with body:', req.body);
+    // console.log('🔧 User info:', req.user);
+    // console.log('🔧 Task ID:', req.params.id);
     
     const { title, comment, startDate, endDate, status, assignedTo } = req.body;
 
@@ -843,10 +843,10 @@ const updateTask = async (req, res) => {
         ? [] // Admin won't get notifications when they create/update
         : adminUsersStr.filter(id => id !== currentUserIdStr); // Non-admin users will notify admins
       
-      console.log('Task assignee recipients (excluding current user):', taskAssigneeRecipients);
-      console.log('Project recipients (excluding current user):', projectRecipients);
-      console.log('Admin recipients (excluding current user):', adminRecipients);
-      console.log('Is current user admin?', isCurrentUserAdmin);
+      // console.log('Task assignee recipients (excluding current user):', taskAssigneeRecipients);
+      // console.log('Project recipients (excluding current user):', projectRecipients);
+      // console.log('Admin recipients (excluding current user):', adminRecipients);
+      // console.log('Is current user admin?', isCurrentUserAdmin);
         
         // Set triggeredBy and triggeredByModel for creator tracking
         const triggeredBy = currentUserId;

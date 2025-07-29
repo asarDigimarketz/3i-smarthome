@@ -381,7 +381,7 @@ const createProjectFromProposal = async (req, res) => {
       customer: customer,
     });
   } catch (error) {
-    console.error("Create project from proposal error:", error);
+    console.error("❌ Create project from proposal error:", error);
     res.status(500).json({
       success: false,
       message: "Server error while creating project from proposal",
@@ -939,8 +939,29 @@ const deleteProject = async (req, res) => {
  */
 const getProjectStats = async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
+    
+    // Build date filter
+    let dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.projectDate = {};
+      if (startDate) {
+        dateFilter.projectDate.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        // If start and end dates are the same, set end time to end of day
+        const endDateObj = new Date(endDate);
+        if (startDate && new Date(startDate).toDateString() === endDateObj.toDateString()) {
+          // Same day - set to end of day (23:59:59.999)
+          endDateObj.setHours(23, 59, 59, 999);
+        }
+        dateFilter.projectDate.$lte = endDateObj;
+      }
+    }
+
     // Status breakdown
     const statusStats = await Project.aggregate([
+      { $match: dateFilter },
       {
         $group: {
           _id: "$projectStatus",
@@ -952,6 +973,7 @@ const getProjectStats = async (req, res) => {
 
     // Service breakdown
     const serviceStats = await Project.aggregate([
+      { $match: dateFilter },
       {
         $group: {
           _id: "$services",
@@ -961,8 +983,9 @@ const getProjectStats = async (req, res) => {
       },
     ]);
 
-    const totalProjects = await Project.countDocuments();
+    const totalProjects = await Project.countDocuments(dateFilter);
     const totalValue = await Project.aggregate([
+      { $match: dateFilter },
       {
         $group: {
           _id: null,

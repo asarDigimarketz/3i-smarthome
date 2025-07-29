@@ -45,7 +45,7 @@ async function sendProposalNotification(userIds, notification) {
       return;
     }
 
-    console.log('User IDs for proposal notification:', userIds);
+    // console.log('User IDs for proposal notification:', userIds);
 
     // Save notifications to database first
     try {
@@ -229,7 +229,7 @@ const createProposal = async (req, res) => {
         path: file.path,
         url: `${
           process.env.BACKEND_URL || "http://localhost:5000"
-        }/assets/images/proposals/${file.filename}`,
+        }/assets/images/proposals/project-attachments/${file.filename}`,
       }));
     }
     // If attachments sent as JSON (for edit mode), merge with new files
@@ -615,7 +615,7 @@ const updateProposal = async (req, res) => {
         path: file.path,
         url: `${
           process.env.BACKEND_URL || "http://localhost:5000"
-        }/assets/images/proposals/${file.filename}`,
+        }/assets/images/proposals/project-attachments/${file.filename}`,
       }));
       baseAttachments = baseAttachments.concat(newAttachments);
     }

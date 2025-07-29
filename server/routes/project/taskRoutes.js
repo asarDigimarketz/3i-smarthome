@@ -32,26 +32,26 @@ if (!fs.existsSync(attachementsDir)) {
 
 // Configure multer for file uploads - After Images
 
-const fileFilter = (req, file, cb) => {
-  // Allow only specific file types
-  const allowedTypes = [
-    "application/pdf",
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-  ];
+// const fileFilter = (req, file, cb) => {
+//   // Allow only specific file types
+//   const allowedTypes = [
+//     "application/pdf",
+//     "image/jpeg",
+//     "image/jpg",
+//     "image/png",
+//   ];
 
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(
-      new Error(
-        "Invalid file type. Only PDF, JPEG, and PNG files are allowed."
-      ),
-      false
-    );
-  }
-};
+//   if (allowedTypes.includes(file.mimetype)) {
+//     cb(null, true);
+//   } else {
+//     cb(
+//       new Error(
+//         "Invalid file type. Only PDF, JPEG, and PNG files are allowed."
+//       ),
+//       false
+//     );
+//   }
+// };
 
 // Create multer instances
 
@@ -83,14 +83,14 @@ const handleFileUploads = (req, res, next) => {
         );
       },
     }),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-    fileFilter,
+    // limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    // fileFilter,
   });
 
   upload.fields([
-    { name: "beforeAttachments", maxCount: 5 },
-    { name: "afterAttachments", maxCount: 5 },
-    { name: "attachements", maxCount: 10 }, // NEW: general attachments
+    { name: "beforeAttachments" },
+    { name: "afterAttachments" },
+    { name: "attachements" }, // NEW: general attachments
   ])(req, res, (err) => {
     if (err) {
       console.error("File upload error:", err);

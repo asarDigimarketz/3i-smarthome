@@ -7,7 +7,6 @@ const roleSchema = require("../../models/rolesAndPermission/roleSchema");
 const FCMToken = require("../../models/fcmToken");
 const User = require("../../models/user");
 const { createEmployeeNotification } = require("../../services/notificationService");
-const mongoose = require("mongoose");
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
 
 // Helper function to convert all values to strings for FCM
@@ -153,13 +152,13 @@ const avatarStorage = multer.diskStorage({
 
 const upload = multer({
   storage: avatarStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  // limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
 // Configure multer middleware
 exports.uploadFiles = upload.fields([
   { name: "avatar", maxCount: 1 },
-  { name: "documents", maxCount: 10 }, // use documents, not attachments
+  { name: "documents"}, // use documents, not attachments
 ]);
 
 // Helper function to generate employee ID

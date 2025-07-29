@@ -76,8 +76,8 @@ app.use(
 );
 
 // 3. Body parsing middleware
-app.use(express.json({ limit: "10mb" })); // Increased limit for file uploads
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json()); // Increased limit for file uploads
+app.use(express.urlencoded({ extended: true }));
 
 // 4. Static file serving
 app.use(express.static("public"));

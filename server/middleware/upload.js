@@ -10,7 +10,7 @@ const fs = require("fs");
 // Ensure uploads directory exists
 const uploadsDir = path.join(
   __dirname,
-  "../public/assets/images/proposal/project-attachments"
+  "../public/assets/images/proposals/project-attachments" // Changed from proposal to proposals 
 );
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -37,52 +37,52 @@ const storage = multer.diskStorage({
  * File filter to validate uploaded files
  * Only allows specific file types for proposal attachments
  */
-const fileFilter = (req, file, cb) => {
-  // Allowed file types based on client component requirements
-  const allowedTypes = [
-    "application/pdf", // PDF files
-    "image/jpeg", // JPEG images
-    "image/jpg", // JPG images
-    "image/png", // PNG images
-    "application/msword", // DOC files
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // DOCX files
-  ];
+// const fileFilter = (req, file, cb) => {
+//   // Allowed file types based on client component requirements
+//   const allowedTypes = [
+//     "application/pdf", // PDF files
+//     "image/jpeg", // JPEG images
+//     "image/jpg", // JPG images
+//     "image/png", // PNG images
+//     "application/msword", // DOC files
+//     "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // DOCX files
+//   ];
 
-  // Allowed file extensions
-  const allowedExtensions = [".pdf", ".jpeg", ".jpg", ".png", ".doc", ".docx"];
-  const fileExtension = path.extname(file.originalname).toLowerCase();
+//   // Allowed file extensions
+//   const allowedExtensions = [".pdf", ".jpeg", ".jpg", ".png", ".doc", ".docx"];
+//   const fileExtension = path.extname(file.originalname).toLowerCase();
 
-  if (
-    allowedTypes.includes(file.mimetype) &&
-    allowedExtensions.includes(fileExtension)
-  ) {
-    cb(null, true);
-  } else {
-    cb(
-      new Error(
-        "Invalid file type. Only PDF, JPEG, JPG, PNG, DOC, and DOCX files are allowed."
-      ),
-      false
-    );
-  }
-};
+//   if (
+//     allowedTypes.includes(file.mimetype) &&
+//     allowedExtensions.includes(fileExtension)
+//   ) {
+//     cb(null, true);
+//   } else {
+//     cb(
+//       new Error(
+//         "Invalid file type. Only PDF, JPEG, JPG, PNG, DOC, and DOCX files are allowed."
+//       ),
+//       false
+//     );
+//   }
+// };
 
 /**
  * Main upload configuration
  */
 const upload = multer({
   storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB file size limit
-    files: 10, // Allow up to 10 files per upload (adjust as needed)
-  },
+  // fileFilter: fileFilter,
+  // limits: {
+  //   fileSize: 10 * 1024 * 1024, // 10MB file size limit
+  //   files: 10, // Allow up to 10 files per upload (adjust as needed)
+  // },
 });
 
 /**
  * Middleware for multiple file upload (proposal attachments)
  */
-const uploadProposalAttachments = upload.array("attachments", 10); // up to 10 files
+const uploadProposalAttachments = upload.array("attachments"); // up to 10 files
 
 /**
  * Enhanced middleware wrapper with better error handling (multiple files)

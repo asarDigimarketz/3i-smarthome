@@ -173,6 +173,8 @@ customerSchema.statics.getCustomersWithFilters = function (
     search = "",
     service = "",
     status = "",
+    startDate = "",
+    endDate = "",
   } = options;
 
   // Build query
@@ -198,6 +200,23 @@ customerSchema.statics.getCustomersWithFilters = function (
     query.status = status;
   }
 
+  // Add date range filter
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      // If start and end dates are the same, set end time to end of day
+      const endDateObj = new Date(endDate);
+      if (startDate && new Date(startDate).toDateString() === endDateObj.toDateString()) {
+        // Same day - set to end of day (23:59:59.999)
+        endDateObj.setHours(23, 59, 59, 999);
+      }
+      query.createdAt.$lte = endDateObj;
+    }
+  }
+
   // Build sort object
   const sort = {};
   sort[sortBy] = sortOrder === "desc" ? -1 : 1;
@@ -217,7 +236,7 @@ customerSchema.statics.getCustomersWithFilters = function (
  * Static method to get customers count
  */
 customerSchema.statics.getCustomersCount = function (filters = {}) {
-  const { search = "", service = "", status = "" } = filters;
+  const { search = "", service = "", status = "", startDate = "", endDate = "" } = filters;
 
   let query = { ...filters };
 
@@ -236,6 +255,23 @@ customerSchema.statics.getCustomersCount = function (filters = {}) {
 
   if (status) {
     query.status = status;
+  }
+
+  // Add date range filter
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      // If start and end dates are the same, set end time to end of day
+      const endDateObj = new Date(endDate);
+      if (startDate && new Date(startDate).toDateString() === endDateObj.toDateString()) {
+        // Same day - set to end of day (23:59:59.999)
+        endDateObj.setHours(23, 59, 59, 999);
+      }
+      query.createdAt.$lte = endDateObj;
+    }
   }
 
   return this.countDocuments(query);
