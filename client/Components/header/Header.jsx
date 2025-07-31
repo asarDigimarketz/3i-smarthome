@@ -52,7 +52,7 @@ const Header = () => {
       {/* Right Side - Notifications and User */}
       <div className="flex items-center space-x-2 md:space-x-4 mr-3">
         {/* Notification Bell */}
-        {canView("notifications") && <NotificationBadge />}
+        <NotificationBadge />
 
         {/* User Dropdown */}
         <Dropdown placement="bottom-end">

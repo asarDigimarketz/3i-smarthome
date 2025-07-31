@@ -3,7 +3,7 @@ import PermissionGuard from "../../../../Components/auth/PermissionGuard";
 
 const page = () => {
   return (
-    <PermissionGuard requiredPermission="proposals" requiredAction="create">
+    <PermissionGuard requiredPermission="proposal" requiredAction="create">
       <AddProposalPage />
     </PermissionGuard>
   );

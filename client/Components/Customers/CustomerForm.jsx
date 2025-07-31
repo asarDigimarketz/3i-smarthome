@@ -13,7 +13,7 @@ import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import DashboardHeader from "../header/DashboardHeader";
 import { usePermissions } from "../../lib/utils";
-
+import axios from "axios";
 export function CustomerForm({ isEdit = false, customerId = null }) {
   const router = useRouter();
   const { canCreate, canEdit } = usePermissions();
@@ -102,11 +102,10 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
           );
 
           if (matchingProjects.length > 0) {
-            duplicateWarnings.contactNumber = `Contact number exists in ${
-              matchingProjects.length
-            } project(s): ${matchingProjects
-              .map((p) => p.customerName)
-              .join(", ")}`;
+            duplicateWarnings.contactNumber = `Contact number exists in ${matchingProjects.length
+              } project(s): ${matchingProjects
+                .map((p) => p.customerName)
+                .join(", ")}`;
           }
         }
       }
@@ -121,11 +120,10 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
           );
 
           if (matchingProjects.length > 0) {
-            duplicateWarnings.email = `Email exists in ${
-              matchingProjects.length
-            } project(s): ${matchingProjects
-              .map((p) => p.customerName)
-              .join(", ")}`;
+            duplicateWarnings.email = `Email exists in ${matchingProjects.length
+              } project(s): ${matchingProjects
+                .map((p) => p.customerName)
+                .join(", ")}`;
           }
         }
       }

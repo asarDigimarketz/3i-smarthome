@@ -17,19 +17,19 @@ const permissions = [
   "Employees",
   "Customers",
   "Projects",
-  "Proposals",
-  "Tasks",
+  "Proposal",
+  "Task",
 ];
 
 const actions = ["View", "Create", "Edit", "Delete"];
 
 export default function RolesResponsibility() {
-  const { 
-    canCreate, 
-    canEdit, 
-    canDelete, 
+  const {
+    canCreate,
+    canEdit,
+    canDelete,
     canView,
-    getUserPermissions 
+    getUserPermissions
   } = usePermissions();
 
   // Get permissions using the hook
@@ -87,10 +87,10 @@ export default function RolesResponsibility() {
             View: newActionState
               ? true
               : // If disabling an action, keep View true if any other action is still enabled
-                currentState[description]?.Create ||
-                currentState[description]?.Edit ||
-                currentState[description]?.Delete ||
-                currentState[description]?.View,
+              currentState[description]?.Create ||
+              currentState[description]?.Edit ||
+              currentState[description]?.Delete ||
+              currentState[description]?.View,
           },
         };
       }
@@ -251,12 +251,22 @@ export default function RolesResponsibility() {
       });
       return;
     }
+
     setRoleToDelete(role);
     setIsDeleteModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!roleToDelete) return;
+    if (!userPermissions.hasDeletePermission) {
+      addToast({
+        title: "Access Denied",
+        description: "You don't have permission to delete roles",
+        color: "danger",
+      });
+      setIsDeleteModalOpen(false);
+      setRoleToDelete(null);
+      return;
+    }
 
     try {
       await apiClient.delete(`/api/rolesAndPermission`, { data: { id: roleToDelete._id } });
@@ -308,117 +318,116 @@ export default function RolesResponsibility() {
           {/* Show form only if user has add or edit permission */}
           {(userPermissions.hasAddPermission ||
             userPermissions.hasEditPermission) && (
-            <div className="mb-8 p-6 border rounded-lg bg-gray-50">
-              <h2 className="text-lg font-semibold mb-4 text-gray-700">
-                {isEditing ? "Edit Role" : "Add New Role"}
-              </h2>
+              <div className="mb-8 p-6 border rounded-lg bg-gray-50">
+                <h2 className="text-lg font-semibold mb-4 text-gray-700">
+                  {isEditing ? "Edit Role" : "Add New Role"}
+                </h2>
 
-              <div className="mb-6">
-                <label
-                  htmlFor="role"
-                  className="block mb-2 font-semibold text-gray-700"
-                >
-                  Role Name
-                </label>
-                <Input
-                  id="role"
-                  placeholder="Enter role name (e.g., Manager, Technician, etc.)"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  variant="bordered"
-                  radius="sm"
-                  classNames={{
-                    inputWrapper: " h-[50px] border-[#E0E5F2]",
-                  }}
-                  className="max-w-md"
-                  isInvalid={!role.trim() && role !== ""}
-                  errorMessage={
-                    !role.trim() && role !== "" ? "Role name is required" : ""
-                  }
-                />
-              </div>
+                <div className="mb-6">
+                  <label
+                    htmlFor="role"
+                    className="block mb-2 font-semibold text-gray-700"
+                  >
+                    Role Name
+                  </label>
+                  <Input
+                    id="role"
+                    placeholder="Enter role name (e.g., Manager, Technician, etc.)"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    variant="bordered"
+                    radius="sm"
+                    classNames={{
+                      inputWrapper: " h-[50px] border-[#E0E5F2]",
+                    }}
+                    className="max-w-md"
+                    isInvalid={!role.trim() && role !== ""}
+                    errorMessage={
+                      !role.trim() && role !== "" ? "Role name is required" : ""
+                    }
+                  />
+                </div>
 
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-4 text-gray-700">
-                  Permissions
-                </h3>
-                <div className="rounded-lg overflow-hidden border">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-primary">
-                        <th className="p-3 text-left font-semibold text-white">
-                          Module
-                        </th>
-                        {actions.map((action) => (
-                          <th
-                            key={action}
-                            className="p-3 text-center font-semibold text-white"
-                          >
-                            {action}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-700">
+                    Permissions
+                  </h3>
+                  <div className="rounded-lg overflow-hidden border">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-primary">
+                          <th className="p-3 text-left font-semibold text-white">
+                            Module
                           </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {permissions.map((description, index) => (
-                        <tr
-                          key={description}
-                          className={`border-b border-gray-200 ${
-                            index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                          } hover:bg-blue-50 transition-colors`}
-                        >
-                          <td className="p-3 text-gray-700 font-medium">
-                            {description}
-                          </td>
                           {actions.map((action) => (
-                            <td
-                              key={`${description}-${action}`}
-                              className="p-3 text-center"
+                            <th
+                              key={action}
+                              className="p-3 text-center font-semibold text-white"
                             >
-                              <button
-                                type="button"
-                                className="w-6 h-6 mx-auto flex items-center justify-center hover:scale-110 transition-transform"
-                                onClick={() =>
-                                  handlePermissionChange(description, action)
-                                }
-                              >
-                                {permissionsState[description]?.[action] ? (
-                                  <Check className="w-6 h-6 text-green-500" />
-                                ) : (
-                                  <div className="w-6 h-6 border-2 border-gray-300 rounded hover:border-gray-400 transition-colors" />
-                                )}
-                              </button>
-                            </td>
+                              {action}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {permissions.map((description, index) => (
+                          <tr
+                            key={description}
+                            className={`border-b border-gray-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                              } hover:bg-blue-50 transition-colors`}
+                          >
+                            <td className="p-3 text-gray-700 font-medium">
+                              {description}
+                            </td>
+                            {actions.map((action) => (
+                              <td
+                                key={`${description}-${action}`}
+                                className="p-3 text-center"
+                              >
+                                <button
+                                  type="button"
+                                  className="w-6 h-6 mx-auto flex items-center justify-center hover:scale-110 transition-transform"
+                                  onClick={() =>
+                                    handlePermissionChange(description, action)
+                                  }
+                                >
+                                  {permissionsState[description]?.[action] ? (
+                                    <Check className="w-6 h-6 text-green-500" />
+                                  ) : (
+                                    <div className="w-6 h-6 border-2 border-gray-300 rounded hover:border-gray-400 transition-colors" />
+                                  )}
+                                </button>
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    className="bg-primary hover:bg-primary/90 text-white"
+                    onPress={handleSubmit}
+                    startContent={
+                      isEditing ? (
+                        <Edit className="w-4 h-4" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )
+                    }
+                  >
+                    {isEditing ? "Update Role" : "Add Role"}
+                  </Button>
+                  {isEditing && (
+                    <Button variant="flat" onPress={resetForm}>
+                      Cancel
+                    </Button>
+                  )}
                 </div>
               </div>
-
-              <div className="flex gap-3">
-                <Button
-                  className="bg-primary hover:bg-primary/90 text-white"
-                  onClick={handleSubmit}
-                  startContent={
-                    isEditing ? (
-                      <Edit className="w-4 h-4" />
-                    ) : (
-                      <Plus className="w-4 h-4" />
-                    )
-                  }
-                >
-                  {isEditing ? "Update Role" : "Add Role"}
-                </Button>
-                {isEditing && (
-                  <Button variant="flat" onClick={resetForm}>
-                    Cancel
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+            )}
 
           {/* Roles List */}
           <div>
@@ -453,9 +462,8 @@ export default function RolesResponsibility() {
                     {roles.map((role, index) => (
                       <tr
                         key={role._id}
-                        className={`border-b border-gray-200 ${
-                          index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                        } hover:bg-blue-50 transition-colors`}
+                        className={`border-b border-gray-200 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          } hover:bg-blue-50 transition-colors`}
                       >
                         <td className="p-3 text-gray-700">{index + 1}</td>
                         <td className="p-3 text-gray-700 font-medium">
@@ -524,7 +532,7 @@ export default function RolesResponsibility() {
         <DeleteConfirmModal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={handleDeleteConfirm}
+          onDelete={handleDeleteConfirm}
           title="Confirm Role Deletion"
           description={
             <>

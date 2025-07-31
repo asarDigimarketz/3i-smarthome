@@ -16,7 +16,6 @@ export const messaging = getMessaging(app);
 export async function getWebPushToken() {
   try {
     const token = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
-    console.log('Web FCM Token:', token);
     // TODO: Send this token to your server
     return token;
   } catch (err) {

@@ -24,8 +24,9 @@ import {
 } from "recharts";
 import ServiceCard from "./ServiceCard.jsx";
 import ProjectCard from "./ProjectCard.jsx";
+import ProjectCardSkeleton from "./ProjectCardSkeleton.jsx";
 import RealTimeActivities from "./RealTimeActivities.jsx";
-import {  ChevronDown, ArrowRight, Calendar } from "lucide-react";
+import { ChevronDown, ArrowRight, Calendar } from "lucide-react";
 import { today, getLocalTimeZone } from "@internationalized/date";
 import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
@@ -116,19 +117,19 @@ const Dashboard = () => {
             dateRange.start.month - 1, // Month is 0-indexed in Date constructor
             dateRange.start.day
           );
-          
+
           const endDate = new Date(
             dateRange.end.year,
             dateRange.end.month - 1, // Month is 0-indexed in Date constructor
             dateRange.end.day
           );
-          
+
           // Set start time to beginning of day (00:00:00)
           startDate.setHours(0, 0, 0, 0);
-          
+
           // Set end time to end of day (23:59:59.999) for same day filtering
           endDate.setHours(23, 59, 59, 999);
-          
+
           projectStatsResponse = await apiClient.get(`/api/projects/stats?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
         } catch (dateError) {
           console.error('Error converting dashboard stats date range:', dateError);
@@ -149,16 +150,16 @@ const Dashboard = () => {
             dateRange.start.month - 1,
             dateRange.start.day
           );
-          
+
           const endDate = new Date(
             dateRange.end.year,
             dateRange.end.month - 1,
             dateRange.end.day
           );
-          
+
           startDate.setHours(0, 0, 0, 0);
           endDate.setHours(23, 59, 59, 999);
-          
+
           monthlyDataResponse = await apiClient.get(`/api/projects/monthly-stats?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
         } catch (dateError) {
           console.error('Error converting monthly stats date range:', dateError);
@@ -179,19 +180,19 @@ const Dashboard = () => {
             dateRange.start.month - 1, // Month is 0-indexed in Date constructor
             dateRange.start.day
           );
-          
+
           const endDate = new Date(
             dateRange.end.year,
             dateRange.end.month - 1, // Month is 0-indexed in Date constructor
             dateRange.end.day
           );
-          
+
           // Set start time to beginning of day (00:00:00)
           startDate.setHours(0, 0, 0, 0);
-          
+
           // Set end time to end of day (23:59:59.999) for same day filtering
           endDate.setHours(23, 59, 59, 999);
-          
+
           projectsResponse = await apiClient.get(`/api/projects?limit=4&sortBy=createdAt&sortOrder=desc&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
         } catch (dateError) {
           console.error('Error converting dashboard recent projects date range:', dateError);
@@ -242,17 +243,17 @@ const Dashboard = () => {
       // Process monthly chart data
       if (monthlyDataResponse.data.success) {
         const monthlyData = monthlyDataResponse.data.data || [];
-        
+
         // Generate all months in the date range
         const months = [];
         const startDate = dateRange?.start ? new Date(dateRange.start.year, dateRange.start.month - 1, 1) : new Date();
         const endDate = dateRange?.end ? new Date(dateRange.end.year, dateRange.end.month - 1, 1) : new Date();
-        
+
         let currentDate = new Date(startDate);
         while (currentDate <= endDate) {
           const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
           const monthName = currentDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-          
+
           // Find data for this month
           const monthData = monthlyData.find(item => item.month === monthKey) || {
             month: monthKey,
@@ -262,7 +263,7 @@ const Dashboard = () => {
             "Outdoor Audio Solution": 0,
             total: 0
           };
-          
+
           months.push({
             month: monthName,
             "Home Cinema": monthData["Home Cinema"] || 0,
@@ -271,11 +272,11 @@ const Dashboard = () => {
             "Outdoor Audio Solution": monthData["Outdoor Audio Solution"] || 0,
             total: monthData.total || 0
           });
-          
+
           // Move to next month
           currentDate.setMonth(currentDate.getMonth() + 1);
         }
-        
+
         setPerformanceData(months);
       } else {
         // Fallback to empty monthly data
@@ -301,10 +302,8 @@ const Dashboard = () => {
           }),
           address:
             project.fullAddress ||
-            `${project.address?.addressLine || ""} , ${
-              project.address?.city || ""
-            } , ${project.address?.district || ""} - ${
-              project.address?.pincode || ""
+            `${project.address?.addressLine || ""} , ${project.address?.city || ""
+            } , ${project.address?.district || ""} - ${project.address?.pincode || ""
             }`,
           progress: `${project.completedTasks || 0}/${project.totalTasks || 0}`,
           color: getServiceColor(project.services),
@@ -397,9 +396,9 @@ const Dashboard = () => {
     if (session) {
       // Add a small delay to prevent excessive API calls
       const timeoutId = setTimeout(() => {
-      fetchDashboardData();
+        fetchDashboardData();
       }, 300);
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [session, dateRange, selectedPreset, fetchDashboardData]);
@@ -417,31 +416,31 @@ const Dashboard = () => {
         {(serviceStats.length > 0
           ? serviceStats
           : [
-              {
-                title: "Home Cinema",
-                count: 2,
-                color: "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]",
-                icon: "lucide:tv",
-              },
-              {
-                title: "Home Automation",
-                count: 1,
-                color: "bg-gradient-to-br from-[#026BB7] to-[#5DEAFF]",
-                icon: "lucide:home",
-              },
-              {
-                title: "Security System",
-                count: 1,
-                color: "bg-gradient-to-br from-[#014C95] to-[#36B9F6]",
-                icon: "lucide:shield",
-              },
-              {
-                title: "Outdoor Audio Solution",
-                count: 0,
-                color: "bg-gradient-to-br from-[#DF2795] to-[#EB7AB7]",
-                icon: "lucide:music",
-              },
-            ]
+            {
+              title: "Home Cinema",
+              count: 0,
+              color: "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]",
+              icon: "lucide:tv",
+            },
+            {
+              title: "Home Automation",
+              count: 0,
+              color: "bg-gradient-to-br from-[#026BB7] to-[#5DEAFF]",
+              icon: "lucide:home",
+            },
+            {
+              title: "Security System",
+              count: 0,
+              color: "bg-gradient-to-br from-[#014C95] to-[#36B9F6]",
+              icon: "lucide:shield",
+            },
+            {
+              title: "Outdoor Audio Solution",
+              count: 0,
+              color: "bg-gradient-to-br from-[#DF2795] to-[#EB7AB7]",
+              icon: "lucide:music",
+            },
+          ]
         ).map((service) => (
           <ServiceCard
             key={service.title}
@@ -549,14 +548,14 @@ const Dashboard = () => {
                         performanceData.length > 0
                           ? performanceData
                           : [
-                              {
-                                month: "No Data",
-                                "Home Cinema": 0,
-                                "Home Automation": 0,
-                                "Security System": 0,
-                                "Outdoor Audio Solution": 0,
-                              }
-                            ]
+                            {
+                              month: "No Data",
+                              "Home Cinema": 0,
+                              "Home Automation": 0,
+                              "Security System": 0,
+                              "Outdoor Audio Solution": 0,
+                            }
+                          ]
                       }
                       margin={{
                         top: 20,
@@ -776,70 +775,41 @@ const Dashboard = () => {
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 ">
-            {(recentProjects.length > 0
-              ? recentProjects
-              : [
-                  {
-                    id: "1",
-                    customer: "Vinoth R",
-                    status: "InProgress",
-                    service: "Home Cinema",
-                    amount: "₹30,00,000",
-                    date: "26/05/2025",
-                    address: "123/ss colony, Thirunager, Madurai-625018",
-                    progress: "1/3",
-                    color: "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]",
-                  },
-                  {
-                    id: "2",
-                    customer: "Vaisu K",
-                    status: "InProgress",
-                    service: "Security System",
-                    amount: "₹26,00,000",
-                    date: "18/05/2025",
-                    address: "23/98,selva 1st, Iyerbunglow, Madurai-625015",
-                    progress: "2/5",
-                    color: "bg-gradient-to-br from-[#014C95] to-[#36B9F6]",
-                  },
-                  {
-                    id: "3",
-                    customer: "Sanker A",
-                    status: "Complete",
-                    service: "Home Automation",
-                    amount: "₹20,00,000",
-                    date: "08/04/2025",
-                    address: "1A/67 Anbu nagar, Anna Nagar, Madurai-625018",
-                    progress: "3/3",
-                    color: "bg-gradient-to-br from-[#026BB7] to-[#5DEAFF]",
-                  },
-                  {
-                    id: "4",
-                    customer: "Anu J",
-                    status: "InProgress",
-                    service: "Outdoor Audio Solution",
-                    amount: "₹32,00,000",
-                    date: "22/04/2025",
-                    address: "23/98,selva 1st, Iyerbunglow, Madurai-625015",
-                    progress: "2/3",
-                    color: "bg-gradient-to-br from-[#DF2795] to-[#EB7AB7]",
-                  },
-                ]
-            ).map((project) => (
-              <ProjectCard
-                key={project.id}
-                id={project.id}
-                customer={project.customer}
-                status={project.status}
-                service={project.service}
-                amount={project.amount}
-                date={project.date}
-                address={project.address}
-                progress={project.progress}
-                color={project.color}
-                assignedEmployees={project.assignedEmployees}
+            {loading ? (
+              // Show skeleton loading when data is being fetched
+              Array.from({ length: 4 }).map((_, index) => (
+                <ProjectCardSkeleton key={`skeleton-${index}`} />
+              ))
+            ) : recentProjects.length > 0 ? (
+              // Show actual project data when available
+              recentProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  customer={project.customer}
+                  status={project.status}
+                  service={project.service}
+                  amount={project.amount}
+                  date={project.date}
+                  address={project.address}
+                  progress={project.progress}
+                  color={project.color}
+                  assignedEmployees={project.assignedEmployees}
                 // userPermissions removed - ProjectCard uses usePermissions hook internally
-              />
-            ))}
+                />
+              ))
+            ) : (
+              // Show empty state when no projects are found
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-500">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-lg font-medium mb-2">No Recent Projects</p>
+                <p className="text-sm text-center">Projects will appear here once they are created</p>
+              </div>
+            )}
           </div>
         </div>
       )}

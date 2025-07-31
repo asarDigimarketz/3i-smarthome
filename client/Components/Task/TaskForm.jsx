@@ -10,10 +10,39 @@ import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { useSearchParams } from "next/navigation";
 import { DeleteConfirmModal } from "../ui/delete-confirm-modal";
+import { usePermissions } from "../../lib/utils";
 
-const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
+const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask }) => {
+  const { isAdmin, user } = usePermissions();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
+
+  // Check if current user can edit this task (same logic as TaskList)
+  const canEditCurrentTask = () => {
+    // For new tasks, use the general add permission
+    if (!task || !task._id) {
+      return userPermissions.hasAddPermission;
+    }
+
+    // Admin can edit all tasks
+    if (isAdmin) return true;
+
+    // Assigned employees can edit their tasks (regardless of general edit permission)
+    if (Array.isArray(task.assignedTo) && task.assignedTo.length > 0 && user) {
+      // Check by both ID and email since they might be different record types
+      const userId = user.id || user._id || user.userId;
+      const userEmail = user.email;
+
+      const isAssigned = task.assignedTo.some(emp => {
+        // Compare by ID first, then by email as fallback
+        return emp._id === userId || emp.email === userEmail;
+      });
+
+      return isAssigned;
+    }
+
+    return false;
+  };
   const [employees, setEmployees] = useState([]);
   const [formData, setFormData] = useState({
     title: "",
@@ -76,8 +105,8 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
         assignedTo: Array.isArray(task.assignedTo)
           ? task.assignedTo.map((emp) => emp._id)
           : task.assignedTo?._id
-          ? [task.assignedTo._id]
-          : [],
+            ? [task.assignedTo._id]
+            : [],
         status: task.status || "new",
       });
       // Existing attachments (show as non-removable for now)
@@ -187,27 +216,16 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
       return;
     }
 
-    // Check permissions before submitting
-    if (task && task._id) {
-      // Editing existing task - check edit permission
-      if (!userPermissions.hasEditPermission) {
-        addToast({
-          title: "Access Denied",
-          description: "You don't have permission to edit tasks",
-          color: "danger",
-        });
-        return;
-      }
-    } else {
-      // Creating new task - check add permission
-      if (!userPermissions.hasAddPermission) {
-        addToast({
-          title: "Access Denied",
-          description: "You don't have permission to create tasks",
-          color: "danger",
-        });
-        return;
-      }
+    // Check permissions before submitting using our custom logic
+    if (!canEditCurrentTask()) {
+      addToast({
+        title: "Access Denied",
+        description: task && task._id
+          ? "You don't have permission to edit this task"
+          : "You don't have permission to create tasks",
+        color: "danger",
+      });
+      return;
     }
 
     if (!formData.title || !formData.startDate) {
@@ -640,7 +658,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks }) => {
             radius="sm"
             isLoading={submitting}
             isDisabled={submitting || !projectId}
-            disabled={!userPermissions.hasEditPermission}
+            disabled={!canEditCurrentTask()}
           >
             Save
           </Button>

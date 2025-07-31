@@ -18,10 +18,10 @@ export function StatusDropdown({ onStatusChange, selectedStatuses = new Set(["Ho
 
   const handleSelectionChange = (keys) => {
     setSelectedKeys(keys);
-    
+
     // Convert Set to array
     const statusArray = Array.from(keys);
-    
+
     // Check if "All Status" is selected
     if (statusArray.includes("All Status")) {
       // When "All Status" is selected, show all statuses including "Confirmed"
@@ -61,6 +61,8 @@ export function StatusDropdown({ onStatusChange, selectedStatuses = new Set(["Ho
         selectedKeys={selectedKeys}
         onSelectionChange={handleSelectionChange}
         disallowEmptySelection={false}
+        closeOnSelect={false}
+
       >
         <DropdownItem key="All Status">
           All Status

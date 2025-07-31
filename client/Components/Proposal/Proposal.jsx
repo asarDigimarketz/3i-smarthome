@@ -14,16 +14,16 @@ import DashboardHeader from "../header/DashboardHeader.jsx";
 import { usePermissions } from "../../lib/utils";
 
 function App() {
-  const { 
-    canCreate, 
-    canEdit, 
-    canDelete, 
+  const {
+    canCreate,
+    canEdit,
+    canDelete,
     canView,
-    getUserPermissions 
+    getUserPermissions
   } = usePermissions();
 
   // Get permissions using the hook
-  const userPermissions = getUserPermissions("proposals");
+  const userPermissions = getUserPermissions("proposal");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState(null);
@@ -87,7 +87,7 @@ function App() {
     setCurrentPage(1); // Reset to first page when filter changes
   };
 
- 
+
 
   return (
     <div className="flex bg-gray-50 min-h-screen overflow-x-auto">
@@ -147,20 +147,20 @@ function App() {
                 }
               />
               <StatusDropdown onStatusChange={handleStatusChange} selectedStatuses={selectedStatuses} />
-              
-                <Link href="/dashboard/proposal/add-proposal">
-                  <Button
-                    color="primary"
-                    radius="sm"
-                    startContent={<Plus />}
-                    size="md"
-                    disabled={!canCreate("proposals")}
-                  >
-                    Add New
-                  </Button>
-                </Link>
-             
-            
+
+              <Link href="/dashboard/proposal/add-proposal">
+                <Button
+                  color="primary"
+                  radius="sm"
+                  startContent={<Plus />}
+                  size="md"
+                  disabled={!canCreate("proposal")}
+                >
+                  Add New
+                </Button>
+              </Link>
+
+
             </div>
           </div>
 

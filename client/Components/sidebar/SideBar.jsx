@@ -66,7 +66,7 @@ export function SidebarDemo() {
     {
       label: "Proposal",
       href: "/dashboard/proposal",
-      permission: "proposals",
+      permission: "proposal",
       icon: (
         <IconClipboardCheck className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -82,7 +82,7 @@ export function SidebarDemo() {
     {
       label: "Task",
       href: "/dashboard/task",
-      permission: "tasks",
+      permission: "task",
       icon: (
         <IconCalendar className="text-white dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -139,8 +139,8 @@ export function SidebarDemo() {
       // Filter links based on employee permissions
       const permissions = session.user.permissions || [];
       const filteredLinks = allLinks.filter((link) => {
-        // Dashboard is always visible for authenticated users
-        if (link.permission === "dashboard") {
+        // Dashboard and Notification are always visible for authenticated users
+        if (link.permission === "notification") {
           return true;
         }
 

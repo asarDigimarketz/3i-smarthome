@@ -32,13 +32,13 @@ const createNotification = async (req, res) => {
     // Check if user exists (try both UserEmployee and User models)
     let user = await UserEmployee.findById(userId);
     let userType = 'employee';
-    
+
     if (!user) {
       // Try User model (admin users)
       user = await User.findById(userId);
       userType = 'admin';
     }
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -90,13 +90,13 @@ const getNotifications = async (req, res) => {
     // Check if user exists (try both UserEmployee and User models)
     let user = await UserEmployee.findById(userId);
     let userType = 'employee';
-    
+
     if (!user) {
       // Try User model (admin users)
       user = await User.findById(userId);
       userType = 'admin';
     }
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -116,7 +116,7 @@ const getNotifications = async (req, res) => {
 
     // Build filter object
     const filter = { userId };
-    
+
     if (type) filter.type = type;
     if (isRead !== undefined) filter.isRead = isRead === 'true';
     if (priority) filter.priority = priority;
@@ -125,7 +125,7 @@ const getNotifications = async (req, res) => {
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     // Get notifications with pagination
     let notifications;
     try {
@@ -136,7 +136,7 @@ const getNotifications = async (req, res) => {
         .skip(skip)
         .limit(parseInt(limit))
         .lean(); // Use lean() to avoid virtual field issues
-      
+
       // Manually populate triggeredBy for each notification
       for (let notification of notifications) {
         if (notification.triggeredBy) {
@@ -293,8 +293,22 @@ const deleteNotification = async (req, res) => {
       });
     }
 
+    const { id } = req.params;
+
+    // Handle "delete all" case
+    if (id === 'delete-all') {
+      const result = await Notification.deleteMany({ userId });
+
+      return res.status(200).json({
+        success: true,
+        message: `Deleted ${result.deletedCount} notifications`,
+        deletedCount: result.deletedCount
+      });
+    }
+
+    // Handle single notification deletion
     const notification = await Notification.findOneAndDelete({
-      _id: req.params.id,
+      _id: id,
       userId
     });
 

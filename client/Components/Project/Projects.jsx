@@ -14,12 +14,12 @@ import { Pagination } from "@heroui/pagination";
 import { usePermissions } from "../../lib/utils";
 
 export function ProjectsPage() {
-  const { 
-    canCreate, 
-    canEdit, 
-    
-   
-    getUserPermissions 
+  const {
+    canCreate,
+    canEdit,
+
+
+    getUserPermissions
   } = usePermissions();
 
   // Get permissions using the hook
@@ -37,7 +37,7 @@ export function ProjectsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 6; // Show 6 projects per page
 
-   
+
 
   // Handlers for filters
   const handleServiceChange = (service) => setServiceFilter(service);
@@ -132,13 +132,13 @@ export function ProjectsPage() {
             selectedStatuses={selectedStatuses}
           />
 
-         
-            <Link href="/dashboard/projects/add-project">
-              <Button color="primary" radius="sm" startContent={<Plus />} disabled={!canCreate("projects")}>
-                Add New
-              </Button>
-            </Link>
-       
+
+          <Link href="/dashboard/projects/add-project">
+            <Button color="primary" radius="sm" startContent={<Plus />} disabled={!canCreate("projects")}>
+              Add New
+            </Button>
+          </Link>
+
         </div>
       </div>
       <div className="space-y-6 bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
@@ -155,16 +155,18 @@ export function ProjectsPage() {
           pageSize={pageSize}
           setTotalPages={setTotalPages}
         />
-        <div className="flex justify-center mt-6">
-          {console.log('📄 Web Projects component - totalPages:', totalPages, 'page:', page, 'serviceFilter:', serviceFilter)}
-          <Pagination
-            total={totalPages}
-            page={page}
-            onChange={setPage}
-            showControls
-            radius="sm"
-          />
-        </div>
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-6">
+            {console.log('📄 Web Projects component - totalPages:', totalPages, 'page:', page, 'serviceFilter:', serviceFilter)}
+            <Pagination
+              total={totalPages}
+              page={page}
+              onChange={setPage}
+              showControls
+              radius="sm"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

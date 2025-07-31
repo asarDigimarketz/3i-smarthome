@@ -44,7 +44,6 @@ export const getFCMToken = async (): Promise<string | null> => {
     });
 
     if (currentToken) {
-      console.log('FCM Token:', currentToken);
       return currentToken;
     } else {
       console.log('No registration token available');

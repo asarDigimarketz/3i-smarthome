@@ -102,18 +102,18 @@ export default function ForgotPassword() {
 
   if (isSubmitted) {
     return (
-      <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 relative overflow-hidden">
+      <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-red-800 relative overflow-hidden">
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-red-600/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-400/5 rounded-full blur-3xl animate-pulse delay-500"></div>
         </div>
 
         <div className="flex w-full items-center justify-center p-6 relative z-10">
           <div className="w-full max-w-md">
-            <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl text-center">
-              <div className="mb-8 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg">
+            <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-red-500/20 shadow-2xl text-center">
+              <div className="mb-8 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-red-400 to-red-500 shadow-lg">
                 <CheckCircle className="h-10 w-10 text-white" />
               </div>
               <h2 className="mb-4 text-3xl font-bold text-white">Check Your Email</h2>
@@ -123,9 +123,9 @@ export default function ForgotPassword() {
               </p>
               <Link
                 href="/login"
-                className="inline-block h-12 px-8 bg-gradient-to-r from-blue-500 to-purple-600 
-                  hover:from-blue-600 hover:to-purple-700 text-white font-semibold 
-                  rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all 
+                className="inline-block h-12 px-8 bg-gradient-to-r from-red-500 to-red-600 
+                  hover:from-red-600 hover:to-red-700 text-white font-semibold 
+                  rounded-xl shadow-lg hover:shadow-red-500/25 transition-all 
                   duration-200 flex items-center justify-center"
               >
                 Return to Login

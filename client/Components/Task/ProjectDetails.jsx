@@ -26,7 +26,7 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
   const fetchProjects = async (filter = "All") => {
     try {
       setLoadingProjects(true);
-      
+
       // Build query parameters like ProjectCards.jsx
       const buildQueryParams = () => {
         const params = [];
@@ -42,7 +42,6 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
 
       if (response.data.success) {
         setProjects(response.data.data || []);
-        console.log(`✅ Loaded ${response.data.data?.length || 0} projects for filter: ${filter}`);
       } else {
         console.error("Failed to fetch projects:", response.data.message);
         setProjects([]);
@@ -128,7 +127,7 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
         onSelectionChange={(keys) => handleProjectChange(Array.from(keys)[0])}
         isLoading={loadingProjects}
         className="w-full"
-        disabled={!canView("tasks")}
+        disabled={!canView("task")}
       >
         {projects && projects.length > 0 ? (
           projects.map((proj) => (
@@ -136,23 +135,22 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
               key={proj._id}
               value={proj._id}
               radius="md"
-              textValue={`${proj.customerName} - ${proj.services}${
-                proj.projectAmount
+              textValue={`${proj.customerName} - ${proj.services}${proj.projectAmount
                   ? ` (${new Intl.NumberFormat("en-IN", {
-                      style: "currency",
-                      currency: "INR",
-                      maximumFractionDigits: 0,
-                    }).format(proj.projectAmount)})`
-                  : ""
-              }`}
-            >
-              {proj.customerName} - {proj.services}
-              {proj.projectAmount
-                ? ` (${new Intl.NumberFormat("en-IN", {
                     style: "currency",
                     currency: "INR",
                     maximumFractionDigits: 0,
                   }).format(proj.projectAmount)})`
+                  : ""
+                }`}
+            >
+              {proj.customerName} - {proj.services}
+              {proj.projectAmount
+                ? ` (${new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 0,
+                }).format(proj.projectAmount)})`
                 : ""}
             </SelectItem>
           ))
@@ -343,8 +341,8 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
                       <span>
                         {project.projectDate
                           ? new Date(project.projectDate).toLocaleDateString(
-                              "en-GB"
-                            )
+                            "en-GB"
+                          )
                           : "Not specified"}
                       </span>
                     </div>

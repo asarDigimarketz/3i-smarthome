@@ -63,21 +63,26 @@ const ProposalFilters = ({ onServiceChange }) => {
             <div
               key={index}
               onClick={() => handleFilterChange(filter.label)}
-              className={`flex-1 flex items-center justify-center py-3 px-4 cursor-pointer transition-all duration-200 rounded-full ${
-                isActive ? `shadow-sm` : "hover:bg-white/50"
-              }`}
+              className={`relative flex-1 flex items-center justify-center py-3 px-4 cursor-pointer transition-all duration-200 rounded-full group ${isActive ? `shadow-sm` : "hover:bg-white/50"
+                }`}
               style={
                 isActive && filter.backgroundColor
                   ? { backgroundColor: filter.backgroundColor }
                   : {}
               }
+              title={filter.label}
             >
               <Icon
-                className={`w-5 h-5 transition-all duration-200 ${
-                  isActive ? filter.iconColor : "text-gray-400"
-                }`}
+                className={`w-5 h-5 transition-all duration-200 ${isActive ? filter.iconColor : "text-gray-400"
+                  }`}
                 style={isActive && filter.style ? filter.style : {}}
               />
+
+              {/* Custom Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                {filter.label}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+              </div>
             </div>
           );
         })}

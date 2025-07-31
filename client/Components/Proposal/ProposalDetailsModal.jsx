@@ -88,7 +88,7 @@ const ProposalDetailsModal = ({
           : "",
         attachments: proposalData.attachments || null,
       });
-      
+
       // Set original status
       setOriginalStatus(proposalData.status || "Warm");
 
@@ -219,7 +219,7 @@ const ProposalDetailsModal = ({
   ];
   // Handle save
   const handleSave = async () => {
-    if (!canEdit("proposals")) {
+    if (!canEdit("proposal")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to edit proposals",
@@ -295,7 +295,7 @@ const ProposalDetailsModal = ({
 
   // Handle delete
   const handleDelete = () => {
-    if (!canDelete("proposals")) {
+    if (!canDelete("proposal")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to delete proposals",
@@ -361,7 +361,7 @@ const ProposalDetailsModal = ({
           }
         } catch (projectError) {
           console.error('❌ Error creating project from proposal:', projectError.response?.data);
-          
+
           // Handle specific error cases
           if (projectError.response?.data?.message?.includes("already exists")) {
             console.log('✅ Project already exists - treating as success');
@@ -482,7 +482,7 @@ const ProposalDetailsModal = ({
               color="primary"
               className="px-3"
               onPress={() => setShowAmountInput(true)} // Show input to add new amount
-              disabled={!canEdit("proposals") || originalStatus === "Confirmed"}
+              disabled={!canEdit("proposal") || originalStatus === "Confirmed"}
             >
               Add
             </Button>
@@ -760,7 +760,7 @@ const ProposalDetailsModal = ({
                         : formData.attachments &&
                           Array.isArray(formData.attachments) &&
                           formData.attachments.length > 0
-                        ? formData.attachments.map((att, idx) => (
+                          ? formData.attachments.map((att, idx) => (
                             <span
                               key={att._id || att.filename || idx}
                               className="block"
@@ -768,17 +768,17 @@ const ProposalDetailsModal = ({
                               {att.originalName || att.filename}
                             </span>
                           ))
-                        : formData.attachments &&
-                          formData.attachments.originalName
-                        ? formData.attachments.originalName
-                        : "No file selected"}
+                          : formData.attachments &&
+                            formData.attachments.originalName
+                            ? formData.attachments.originalName
+                            : "No file selected"}
                     </span>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 p-2 border border-gray-200 rounded-lg">
                     {formData.attachments &&
-                    Array.isArray(formData.attachments) &&
-                    formData.attachments.length > 0 ? (
+                      Array.isArray(formData.attachments) &&
+                      formData.attachments.length > 0 ? (
                       formData.attachments.map((att, idx) => (
                         <div
                           key={att._id || att.filename || idx}
@@ -826,39 +826,39 @@ const ProposalDetailsModal = ({
             </ModalBody>
 
             {/* Modal Footer */}
-            <ModalFooter className="px-6 py-4 flex justify-between">
+            <ModalFooter className="px-6 py-4 flex justify-around">
               <div className="flex gap-2">
-               
-                  <Button
-                    color="primary"
-                    onPress={handleSave}
-                    className="px-6"
-                    disabled={loading || !canEdit("proposals") || originalStatus === "Confirmed"}
-                    radius="md"
-                  >
-                    save
-                  </Button>
-              
-               
-                  <Button
-                    onPress={handleEdit}
-                    className="px-6 bg-[#616161] text-white"
-                    disabled={loading || !canEdit("proposals") || originalStatus === "Confirmed"}
-                    radius="md"
-                  >
-                    Edit
-                  </Button>
-               
+
+                <Button
+                  color="primary"
+                  onPress={handleSave}
+                  className="px-6"
+                  disabled={loading || !canEdit("proposal") || originalStatus === "Confirmed"}
+                  radius="md"
+                >
+                  save
+                </Button>
+
+
+                <Button
+                  onPress={handleEdit}
+                  className="px-6 bg-[#616161] text-white"
+                  disabled={loading || !canEdit("proposal") || originalStatus === "Confirmed"}
+                  radius="md"
+                >
+                  Edit
+                </Button>
+
                 <Button
                   onPress={handleDelete}
                   className="px-6 text-white bg-[#999999]"
-                  disabled={loading || !canDelete("proposals") || originalStatus === "Confirmed"}
+                  disabled={loading || !canDelete("proposal") || originalStatus === "Confirmed"}
                   radius="md"
                 >
                   Delete
                 </Button>
               </div>
-              <Button
+              {/* <Button
                 color="success"
                 variant="solid"
                 className="px-6"
@@ -866,7 +866,7 @@ const ProposalDetailsModal = ({
                 disabled={loading || originalStatus === "Confirmed"}
               >
                 {loading ? "Confirming..." : originalStatus === "Confirmed" ? "Already Confirmed" : "Project Confirmed"}
-              </Button>
+              </Button> */}
             </ModalFooter>
           </>
         )}

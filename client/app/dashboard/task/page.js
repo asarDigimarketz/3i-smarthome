@@ -3,7 +3,7 @@ import PermissionGuard from "../../../Components/auth/PermissionGuard";
 
 export default function Page() {
   return (
-    <PermissionGuard requiredPermission="tasks" requiredAction="view">
+    <PermissionGuard requiredPermission="task" requiredAction="view">
       <Task />
     </PermissionGuard>
   );

@@ -448,7 +448,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
 
   // Check permissions on component mount
   useEffect(() => {
-    if (isEdit && !canEdit("proposals")) {
+    if (isEdit && !canEdit("proposal")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to edit proposals",
@@ -457,8 +457,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       router.push("/dashboard/proposal");
       return;
     }
-    
-    if (!isEdit && !canCreate("proposals")) {
+
+    if (!isEdit && !canCreate("proposal")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to create proposals",
@@ -470,7 +470,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
   }, [isEdit, canCreate, canEdit, router]);
 
   // Show access denied if no view permission
-  if (!canView("proposals")) {
+  if (!canView("proposal")) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center">
@@ -758,8 +758,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                   value={
                     formData.projectAmount
                       ? `₹${parseInt(formData.projectAmount).toLocaleString(
-                          "en-IN"
-                        )}`
+                        "en-IN"
+                      )}`
                       : ""
                   }
                   onChange={(e) => {

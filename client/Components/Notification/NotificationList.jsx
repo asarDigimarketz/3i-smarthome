@@ -7,7 +7,6 @@ import { Avatar } from '@heroui/avatar';
 import { Check, Trash2, RefreshCw, CheckCheck, Trash2Icon } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { addToast } from '@heroui/toast';
-import { getAuthToken } from '../../lib/auth';
 import { useNotificationCount } from '../../hooks/useNotificationCount';
 import apiClient from '../../lib/axios';
 import {
@@ -28,10 +27,10 @@ const NotificationList = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { 
-    isOpen: isMarkAllOpen, 
-    onOpen: onMarkAllOpen, 
-    onClose: onMarkAllClose 
+  const {
+    isOpen: isMarkAllOpen,
+    onOpen: onMarkAllOpen,
+    onClose: onMarkAllClose
   } = useDisclosure();
 
   const fetchNotifications = async (pageNum = 1, isRefresh = false) => {
@@ -46,7 +45,7 @@ const NotificationList = () => {
 
       const response = await apiClient.get(`/api/notifications?page=${pageNum}&limit=20`);
       const data = response.data;
-      
+
       if (data.success && data.data) {
         if (isRefresh || pageNum === 1) {
           setNotifications(data.data.notifications || []);
@@ -74,17 +73,17 @@ const NotificationList = () => {
       const response = await apiClient.put(`/api/notifications/${notificationId}/read`);
 
       if (response.data.success) {
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif._id === notificationId 
+        setNotifications(prev =>
+          prev.map(notif =>
+            notif._id === notificationId
               ? { ...notif, isRead: true }
               : notif
           )
         );
-        
+
         // Refresh the notification badge count
         refreshCount();
-        
+
         addToast({
           title: 'Success',
           description: 'Notification marked as read',
@@ -107,10 +106,10 @@ const NotificationList = () => {
 
       if (response.data.success) {
         setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
-        
+
         // Refresh the notification badge count
         refreshCount();
-        
+
         addToast({
           title: 'Success',
           description: 'Notification deleted',
@@ -132,13 +131,13 @@ const NotificationList = () => {
       const response = await apiClient.put('/api/notifications/read-all');
 
       if (response.data.success) {
-        setNotifications(prev => 
+        setNotifications(prev =>
           prev.map(notif => ({ ...notif, isRead: true }))
         );
-        
+
         // Refresh the notification badge count
         refreshCount();
-        
+
         addToast({
           title: 'Success',
           description: `Marked ${response.data.data.updatedCount} notifications as read`,
@@ -162,10 +161,10 @@ const NotificationList = () => {
 
       if (response.data.success) {
         setNotifications([]);
-        
+
         // Refresh the notification badge count
         refreshCount();
-        
+
         addToast({
           title: 'Success',
           description: `Deleted ${response.data.data.deletedCount} notifications`,
@@ -187,7 +186,7 @@ const NotificationList = () => {
     const now = new Date();
     const date = new Date(dateString);
     const diffInSeconds = Math.floor((now - date) / 1000);
-    
+
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -279,7 +278,7 @@ const NotificationList = () => {
     <div className="space-y-4">
       {/* Header with Actions */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Notifications</h2>
+        <h2 className="text-xl font-semibold text-black">Notifications</h2>
         <div className="flex items-center gap-2">
           {notifications.length > 0 && (
             <>
@@ -326,11 +325,10 @@ const NotificationList = () => {
       ) : (
         <div className="space-y-3">
           {notifications.map((notification) => (
-            <Card 
-              key={notification._id} 
-              className={`transition-all hover:shadow-md ${
-                !notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/50' : ''
-              }`}
+            <Card
+              key={notification._id}
+              className={`transition-all hover:shadow-md ${!notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/50' : ''
+                }`}
             >
               <CardBody className="p-4">
                 <div className="flex items-start gap-3">
@@ -339,7 +337,7 @@ const NotificationList = () => {
                   >
                     {getNotificationIcon(notification.type)}
                   </Avatar>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -360,7 +358,7 @@ const NotificationList = () => {
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-1">
                         {!notification.isRead && (
                           <Button
@@ -390,7 +388,7 @@ const NotificationList = () => {
               </CardBody>
             </Card>
           ))}
-          
+
           {hasMore && (
             <div className="text-center py-4">
               <Button

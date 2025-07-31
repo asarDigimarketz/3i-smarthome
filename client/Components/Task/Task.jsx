@@ -15,18 +15,18 @@ import { usePermissions } from "../../lib/utils";
 import apiClient from "../../lib/axios";
 
 const Task = () => {
-  const { 
-    canView, 
-    canCreate, 
-    canEdit, 
-    canDelete, 
-    getUserPermissions 
+  const {
+    canView,
+    canCreate,
+    canEdit,
+    canDelete,
+    getUserPermissions
   } = usePermissions();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
 
   // Get permissions using the hook
-  const userPermissions = getUserPermissions("tasks");
+  const userPermissions = getUserPermissions("task");
 
   // Service filter state
   const [serviceFilter, setServiceFilter] = useState("All");
@@ -102,7 +102,7 @@ const Task = () => {
       return;
     }
 
-    if (!canCreate("tasks")) {
+    if (!canCreate("task")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to add tasks",
@@ -121,7 +121,7 @@ const Task = () => {
   const refreshTasks = () => setTaskListRefreshKey((k) => k + 1);
 
   // Show access denied if no view permission
-  if (!canView("tasks")) {
+  if (!canView("task")) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center">
@@ -143,7 +143,7 @@ const Task = () => {
       <Card className="w-full mx-auto mt-4 shadow-md md:min-h-[600px] bg-white rounded-md">
         <div className="p-2 sm:p-4 md:p-8">
           <div className="flex items-center justify-between mb-4 md:mb-6">
-            {!canCreate("tasks") && (
+            {!canCreate("task") && (
               <div className="px-3 py-1 bg-warning-100 text-warning-800 rounded-full text-sm">
                 Read Only
               </div>
@@ -167,18 +167,18 @@ const Task = () => {
             <div className="w-full md:w-[67%] bg-white border-1 border-gray-200 p-2 sm:p-4 md:p-8 rounded-lg shadow-sm overflow-x-auto">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                 <h2 className="text-lg sm:text-xl font-semibold">Task</h2>
-                
-                  <Button
-                    color="primary"
-                    onPress={handleAddTask}
-                    startContent={<Plus />}
-                    className="rounded-lg w-full sm:w-auto min-h-[44px] text-base px-6"
-                    style={{ minWidth: 120 }}
-                    disabled={!projectId || !shouldAllowTaskActions() || !canCreate("tasks")}
-                  >
-                    Add Task
-                  </Button>
-                
+
+                <Button
+                  color="primary"
+                  onPress={handleAddTask}
+                  startContent={<Plus />}
+                  className="rounded-lg w-full sm:w-auto min-h-[44px] text-base px-6"
+                  style={{ minWidth: 120 }}
+                  disabled={!projectId || !shouldAllowTaskActions() || !canCreate("task")}
+                >
+                  Add Task
+                </Button>
+
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-4">
                 <TaskList

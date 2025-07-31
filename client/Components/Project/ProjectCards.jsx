@@ -52,21 +52,21 @@ export function ProjectCards({
           dateRange.start.month - 1, // Month is 0-indexed in Date constructor
           dateRange.start.day
         );
-        
+
         const endDate = new Date(
           dateRange.end.year,
           dateRange.end.month - 1, // Month is 0-indexed in Date constructor
           dateRange.end.day
         );
-        
+
         // Set start time to beginning of day (00:00:00)
         startDate.setHours(0, 0, 0, 0);
-        
+
         // Set end time to end of day (23:59:59.999) for same day filtering
         endDate.setHours(23, 59, 59, 999);
-        
-       
-        
+
+
+
         params.push(`startDate=${encodeURIComponent(startDate.toISOString())}`);
         params.push(`endDate=${encodeURIComponent(endDate.toISOString())}`);
       } catch (dateError) {
@@ -94,8 +94,7 @@ export function ProjectCards({
             proposalId: project.proposalId || "",
             location:
               project.fullAddress ||
-              `${project.address?.addressLine}, ${project.address?.city} ${
-                project.address?.district || ""
+              `${project.address?.addressLine}, ${project.address?.city} ${project.address?.district || ""
               } - ${project.address?.pincode || ""}`,
             service: project.services,
             amount: new Intl.NumberFormat("en-IN", {
@@ -122,16 +121,16 @@ export function ProjectCards({
         if (setTotalPages && response.data.pagination) {
           const totalPages = response.data.pagination.total || 1;
           setTotalPages(totalPages);
-          
+
           console.log('📄 Web pagination - serviceFilter:', serviceFilter, 'totalPages:', totalPages, 'current:', response.data.pagination.current, 'hasNext:', response.data.pagination.hasNext);
-          
+
           // Fallback: If we got exactly 6 projects on first page, there might be more
           const isFirstPage = response.data.pagination.current === 1;
           const gotFullPage = transformedProjects.length === 6;
           const hasMoreFromPageSize = isFirstPage && gotFullPage;
-          
+
           console.log('📄 Web page logic - isFirstPage:', isFirstPage, 'gotFullPage:', gotFullPage, 'hasMoreFromPageSize:', hasMoreFromPageSize);
-          
+
           // If pagination says no more pages but we got a full page, assume there might be more
           if (totalPages === 1 && hasMoreFromPageSize) {
             console.log('🔄 Web fallback: Got exactly 6 projects on first page, setting totalPages to 2');
@@ -141,7 +140,7 @@ export function ProjectCards({
           // No pagination data, check if we got a full page
           const gotFullPage = transformedProjects.length === 6;
           console.log('📄 Web no pagination - serviceFilter:', serviceFilter, 'gotFullPage:', gotFullPage, 'projectsCount:', transformedProjects.length);
-          
+
           if (gotFullPage) {
             console.log('🔄 Web fallback: No pagination data but got full page, setting totalPages to 2');
             setTotalPages(2); // Assume at least 2 pages if we got a full page
@@ -195,11 +194,9 @@ export function ProjectCards({
         .slice(0, 2)
         .map(
           (emp, index) =>
-            `${
-              emp.avatar ||
-              `https://img.heroui.chat/image/avatar?w=40&h=40&u=user${
-                index + 1
-              }`
+            `${emp.avatar ||
+            `https://img.heroui.chat/image/avatar?w=40&h=40&u=user${index + 1
+            }`
             }`
         );
     }
@@ -296,9 +293,9 @@ export function ProjectCards({
   const handleStatusChange = async (projectId, newStatus) => {
     setStatusLoading((prev) => ({ ...prev, [projectId]: true }));
     try {
-      const res = await apiClient.patch(`/api/projects/${projectId}/field`, { 
-        field: "projectStatus", 
-        value: newStatus 
+      const res = await apiClient.patch(`/api/projects/${projectId}/field`, {
+        field: "projectStatus",
+        value: newStatus
       });
       if (res.data.success) {
         setProjectStatuses((prev) => ({ ...prev, [projectId]: newStatus }));
@@ -339,6 +336,23 @@ export function ProjectCards({
     );
   }
 
+  // Show "no projects found" message when there are no projects
+  if (projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="text-6xl mb-4">📋</div>
+        <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          No Projects Found
+        </h3>
+        <p className="text-gray-500 max-w-md">
+          {searchValue || serviceFilter !== "All" || statusFilter !== "all" || dateRange
+            ? "No projects match your current filters. Try adjusting your search criteria."
+            : "You haven't created any projects yet. Click 'Add New' to create your first project."}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((project) => (
@@ -370,11 +384,11 @@ export function ProjectCards({
                           {statusLoading[project.id]
                             ? "Updating..."
                             : statusOptions.find(
-                                (opt) =>
-                                  opt.value ===
-                                  (projectStatuses[project.id] ||
-                                    project.status.toLowerCase())
-                              )?.label || project.status}
+                              (opt) =>
+                                opt.value ===
+                                (projectStatuses[project.id] ||
+                                  project.status.toLowerCase())
+                            )?.label || project.status}
                         </Button>
                       </DropdownTrigger>
                       <DropdownMenu

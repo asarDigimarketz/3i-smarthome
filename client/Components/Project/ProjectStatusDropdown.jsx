@@ -28,10 +28,10 @@ export function ProjectStatusDropdown({ onStatusChange, selectedStatuses = new S
 
   const handleSelectionChange = (keys) => {
     setSelectedKeys(keys);
-    
+
     // Convert Set to array
     const statusArray = Array.from(keys);
-    
+
     // Check if "All Status" is selected
     if (statusArray.includes("All Status")) {
       // When "All Status" is selected, show all statuses including "Completed" and "Dropped/Cancelled"
@@ -75,6 +75,7 @@ export function ProjectStatusDropdown({ onStatusChange, selectedStatuses = new S
         selectedKeys={selectedKeys}
         onSelectionChange={handleSelectionChange}
         disallowEmptySelection={false}
+        closeOnSelect={false}
       >
         <DropdownItem key="All Status">All Status</DropdownItem>
         <DropdownItem key="new">New Project</DropdownItem>
