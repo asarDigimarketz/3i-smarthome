@@ -7,6 +7,7 @@ import {
 } from "@heroui/dropdown";
 import { Button } from "@heroui/button";
 import { ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const STATUS_LABELS = {
   "": "All Status",
@@ -17,12 +18,40 @@ const STATUS_LABELS = {
   cancelled: "Dropped/Cancelled",
 };
 
-export function ProjectStatusDropdown({ value = "", onChange }) {
-  // Map value to label for display
-  const displayLabel = STATUS_LABELS[value] || "All Status";
+export function ProjectStatusDropdown({ onStatusChange, selectedStatuses = new Set(["new", "in-progress", "done"]) }) {
+  const [selectedKeys, setSelectedKeys] = useState(selectedStatuses);
 
-  const handleStatusSelect = (status) => {
-    onChange && onChange(status === "Status" ? "" : status);
+  // Update selected keys when selectedStatuses prop changes
+  useEffect(() => {
+    setSelectedKeys(selectedStatuses);
+  }, [selectedStatuses]);
+
+  const handleSelectionChange = (keys) => {
+    setSelectedKeys(keys);
+    
+    // Convert Set to array
+    const statusArray = Array.from(keys);
+    
+    // Check if "All Status" is selected
+    if (statusArray.includes("All Status")) {
+      // When "All Status" is selected, show all statuses including "Completed" and "Dropped/Cancelled"
+      onStatusChange && onStatusChange("all");
+    } else {
+      // Pass the selected statuses to parent (excluding "All Status")
+      const filteredStatuses = statusArray.filter(status => status !== "All Status");
+      onStatusChange && onStatusChange(filteredStatuses);
+    }
+  };
+
+  // Get display text for button
+  const getDisplayText = () => {
+    if (selectedKeys.size === 0) return "Select Status";
+    if (selectedKeys.has("All Status") && selectedKeys.size === 1) return "All Status";
+    if (selectedKeys.size === 1) {
+      const status = Array.from(selectedKeys)[0];
+      return STATUS_LABELS[status] || status;
+    }
+    return `${selectedKeys.size} Statuses`;
   };
 
   return (
@@ -37,14 +66,17 @@ export function ProjectStatusDropdown({ value = "", onChange }) {
             <ChevronDown className="text-gray-600 flex justify-between" />
           }
         >
-          {displayLabel}
+          {getDisplayText()}
         </Button>
       </DropdownTrigger>
       <DropdownMenu
         aria-label="Status options"
-        onAction={(key) => handleStatusSelect(key)}
+        selectionMode="multiple"
+        selectedKeys={selectedKeys}
+        onSelectionChange={handleSelectionChange}
+        disallowEmptySelection={false}
       >
-        <DropdownItem key="">All Status</DropdownItem>
+        <DropdownItem key="All Status">All Status</DropdownItem>
         <DropdownItem key="new">New Project</DropdownItem>
         <DropdownItem key="in-progress">In Progress</DropdownItem>
         <DropdownItem key="done">Done</DropdownItem>

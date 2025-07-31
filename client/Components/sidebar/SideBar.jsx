@@ -164,7 +164,7 @@ export function SidebarDemo() {
       initial={{ x: -100 }}
       animate={{ x: 0 }}
       className={cn(
-        "rounded-md flex flex-col bg-white dark:bg-neutral-800 max-w-[250px] border border-neutral-200 dark:border-neutral-700 overflow-hidden h-screen sidebarmain"
+        " flex flex-col bg-white dark:bg-neutral-800 max-w-[200px] overflow-hidden h-screen sidebarmain"
       )}
     >
       <Sidebar open={open} setOpen={setOpen}>

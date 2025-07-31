@@ -139,6 +139,35 @@ const Dashboard = () => {
         projectStatsResponse = await apiClient.get(`/api/projects/stats`);
       }
 
+      // Fetch monthly project data for chart
+      let monthlyDataResponse;
+      if (dateRange && dateRange.start && dateRange.end) {
+        try {
+          // Convert DateRangePicker format to Date objects
+          const startDate = new Date(
+            dateRange.start.year,
+            dateRange.start.month - 1,
+            dateRange.start.day
+          );
+          
+          const endDate = new Date(
+            dateRange.end.year,
+            dateRange.end.month - 1,
+            dateRange.end.day
+          );
+          
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          
+          monthlyDataResponse = await apiClient.get(`/api/projects/monthly-stats?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
+        } catch (dateError) {
+          console.error('Error converting monthly stats date range:', dateError);
+          monthlyDataResponse = await apiClient.get(`/api/projects/monthly-stats`);
+        }
+      } else {
+        monthlyDataResponse = await apiClient.get(`/api/projects/monthly-stats`);
+      }
+
       // Fetch recent projects
       let projectsResponse;
       if (dateRange && dateRange.start && dateRange.end) {
@@ -208,18 +237,49 @@ const Dashboard = () => {
           },
         ];
         setServiceStats(transformedServiceStats);
+      }
+
+      // Process monthly chart data
+      if (monthlyDataResponse.data.success) {
+        const monthlyData = monthlyDataResponse.data.data || [];
         
-        // Use the same service data for chart to ensure consistency
-        const chartData = [
-          {
-            month: selectedPreset === "Custom" ? "Selected Period" : selectedPreset,
-            "Home Cinema": serviceData.find((s) => s._id === "Home Cinema")?.count || 0,
-            "Home Automation": serviceData.find((s) => s._id === "Home Automation")?.count || 0,
-            "Security System": serviceData.find((s) => s._id === "Security System")?.count || 0,
-            "Outdoor Audio Solution": serviceData.find((s) => s._id === "Outdoor Audio Solution")?.count || 0,
-          }
-        ];
-        setPerformanceData(chartData);
+        // Generate all months in the date range
+        const months = [];
+        const startDate = dateRange?.start ? new Date(dateRange.start.year, dateRange.start.month - 1, 1) : new Date();
+        const endDate = dateRange?.end ? new Date(dateRange.end.year, dateRange.end.month - 1, 1) : new Date();
+        
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+          const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+          const monthName = currentDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          
+          // Find data for this month
+          const monthData = monthlyData.find(item => item.month === monthKey) || {
+            month: monthKey,
+            "Home Cinema": 0,
+            "Home Automation": 0,
+            "Security System": 0,
+            "Outdoor Audio Solution": 0,
+            total: 0
+          };
+          
+          months.push({
+            month: monthName,
+            "Home Cinema": monthData["Home Cinema"] || 0,
+            "Home Automation": monthData["Home Automation"] || 0,
+            "Security System": monthData["Security System"] || 0,
+            "Outdoor Audio Solution": monthData["Outdoor Audio Solution"] || 0,
+            total: monthData.total || 0
+          });
+          
+          // Move to next month
+          currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+        
+        setPerformanceData(months);
+      } else {
+        // Fallback to empty monthly data
+        setPerformanceData([]);
       }
 
       // Process recent projects
@@ -337,7 +397,7 @@ const Dashboard = () => {
     if (session) {
       // Add a small delay to prevent excessive API calls
       const timeoutId = setTimeout(() => {
-        fetchDashboardData();
+      fetchDashboardData();
       }, 300);
       
       return () => clearTimeout(timeoutId);

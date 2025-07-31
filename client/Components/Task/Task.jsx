@@ -156,15 +156,15 @@ const Task = () => {
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 md:gap-8">
-            <div className="w-full md:w-1/3 mb-4 md:mb-0">
+          <div className="flex flex-col md:flex-row gap-4 ">
+            <div className="w-full md:w-[33%] mb-4 md:mb-0">
               <ProjectDetails
                 userPermissions={userPermissions}
                 serviceFilter={serviceFilter}
               />
             </div>
             <Divider className="my-2 md:my-0" orientation="vertical" />
-            <div className="w-full md:w-2/3 bg-white border-1 border-gray-200 p-2 sm:p-4 md:p-8 rounded-lg shadow-sm overflow-x-auto">
+            <div className="w-full md:w-[67%] bg-white border-1 border-gray-200 p-2 sm:p-4 md:p-8 rounded-lg shadow-sm overflow-x-auto">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                 <h2 className="text-lg sm:text-xl font-semibold">Task</h2>
                 

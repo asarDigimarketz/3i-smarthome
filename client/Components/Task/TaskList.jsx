@@ -272,7 +272,7 @@ const TaskItem = ({ task, userPermissions, onEditTask }) => {
             </h4>
             <div className="text-[#616161] text-xs sm:text-sm ">
               Assignee:{" "}
-              <span className="font-[700] text-[#616161] flex flex-wrap gap-2">
+              <span className="font-[700] text-[#616161] flex  sm:flex-row flex-wrap gap-2 ">
                 {Array.isArray(assignedTo) && assignedTo.length > 0
                   ? assignedTo.map((emp) => (
                       <span key={emp._id} className="flex items-center gap-1">

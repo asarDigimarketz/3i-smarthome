@@ -40,7 +40,9 @@ export function ProjectCards({
       params.push(`search=${encodeURIComponent(searchValue)}`);
     if (serviceFilter && serviceFilter !== "All")
       params.push(`service=${encodeURIComponent(serviceFilter)}`);
-    if (statusFilter) params.push(`status=${encodeURIComponent(statusFilter)}`);
+    if (statusFilter && statusFilter !== "all") {
+      params.push(`status=${encodeURIComponent(statusFilter)}`);
+    }
     if (dateRange && dateRange.start && dateRange.end) {
       try {
         // Convert DateRangePicker format to Date objects
@@ -118,7 +120,35 @@ export function ProjectCards({
 
         setProjects(transformedProjects);
         if (setTotalPages && response.data.pagination) {
-          setTotalPages(response.data.pagination.total || 1);
+          const totalPages = response.data.pagination.total || 1;
+          setTotalPages(totalPages);
+          
+          console.log('📄 Web pagination - serviceFilter:', serviceFilter, 'totalPages:', totalPages, 'current:', response.data.pagination.current, 'hasNext:', response.data.pagination.hasNext);
+          
+          // Fallback: If we got exactly 6 projects on first page, there might be more
+          const isFirstPage = response.data.pagination.current === 1;
+          const gotFullPage = transformedProjects.length === 6;
+          const hasMoreFromPageSize = isFirstPage && gotFullPage;
+          
+          console.log('📄 Web page logic - isFirstPage:', isFirstPage, 'gotFullPage:', gotFullPage, 'hasMoreFromPageSize:', hasMoreFromPageSize);
+          
+          // If pagination says no more pages but we got a full page, assume there might be more
+          if (totalPages === 1 && hasMoreFromPageSize) {
+            console.log('🔄 Web fallback: Got exactly 6 projects on first page, setting totalPages to 2');
+            setTotalPages(2); // Assume at least 2 pages if we got a full page
+          }
+        } else if (setTotalPages) {
+          // No pagination data, check if we got a full page
+          const gotFullPage = transformedProjects.length === 6;
+          console.log('📄 Web no pagination - serviceFilter:', serviceFilter, 'gotFullPage:', gotFullPage, 'projectsCount:', transformedProjects.length);
+          
+          if (gotFullPage) {
+            console.log('🔄 Web fallback: No pagination data but got full page, setting totalPages to 2');
+            setTotalPages(2); // Assume at least 2 pages if we got a full page
+          } else {
+            console.log('🔄 Web fallback: No pagination data and less than full page, setting totalPages to 1');
+            setTotalPages(1); // Only one page if we got less than 6 projects
+          }
         }
       }
     } catch (error) {

@@ -64,7 +64,7 @@ export const DesktopSidebar = ({ className, children, ...props }) => {
     <>
       <motion.div
         className={cn(
-          "h-screen px-4 py-0 hidden md:flex md:flex-col dark:bg-neutral-800 max-w-[250px] flex-shrink-0 relative overflow-hidden",
+          "h-screen px-4 py-0 hidden md:flex md:flex-col dark:bg-neutral-800 max-w-[200px] flex-shrink-0 relative overflow-hidden",
           className
         )}
         style={{

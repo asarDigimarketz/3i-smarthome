@@ -30,7 +30,6 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
     country: "",
     pincode: "",
     notes: "",
-    status: "Active",
   });
 
   const [errors, setErrors] = useState({});
@@ -70,7 +69,6 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
           country: customer.address?.country || "",
           pincode: customer.address?.pincode || "",
           notes: customer.notes || "",
-          status: customer.status || "Active",
         });
       }
     } catch (error) {
@@ -283,7 +281,6 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
           pincode: formData.pincode,
         },
         notes: formData.notes,
-        status: formData.status,
       };
       if (!isEdit && Object.keys(duplicates).length > 0) {
         addToast({
@@ -425,32 +422,6 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
                   ⚠️ {duplicateWarnings.email}
                 </div>
               )}
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-gray-700 mb-2">Status</label>
-              <Select
-                placeholder="Select status"
-                radius="sm"
-                variant="bordered"
-                className="w-full"
-                classNames={{
-                  trigger: "border-[#E0E5F2]  h-[50px]",
-                }}
-                selectedKeys={[formData.status]}
-                onSelectionChange={(keys) => {
-                  const selected = Array.from(keys)[0];
-                  if (selected) handleInputChange("status", selected);
-                }}
-              >
-                <SelectItem key="Active" value="Active">
-                  Active
-                </SelectItem>
-                <SelectItem key="Inactive" value="Inactive">
-                  Inactive
-                </SelectItem>
-              </Select>
             </div>
 
             {/* Address Section Header */}
@@ -603,7 +574,7 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
             </Button>
 
             <Button
-              color="danger"
+              color="primary"
               radius="full"
               className="px-8"
               type="submit"

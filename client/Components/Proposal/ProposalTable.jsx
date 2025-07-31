@@ -47,7 +47,22 @@ const ProposalTable = ({
 
       // Add status filter
       if (statusFilter) {
-        params.append("status", statusFilter);
+        if (statusFilter === "Confirmed") {
+          // When "Confirmed" is selected, show only confirmed proposals
+          params.append("status", statusFilter);
+        } else if (statusFilter === "all") {
+          // When "All Status" is explicitly selected, show ALL statuses including "Confirmed"
+          // Don't add any status filter - this will show all
+        } else if (statusFilter.includes(",")) {
+          // Multiple statuses selected (comma-separated)
+          params.append("status", statusFilter);
+        } else {
+          // For other specific statuses, show that status
+          params.append("status", statusFilter);
+        }
+      } else {
+        // Default behavior: show specific statuses (Hot, Cold, Warm, Scrap)
+        params.append("status", "Hot,Cold,Warm,Scrap");
       }
 
       // Add date range filter

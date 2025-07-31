@@ -28,8 +28,9 @@ export function ProjectsPage() {
   // Filter states
   const [dateRange, setDateRange] = useState(null);
   const [serviceFilter, setServiceFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("new,in-progress,done");
   const [searchValue, setSearchValue] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState(new Set(["new", "in-progress", "done"])); // Default: all except "Completed" and "Dropped/Cancelled"
 
   // Pagination states
   const [page, setPage] = useState(1);
@@ -40,7 +41,29 @@ export function ProjectsPage() {
 
   // Handlers for filters
   const handleServiceChange = (service) => setServiceFilter(service);
-  const handleStatusChange = (status) => setStatusFilter(status);
+  const handleStatusChange = (statuses) => {
+    if (statuses === "all") {
+      // When "All Status" is selected, show ALL statuses including "Completed" and "Dropped/Cancelled"
+      setStatusFilter("all");
+      setSelectedStatuses(new Set(["All Status", "new", "in-progress", "done", "completed", "cancelled"]));
+    } else if (Array.isArray(statuses)) {
+      // Multiple statuses selected
+      if (statuses.length === 0) {
+        // No statuses selected, show default statuses
+        setStatusFilter("new,in-progress,done");
+        setSelectedStatuses(new Set(["new", "in-progress", "done"]));
+      } else {
+        // Multiple specific statuses selected
+        setStatusFilter(statuses.join(",")); // Join multiple statuses
+        setSelectedStatuses(new Set(statuses));
+      }
+    } else {
+      // Single status (legacy support)
+      setStatusFilter(statuses);
+      setSelectedStatuses(new Set([statuses]));
+    }
+    setPage(1); // Reset to first page when filter changes
+  };
   const handleDateRangeChange = (range) => setDateRange(range);
   const handleSearchChange = (e) => setSearchValue(e.target.value);
 
@@ -105,8 +128,8 @@ export function ProjectsPage() {
             }
           />
           <ProjectStatusDropdown
-            value={statusFilter}
-            onChange={handleStatusChange}
+            onStatusChange={handleStatusChange}
+            selectedStatuses={selectedStatuses}
           />
 
          
@@ -133,6 +156,7 @@ export function ProjectsPage() {
           setTotalPages={setTotalPages}
         />
         <div className="flex justify-center mt-6">
+          {console.log('📄 Web Projects component - totalPages:', totalPages, 'page:', page, 'serviceFilter:', serviceFilter)}
           <Pagination
             total={totalPages}
             page={page}

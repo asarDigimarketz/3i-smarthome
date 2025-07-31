@@ -35,6 +35,7 @@ const ProposalDetailsModal = ({
   const [selectedFile, setSelectedFile] = useState(null);
   const [showAmountInput, setShowAmountInput] = useState(false);
   const [newAmount, setNewAmount] = useState("");
+  const [originalStatus, setOriginalStatus] = useState(""); // Track original status
   // Form data state
   const [formData, setFormData] = useState({
     customerName: "",
@@ -87,6 +88,9 @@ const ProposalDetailsModal = ({
           : "",
         attachments: proposalData.attachments || null,
       });
+      
+      // Set original status
+      setOriginalStatus(proposalData.status || "Warm");
 
       // Update amount options if available in proposal data
       if (
@@ -421,12 +425,14 @@ const ProposalDetailsModal = ({
               variant="bordered"
               className="w-40"
               type="number"
+              disabled={originalStatus === "Confirmed"}
             />
             <Button
               size="sm"
               color="primary"
               className="px-3"
               onPress={handleAddAmount}
+              disabled={originalStatus === "Confirmed"}
             >
               Save
             </Button>
@@ -438,6 +444,7 @@ const ProposalDetailsModal = ({
                 setShowAmountInput(false);
                 setNewAmount("");
               }}
+              disabled={originalStatus === "Confirmed"}
             >
               Cancel
             </Button>
@@ -462,7 +469,7 @@ const ProposalDetailsModal = ({
                   );
                   handleAmountSelect(key);
                 }}
-                disabledKeys={["close"]}
+                disabledKeys={originalStatus === "Confirmed" ? amountOptions : ["close"]}
                 closeOnSelect={false}
               >
                 {amountOptions.map((amount) => (
@@ -475,7 +482,7 @@ const ProposalDetailsModal = ({
               color="primary"
               className="px-3"
               onPress={() => setShowAmountInput(true)} // Show input to add new amount
-              disabled={!canEdit("proposals")}
+              disabled={!canEdit("proposals") || originalStatus === "Confirmed"}
             >
               Add
             </Button>
@@ -711,7 +718,7 @@ const ProposalDetailsModal = ({
                     }
                   }}
                   disallowEmptySelection={true}
-                  isDisabled={formData.status === "Confirmed"}
+                  isDisabled={originalStatus === "Confirmed"}
                 >
                   {statusOptions.map((status) => (
                     <SelectItem key={status.key} value={status.key}>
@@ -742,6 +749,7 @@ const ProposalDetailsModal = ({
                         size="sm"
                         startContent={<Upload size={16} />}
                         className="cursor-pointer"
+                        disabled={originalStatus === "Confirmed"}
                       >
                         {selectedFile ? "Change File" : "Upload File"}
                       </Button>
@@ -825,7 +833,7 @@ const ProposalDetailsModal = ({
                     color="primary"
                     onPress={handleSave}
                     className="px-6"
-                    disabled={loading || !canEdit("proposals")}
+                    disabled={loading || !canEdit("proposals") || originalStatus === "Confirmed"}
                     radius="md"
                   >
                     save
@@ -835,34 +843,30 @@ const ProposalDetailsModal = ({
                   <Button
                     onPress={handleEdit}
                     className="px-6 bg-[#616161] text-white"
-                    disabled={loading || !canEdit("proposals")}
+                    disabled={loading || !canEdit("proposals") || originalStatus === "Confirmed"}
                     radius="md"
                   >
                     Edit
                   </Button>
                
-                {formData.status !== "Confirmed" && (
-                  <Button
-                    onPress={handleDelete}
-                    className="px-6  text-white hover:bg-red-50 bg-[#999999]"
-                    disabled={loading || !canDelete("proposals")}
-                    radius="md"
-                  >
-                    Delete
-                  </Button>
-                )}
-              </div>
-              {formData.status !== "Confirmed" && canEdit("proposals") && (
                 <Button
-                  color="success"
-                  variant="solid"
-                  className="px-6"
-                  onPress={handleProjectConfirmed}
-                  disabled={loading}
+                  onPress={handleDelete}
+                  className="px-6 text-white bg-[#999999]"
+                  disabled={loading || !canDelete("proposals") || originalStatus === "Confirmed"}
+                  radius="md"
                 >
-                  {loading ? "Confirming..." : "Project Confirmed"}
+                  Delete
                 </Button>
-              )}
+              </div>
+              <Button
+                color="success"
+                variant="solid"
+                className="px-6"
+                onPress={handleProjectConfirmed}
+                disabled={loading || originalStatus === "Confirmed"}
+              >
+                {loading ? "Confirming..." : originalStatus === "Confirmed" ? "Already Confirmed" : "Project Confirmed"}
+              </Button>
             </ModalFooter>
           </>
         )}

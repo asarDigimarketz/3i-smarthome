@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@heroui/card";
 import { Divider } from "@heroui/divider";
-import { Calendar, ChevronDown, Edit, File, Download } from "lucide-react";
+import { Calendar, ChevronDown, Edit, File, Download, ChevronUp } from "lucide-react";
 import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -20,28 +20,45 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(false);
+
+  // Fetch projects with server-side filtering like Projects page
+  const fetchProjects = async (filter = "All") => {
+    try {
+      setLoadingProjects(true);
+      
+      // Build query parameters like ProjectCards.jsx
+      const buildQueryParams = () => {
+        const params = [];
+        if (filter && filter !== "All") {
+          params.push(`service=${encodeURIComponent(filter)}`);
+        }
+        params.push(`limit=100`); // Get more projects
+        return params.length ? `?${params.join("&")}` : `?limit=100`;
+      };
+
+      const query = buildQueryParams();
+      const response = await apiClient.get(`/api/projects${query}`);
+
+      if (response.data.success) {
+        setProjects(response.data.data || []);
+        console.log(`✅ Loaded ${response.data.data?.length || 0} projects for filter: ${filter}`);
+      } else {
+        console.error("Failed to fetch projects:", response.data.message);
+        setProjects([]);
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      setProjects([]);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
 
   // Fetch all projects for the dropdown
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoadingProjects(true);
-        const response = await apiClient.get(`/api/projects`);
-
-        if (response.data.success) {
-          setProjects(response.data.data || []);
-        } else {
-          console.error("Failed to fetch projects:", response.data.message);
-        }
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      } finally {
-        setLoadingProjects(false);
-      }
-    };
-
-    fetchProjects();
-  }, []);
+    fetchProjects(serviceFilter);
+  }, [serviceFilter]);
 
   // Fetch selected project details
   useEffect(() => {
@@ -80,17 +97,16 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
     fetchProjectDetails();
   }, [projectId]);
 
-  // Filter projects based on service filter
-  const filteredProjects = projects.filter((proj) => {
-    if (serviceFilter === "All") return true;
-    return proj.services === serviceFilter;
-  });
-
   // Handle project selection change
   const handleProjectChange = (selectedId) => {
     if (selectedId) {
       router.push(`/dashboard/task?projectId=${selectedId}`);
     }
+  };
+
+  // Toggle minimize/expand project details
+  const toggleMinimize = () => {
+    setIsMinimized(!isMinimized);
   };
 
   // Check if current project matches the service filter
@@ -114,8 +130,8 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
         className="w-full"
         disabled={!canView("tasks")}
       >
-        {filteredProjects && filteredProjects.length > 0 ? (
-          filteredProjects.map((proj) => (
+        {projects && projects.length > 0 ? (
+          projects.map((proj) => (
             <SelectItem
               key={proj._id}
               value={proj._id}
@@ -207,42 +223,30 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
       {renderProjectSelector()}
       <div className="bg-[#F9E6E78A] p-2 sm:p-4 rounded-md">
         <div className="p-2 sm:p-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+          {/* Header with Project Details text and Chevron button */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
             <div className="flex flex-col gap-1 sm:gap-3">
-              <h3 className="font-semibold text-base sm:text-lg items-center align-middle">
-                {project.customerName}
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-500 items-center align-middle mt-1">
-                {project.contactNumber}
-              </p>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-base sm:text-lg">Project Details</h3>
+              </div>
             </div>
-            <ChevronDown className="text-gray-400 hidden sm:block" />
+            <button
+              onClick={toggleMinimize}
+              className="hidden sm:flex items-center justify-center p-1 rounded-md hover:bg-gray-100 transition-colors"
+            >
+              {isMinimized ? (
+                <ChevronDown className="text-gray-400 transition-transform duration-200" />
+              ) : (
+                <ChevronUp className="text-gray-400 transition-transform duration-200" />
+              )}
+            </button>
           </div>
-          <p className="text-base sm:text-lg font-semibold mb-4">
-            {formattedAmount}
-          </p>
-          <Divider className="my-2" />
-          <div className="space-y-2 grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <DetailItem
-              label="Address"
-              value={project.fullAddress || "Not specified"}
-            />
-            <DetailItem
-              label="Email Id"
-              value={project.email || "Not specified"}
-            />
-            <DetailItem
-              label="Description"
-              value={project.projectDescription || "Not specified"}
-            />
-            <DetailItem label="Size" value={project.size || "Not specified"} />
+
+          {/* Basic Info - Always Visible */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             <DetailItem
               label="Customer"
               value={project.customerName || "Not specified"}
-            />
-            <DetailItem
-              label="Phone Number"
-              value={project.contactNumber || "Not specified"}
             />
             <DetailItem
               label="Service"
@@ -252,73 +256,103 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
               label="Amount"
               value={formattedAmount || "Not specified"}
             />
+            <DetailItem
+              label="Status"
+              value={project.projectStatus || "Not specified"}
+            />
+          </div>
 
-            {/* Attachments (multiple, with preview UI) */}
-            {Array.isArray(project.attachments) &&
-              project.attachments.length > 0 && (
+          {/* Detailed Info - Only when expanded */}
+          {!isMinimized && (
+            <>
+              <Divider className="my-4" />
+              <div className="space-y-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <DetailItem
-                  label={
-                    project.attachments.length > 1
-                      ? "Attachments"
-                      : "Attachment"
-                  }
-                  value={
-                    <div className="flex flex-col gap-2">
-                      {project.attachments.map((att, idx) => (
-                        <div
-                          key={att._id || att.url || idx}
-                          className="flex flex-col sm:flex-row items-center bg-[#E3F2FD] border border-gray-200 rounded px-3 py-2 gap-2 sm:gap-3 shadow-sm w-full max-w-full"
-                        >
-                          <File className="text-blue-500 w-5 h-5" />
-                          <span
-                            className="truncate max-w-[120px] sm:max-w-xs font-medium"
-                            title={att.originalName || "Attachment"}
-                          >
-                            {att.originalName || "Attachment"}
-                          </span>
-                          <a
-                            href={
-                              att.url && att.url.startsWith("http")
-                                ? att.url
-                                : `/${att.url}`
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download={att.originalName || true}
-                            className="ml-auto"
-                          >
-                            <Button
-                              size="xs"
-                              isIconOnly
-                              color="primary"
-                              variant="flat"
+                  label="Address"
+                  value={project.fullAddress || "Not specified"}
+                />
+                <DetailItem
+                  label="Email Id"
+                  value={project.email || "Not specified"}
+                />
+                <DetailItem
+                  label="Description"
+                  value={project.projectDescription || "Not specified"}
+                />
+                <DetailItem label="Size" value={project.size || "Not specified"} />
+                <DetailItem
+                  label="Phone Number"
+                  value={project.contactNumber || "Not specified"}
+                />
+
+                {/* Attachments (multiple, with preview UI) */}
+                {Array.isArray(project.attachments) &&
+                  project.attachments.length > 0 && (
+                    <DetailItem
+                      label={
+                        project.attachments.length > 1
+                          ? "Attachments"
+                          : "Attachment"
+                      }
+                      value={
+                        <div className="flex flex-col gap-2">
+                          {project.attachments.map((att, idx) => (
+                            <div
+                              key={att._id || att.url || idx}
+                              className="flex flex-col sm:flex-row items-center bg-[#E3F2FD] border border-gray-200 rounded px-3 py-2 gap-2 sm:gap-3 shadow-sm w-full max-w-full"
                             >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          </a>
+                              <File className="text-blue-500 w-5 h-5 flex-shrink-0" />
+                              <span
+                                className="truncate max-w-[120px] sm:max-w-xs font-medium break-words"
+                                title={att.originalName || "Attachment"}
+                              >
+                                {att.originalName || "Attachment"}
+                              </span>
+                              <a
+                                href={
+                                  att.url && att.url.startsWith("http")
+                                    ? att.url
+                                    : `/${att.url}`
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={att.originalName || true}
+                                className="ml-auto flex-shrink-0"
+                              >
+                                <Button
+                                  size="xs"
+                                  isIconOnly
+                                  color="primary"
+                                  variant="flat"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              </a>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      }
+                    />
+                  )}
+
+                <DetailItem
+                  label="Date"
+                  value={
+                    <div className="flex items-center">
+                      <Calendar className="mr-1 flex-shrink-0" />
+                      <span>
+                        {project.projectDate
+                          ? new Date(project.projectDate).toLocaleDateString(
+                              "en-GB"
+                            )
+                          : "Not specified"}
+                      </span>
                     </div>
                   }
                 />
-              )}
-
-            <DetailItem
-              label="Date"
-              value={
-                <div className="flex items-center">
-                  <Calendar className="mr-1" />
-                  <span>
-                    {project.projectDate
-                      ? new Date(project.projectDate).toLocaleDateString(
-                          "en-GB"
-                        )
-                      : "Not specified"}
-                  </span>
-                </div>
-              }
-            />
-          </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="p-2 sm:p-4 flex justify-end ">
@@ -337,9 +371,17 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
 };
 
 const DetailItem = ({ label, value }) => (
-  <div>
-    <span className="text-sm text-gray-500">{label}</span>
-    <span className="text-sm font-medium block">{value}</span>
+  <div className="break-words">
+    <span className="text-sm text-gray-500 block mb-1">{label}</span>
+    <div className="text-sm font-medium break-words overflow-hidden">
+      {typeof value === 'string' ? (
+        <span className="break-all" title={value}>
+          {value}
+        </span>
+      ) : (
+        value
+      )}
+    </div>
   </div>
 );
 

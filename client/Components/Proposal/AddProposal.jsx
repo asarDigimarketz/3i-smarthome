@@ -746,7 +746,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               </label>
               <div className="space-y-2">
                 <Select
-                  placeholder="Select or enter amount"
+                  isDisabled={formData.status === "Confirmed"}
+                  placeholder="Select Amount"
                   aria-label="Select project amount"
                   radius="sm"
                   variant="bordered"
@@ -775,7 +776,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 </Select>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Or enter custom amount"
+                    placeholder="Enter Amount"
                     type="number"
                     radius="sm"
                     variant="bordered"
@@ -790,7 +791,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                     }
                   />
                   <Button
-                    size="sm"
+                    size="lg"
+                    radius="sm"
                     color="primary"
                     variant="bordered"
                     onClick={() => {
@@ -801,6 +803,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                         if (!amountOptions.includes(newAmount)) {
                           setAmountOptions((prev) => [...prev, newAmount]);
                         }
+                        // Clear the input after adding
+                        handleInputChange("projectAmount", "");
                       }
                     }}
                   >

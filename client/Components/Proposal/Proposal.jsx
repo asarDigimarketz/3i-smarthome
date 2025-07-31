@@ -32,6 +32,7 @@ function App() {
   const [serviceFilter, setServiceFilter] = useState("");
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState(new Set(["Hot", "Cold", "Warm", "Scrap"])); // Default: only specific statuses
 
   // Debounce search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -47,8 +48,36 @@ function App() {
   // Remove auto-reset on page refresh; user can clear date range with button
 
   // Handle status filter change
-  const handleStatusChange = (status) => {
-    setStatusFilter(status);
+  const handleStatusChange = (statuses) => {
+    if (statuses === "all") {
+      // When "All Status" is selected, show ALL statuses including "Confirmed"
+      setStatusFilter("all");
+      setSelectedStatuses(new Set(["All Status", "Hot", "Cold", "Warm", "Scrap", "Confirmed"]));
+    } else if (Array.isArray(statuses)) {
+      // Multiple statuses selected
+      if (statuses.length === 0) {
+        // No statuses selected, show default statuses
+        setStatusFilter("Hot,Cold,Warm,Scrap");
+        setSelectedStatuses(new Set(["Hot", "Cold", "Warm", "Scrap"]));
+      } else if (statuses.length === 1 && statuses[0] === "Confirmed") {
+        // Only "Confirmed" selected
+        setStatusFilter("Confirmed");
+        setSelectedStatuses(new Set(["Confirmed"]));
+      } else {
+        // Multiple specific statuses selected
+        setStatusFilter(statuses.join(",")); // Join multiple statuses
+        setSelectedStatuses(new Set(statuses));
+      }
+    } else {
+      // Single status (legacy support)
+      if (statuses === "Confirmed") {
+        setStatusFilter("Confirmed");
+        setSelectedStatuses(new Set(["Confirmed"]));
+      } else {
+        setStatusFilter(statuses);
+        setSelectedStatuses(new Set([statuses]));
+      }
+    }
     setCurrentPage(1); // Reset to first page when filter changes
   };
 
@@ -117,7 +146,7 @@ function App() {
                   ) : null
                 }
               />
-              <StatusDropdown onStatusChange={handleStatusChange} />
+              <StatusDropdown onStatusChange={handleStatusChange} selectedStatuses={selectedStatuses} />
               
                 <Link href="/dashboard/proposal/add-proposal">
                   <Button
