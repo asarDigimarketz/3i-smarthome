@@ -314,7 +314,14 @@ projectSchema.statics.getProjectsWithFilters = function (
 
   // Add status filter
   if (status) {
-    query.projectStatus = status;
+    if (status.includes(",")) {
+      // Multiple statuses - use $in operator
+      const statusArray = status.split(",").map(s => s.trim());
+      query.projectStatus = { $in: statusArray };
+    } else {
+      // Single status
+      query.projectStatus = status;
+    }
   }
 
   // Add service filter
@@ -383,7 +390,14 @@ projectSchema.statics.getProjectsCount = function (filters = {}) {
   }
 
   if (status) {
-    query.projectStatus = status;
+    if (status.includes(",")) {
+      // Multiple statuses - use $in operator
+      const statusArray = status.split(",").map(s => s.trim());
+      query.projectStatus = { $in: statusArray };
+    } else {
+      // Single status
+      query.projectStatus = status;
+    }
   }
 
   if (service) {

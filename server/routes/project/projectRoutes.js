@@ -11,6 +11,7 @@ const {
   updateProjectField,
   deleteProject,
   getProjectStats,
+  getMonthlyProjectStats,
   updateTaskStatus,
   updateProjectProgress,
   syncProjectWithTasks,
@@ -114,6 +115,11 @@ const handleFileUpload = (req, res, next) => {
 // @desc    Get project statistics
 // @access  Private
 router.get("/stats", authenticateToken, getProjectStats);
+
+// @route   GET /api/projects/monthly-stats
+// @desc    Get monthly project statistics
+// @access  Private
+router.get("/monthly-stats", authenticateToken, getMonthlyProjectStats);
 
 // @route   POST /api/projects/from-proposal/:proposalId
 // @desc    Create new project from proposal

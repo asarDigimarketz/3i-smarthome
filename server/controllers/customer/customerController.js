@@ -17,7 +17,6 @@ const getCustomers = async (req, res) => {
       limit = 10,
       search = "",
       service = "",
-      status = "",
       startDate = "",
       endDate = "",
       sortBy = "createdAt",
@@ -29,7 +28,6 @@ const getCustomers = async (req, res) => {
       limit: parseInt(limit),
       search,
       service,
-      status,
       startDate,
       endDate,
       sortBy,
@@ -43,7 +41,6 @@ const getCustomers = async (req, res) => {
     const totalCustomers = await Customer.getCustomersCount({
       search,
       service,
-      status,
       startDate,
       endDate,
     });
@@ -125,7 +122,6 @@ const createCustomer = async (req, res) => {
       email,
       address,
       notes,
-      status = "Active",
     } = req.body;
     const customerId = await generateCustomerId({
       email,
@@ -170,7 +166,6 @@ const createCustomer = async (req, res) => {
       email,
       address: parsedAddress,
       notes,
-      status,
     };
 
     const customer = await Customer.create(customerData);
@@ -208,7 +203,7 @@ const createCustomer = async (req, res) => {
  */
 const updateCustomer = async (req, res) => {
   try {
-    const { customerName, contactNumber, email, address, notes, status } =
+    const { customerName, contactNumber, email, address, notes } =
       req.body;
 
     // Find customer
@@ -241,7 +236,6 @@ const updateCustomer = async (req, res) => {
     if (email) updateData.email = email;
     if (parsedAddress) updateData.address = parsedAddress;
     if (notes !== undefined) updateData.notes = notes;
-    if (status) updateData.status = status;
 
     // Check if email is being changed and if new email already exists
     if (email && email !== customer.email) {
@@ -332,16 +326,6 @@ const deleteCustomer = async (req, res) => {
  */
 const getCustomerStats = async (req, res) => {
   try {
-    const stats = await Customer.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-          totalSpent: { $sum: "$totalSpent" },
-        },
-      },
-    ]);
-
     const totalCustomers = await Customer.countDocuments();
     const totalRevenue = await Customer.aggregate([
       {
@@ -366,7 +350,6 @@ const getCustomerStats = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        statusBreakdown: stats,
         serviceBreakdown: serviceStats,
         totalCustomers,
         totalRevenue: totalRevenue[0]?.total || 0,

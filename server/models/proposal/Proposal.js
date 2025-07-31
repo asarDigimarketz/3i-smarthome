@@ -223,6 +223,7 @@ proposalSchema.statics.getProposalsWithFilters = function (
     sortOrder = "desc",
     search = "",
     status = "",
+    excludeStatus = "",
     dateFrom = "",
     dateTo = "",
   } = options;
@@ -249,7 +250,19 @@ proposalSchema.statics.getProposalsWithFilters = function (
 
   // Add status filter
   if (status) {
-    query.status = status;
+    if (status.includes(",")) {
+      // Multiple statuses - use $in operator
+      const statusArray = status.split(",").map(s => s.trim());
+      query.status = { $in: statusArray };
+    } else {
+      // Single status
+      query.status = status;
+    }
+  }
+
+  // Add excludeStatus filter
+  if (excludeStatus) {
+    query.status = { $ne: excludeStatus };
   }
 
   // Add date range filter
@@ -280,6 +293,7 @@ proposalSchema.statics.getProposalsCount = function (filters = {}) {
   const {
     search = "",
     status = "",
+    excludeStatus = "",
     dateFrom = "",
     dateTo = "",
     ...additionalFilters
@@ -307,7 +321,19 @@ proposalSchema.statics.getProposalsCount = function (filters = {}) {
 
   // Add status filter
   if (status) {
-    query.status = status;
+    if (status.includes(",")) {
+      // Multiple statuses - use $in operator
+      const statusArray = status.split(",").map(s => s.trim());
+      query.status = { $in: statusArray };
+    } else {
+      // Single status
+      query.status = status;
+    }
+  }
+
+  // Add excludeStatus filter
+  if (excludeStatus) {
+    query.status = { $ne: excludeStatus };
   }
 
   // Add date range filter

@@ -106,13 +106,6 @@ const customerSchema = new mongoose.Schema(
       },
     ],
 
-    // Customer status
-    status: {
-      type: String,
-      enum: ["Active", "Inactive"],
-      default: "Active",
-    },
-
     // Projects associated with this customer
     projects: [
       {
@@ -172,7 +165,6 @@ customerSchema.statics.getCustomersWithFilters = function (
     sortOrder = "desc",
     search = "",
     service = "",
-    status = "",
     startDate = "",
     endDate = "",
   } = options;
@@ -193,11 +185,6 @@ customerSchema.statics.getCustomersWithFilters = function (
   // Add service filter
   if (service && service !== "all") {
     query.services = { $in: [service] };
-  }
-
-  // Add status filter
-  if (status) {
-    query.status = status;
   }
 
   // Add date range filter
@@ -236,7 +223,7 @@ customerSchema.statics.getCustomersWithFilters = function (
  * Static method to get customers count
  */
 customerSchema.statics.getCustomersCount = function (filters = {}) {
-  const { search = "", service = "", status = "", startDate = "", endDate = "" } = filters;
+  const { search = "", service = "", startDate = "", endDate = "" } = filters;
 
   let query = { ...filters };
 
@@ -251,10 +238,6 @@ customerSchema.statics.getCustomersCount = function (filters = {}) {
 
   if (service && service !== "all") {
     query.services = { $in: [service] };
-  }
-
-  if (status) {
-    query.status = status;
   }
 
   // Add date range filter
@@ -332,7 +315,6 @@ customerSchema.statics.findOrCreateCustomer = async function (customerData) {
       const newCustomerData = {
         ...customerData,
         customerId,
-        status: customerData.status || "Active",
       };
 
       try {

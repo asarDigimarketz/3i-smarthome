@@ -351,6 +351,7 @@ const getProposals = async (req, res) => {
       sortOrder = "desc",
       search = "",
       status = "",
+      excludeStatus = "",
       dateFrom = "",
       dateTo = "",
       service = "",
@@ -364,6 +365,7 @@ const getProposals = async (req, res) => {
       sortOrder,
       search,
       status,
+      excludeStatus,
       dateFrom,
       dateTo,
     };
@@ -384,6 +386,7 @@ const getProposals = async (req, res) => {
     const total = await Proposal.getProposalsCount({
       search,
       status,
+      excludeStatus,
       dateFrom,
       dateTo,
       ...additionalFilters,
@@ -736,9 +739,9 @@ const updateProposal = async (req, res) => {
             proposalDate: proposal.date,
           };
 
-          // Copy attachment if exists
-          if (proposal.attachment) {
-            projectData.attachment = proposal.attachment;
+          // Copy attachments if exists
+          if (proposal.attachments && proposal.attachments.length > 0) {
+            projectData.attachments = proposal.attachments;
           }
 
           // Create or update customer automatically
@@ -962,9 +965,9 @@ const updateProposalField = async (req, res) => {
             proposalDate: proposal.date,
           };
 
-          // Copy attachment if exists
-          if (proposal.attachment) {
-            projectData.attachment = proposal.attachment;
+          // Copy attachments if exists
+          if (proposal.attachments && proposal.attachments.length > 0) {
+            projectData.attachments = proposal.attachments;
           }
 
           // Create or update customer automatically

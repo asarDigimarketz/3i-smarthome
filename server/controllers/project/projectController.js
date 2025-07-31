@@ -350,9 +350,9 @@ const createProjectFromProposal = async (req, res) => {
       proposalDate: proposal.date,
     };
 
-    // Copy attachment if exists
-    if (proposal.attachment) {
-      projectData.attachment = proposal.attachment;
+    // Copy attachments if exists
+    if (proposal.attachments && proposal.attachments.length > 0) {
+      projectData.attachments = proposal.attachments;
     }
 
     // Create or update customer automatically
@@ -940,74 +940,198 @@ const deleteProject = async (req, res) => {
 const getProjectStats = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     // Build date filter
     let dateFilter = {};
-    if (startDate || endDate) {
-      dateFilter.projectDate = {};
-      if (startDate) {
-        dateFilter.projectDate.$gte = new Date(startDate);
-      }
-      if (endDate) {
-        // If start and end dates are the same, set end time to end of day
-        const endDateObj = new Date(endDate);
-        if (startDate && new Date(startDate).toDateString() === endDateObj.toDateString()) {
-          // Same day - set to end of day (23:59:59.999)
-          endDateObj.setHours(23, 59, 59, 999);
-        }
-        dateFilter.projectDate.$lte = endDateObj;
-      }
+    if (startDate && endDate) {
+      dateFilter.projectDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
     }
 
-    // Status breakdown
-    const statusStats = await Project.aggregate([
+    // Get total projects count
+    const totalProjects = await Project.countDocuments(dateFilter);
+
+    // Get projects by status
+    const statusBreakdown = await Project.aggregate([
       { $match: dateFilter },
       {
         $group: {
           _id: "$projectStatus",
-          count: { $sum: 1 },
-          totalAmount: { $sum: "$projectAmount" },
-        },
+          count: { $sum: 1 }
+        }
       },
+      { $sort: { count: -1 } }
     ]);
 
-    // Service breakdown
-    const serviceStats = await Project.aggregate([
+    // Get projects by service
+    const serviceBreakdown = await Project.aggregate([
       { $match: dateFilter },
       {
         $group: {
           _id: "$services",
-          count: { $sum: 1 },
-          totalAmount: { $sum: "$projectAmount" },
-        },
+          count: { $sum: 1 }
+        }
       },
+      { $sort: { count: -1 } }
     ]);
 
-    const totalProjects = await Project.countDocuments(dateFilter);
-    const totalValue = await Project.aggregate([
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$projectAmount" },
-        },
-      },
-    ]);
+    // Get recent projects
+    const recentProjects = await Project.find(dateFilter)
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("assignedEmployees", "firstName lastName email avatar")
+      .lean();
 
     res.status(200).json({
       success: true,
       data: {
-        statusBreakdown: statusStats,
-        serviceBreakdown: serviceStats,
         totalProjects,
-        totalValue: totalValue[0]?.total || 0,
-      },
+        statusBreakdown,
+        serviceBreakdown,
+        recentProjects
+      }
     });
   } catch (error) {
-    console.error("Get project stats error:", error);
+    console.error("Error getting project stats:", error);
     res.status(500).json({
       success: false,
-      message: "Server error while fetching project statistics",
+      error: "Failed to get project statistics"
+    });
+  }
+};
+
+// Get monthly project statistics
+const getMonthlyProjectStats = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    // Build date filter
+    let dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter.projectDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    // Get monthly breakdown by service
+    const monthlyData = await Project.aggregate([
+      { $match: dateFilter },
+      {
+        $addFields: {
+          year: { $year: "$projectDate" },
+          month: { $month: "$projectDate" }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: "$year",
+            month: "$month",
+            service: "$services"
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: "$_id.year",
+            month: "$_id.month"
+          },
+          services: {
+            $push: {
+              service: "$_id.service",
+              count: "$count"
+            }
+          },
+          total: { $sum: "$count" }
+        }
+      },
+      {
+        $addFields: {
+          month: {
+            $concat: [
+              { $toString: "$_id.year" },
+              "-",
+              { $cond: { if: { $lt: ["$_id.month", 10] }, then: { $concat: ["0", { $toString: "$_id.month" }] }, else: { $toString: "$_id.month" } } }
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          month: 1,
+          total: 1,
+          "Home Cinema": {
+            $let: {
+              vars: {
+                homeCinema: {
+                  $filter: {
+                    input: "$services",
+                    cond: { $eq: ["$$this.service", "Home Cinema"] }
+                  }
+                }
+              },
+              in: { $ifNull: [{ $arrayElemAt: ["$$homeCinema.count", 0] }, 0] }
+            }
+          },
+          "Home Automation": {
+            $let: {
+              vars: {
+                homeAutomation: {
+                  $filter: {
+                    input: "$services",
+                    cond: { $eq: ["$$this.service", "Home Automation"] }
+                  }
+                }
+              },
+              in: { $ifNull: [{ $arrayElemAt: ["$$homeAutomation.count", 0] }, 0] }
+            }
+          },
+          "Security System": {
+            $let: {
+              vars: {
+                securitySystem: {
+                  $filter: {
+                    input: "$services",
+                    cond: { $eq: ["$$this.service", "Security System"] }
+                  }
+                }
+              },
+              in: { $ifNull: [{ $arrayElemAt: ["$$securitySystem.count", 0] }, 0] }
+            }
+          },
+          "Outdoor Audio Solution": {
+            $let: {
+              vars: {
+                outdoorAudio: {
+                  $filter: {
+                    input: "$services",
+                    cond: { $eq: ["$$this.service", "Outdoor Audio Solution"] }
+                  }
+                }
+              },
+              in: { $ifNull: [{ $arrayElemAt: ["$$outdoorAudio.count", 0] }, 0] }
+            }
+          }
+        }
+      },
+      { $sort: { month: 1 } }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: monthlyData
+    });
+  } catch (error) {
+    console.error("Error getting monthly project stats:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to get monthly project statistics"
     });
   }
 };
@@ -1153,6 +1277,7 @@ module.exports = {
   updateProjectField,
   deleteProject,
   getProjectStats,
+  getMonthlyProjectStats,
   updateTaskStatus,
   updateProjectProgress,
   syncProjectWithTasks,
