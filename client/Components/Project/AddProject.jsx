@@ -53,7 +53,7 @@ export function AddProjectPage() {
   // Check permissions on component mount
   useEffect(() => {
     const isEdit = !!projectId;
-    
+
     if (isEdit && !canEdit("projects")) {
       addToast({
         title: "Access Denied",
@@ -63,7 +63,7 @@ export function AddProjectPage() {
       router.push("/dashboard/projects");
       return;
     }
-    
+
     if (!isEdit && !canCreate("projects")) {
       addToast({
         title: "Access Denied",
@@ -135,7 +135,7 @@ export function AddProjectPage() {
                 new Date(p.projectDate).toISOString().split("T")[0],
               attachments: Array.isArray(p.attachments) ? p.attachments : [],
             });
-            
+
             // Update input values for autocomplete fields
             // Use a separate effect to avoid infinite loops
             if (p.email || p.contactNumber) {
@@ -182,6 +182,45 @@ export function AddProjectPage() {
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  // Handle size input with automatic X formatting
+  const handleSizeChange = (e) => {
+    let value = e.target.value;
+
+    // Only allow numbers and X
+    value = value.replace(/[^\dX]/g, '');
+
+    // Ensure only one X exists
+    const xCount = (value.match(/X/g) || []).length;
+    if (xCount > 1) {
+      // Keep only the first X
+      const firstXIndex = value.indexOf('X');
+      value = value.substring(0, firstXIndex + 1) + value.substring(firstXIndex + 1).replace(/X/g, '');
+    }
+
+    // Ensure X is not at the beginning or end
+    if (value.startsWith('X')) {
+      value = value.substring(1);
+    }
+    if (value.endsWith('X') && value.length > 1 && value.charAt(value.length - 2) === 'X') {
+      value = value.substring(0, value.length - 1);
+    }
+
+    handleInputChange("size", value);
+  };
+
+  // Handle size keydown for space bar
+  const handleSizeKeyDown = (e) => {
+    if (e.key === ' ') {
+      e.preventDefault();
+      const currentValue = formData.size;
+
+      // Only add X if there's no X already and there are digits
+      if (!currentValue.includes('X') && currentValue.length > 0 && /^\d+$/.test(currentValue)) {
+        handleInputChange("size", currentValue + 'X');
+      }
     }
   };
 
@@ -243,45 +282,139 @@ export function AddProjectPage() {
   const validateForm = () => {
     const newErrors = {};
 
-    // Required field validation
+    // Customer Name validation
     if (!formData.customerName.trim()) {
       newErrors.customerName = "Customer name is required";
+    } else if (formData.customerName.trim().length < 2) {
+      newErrors.customerName = "Customer name must be at least 2 characters";
+    } else if (formData.customerName.trim().length > 100) {
+      newErrors.customerName = "Customer name must not exceed 100 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.customerName.trim())) {
+      newErrors.customerName = "Customer name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
+
+    // Contact Number validation
     if (!formData.contactNumber.trim()) {
       newErrors.contactNumber = "Contact number is required";
+    } else if (!/^\d{10}$/.test(formData.contactNumber.trim())) {
+      newErrors.contactNumber = "Please enter a valid 10-digit mobile number";
     }
+
+    // Email validation
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email";
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email.trim())) {
+      newErrors.email = "Please enter a valid email address";
+    } else if (formData.email.trim().length > 254) {
+      newErrors.email = "Email address is too long";
     }
+
+    // Address validation
     if (!formData.address.addressLine.trim()) {
       newErrors["address.addressLine"] = "Address line is required";
+    } else if (formData.address.addressLine.trim().length < 5) {
+      newErrors["address.addressLine"] = "Address line must be at least 5 characters";
+    } else if (formData.address.addressLine.trim().length > 200) {
+      newErrors["address.addressLine"] = "Address line must not exceed 200 characters";
     }
+
     if (!formData.address.city.trim()) {
       newErrors["address.city"] = "City is required";
+    } else if (formData.address.city.trim().length < 2) {
+      newErrors["address.city"] = "City name must be at least 2 characters";
+    } else if (formData.address.city.trim().length > 50) {
+      newErrors["address.city"] = "City name must not exceed 50 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.address.city.trim())) {
+      newErrors["address.city"] = "City name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
+
     if (!formData.address.district.trim()) {
       newErrors["address.district"] = "District is required";
+    } else if (formData.address.district.trim().length < 2) {
+      newErrors["address.district"] = "District name must be at least 2 characters";
+    } else if (formData.address.district.trim().length > 50) {
+      newErrors["address.district"] = "District name must not exceed 50 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.address.district.trim())) {
+      newErrors["address.district"] = "District name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
+
     if (!formData.address.state.trim()) {
       newErrors["address.state"] = "State is required";
+    } else if (formData.address.state.trim().length < 2) {
+      newErrors["address.state"] = "State name must be at least 2 characters";
+    } else if (formData.address.state.trim().length > 50) {
+      newErrors["address.state"] = "State name must not exceed 50 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.address.state.trim())) {
+      newErrors["address.state"] = "State name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
+
+    if (!formData.address.country.trim()) {
+      newErrors["address.country"] = "Country is required";
+    } else if (formData.address.country.trim().length < 2) {
+      newErrors["address.country"] = "Country name must be at least 2 characters";
+    } else if (formData.address.country.trim().length > 50) {
+      newErrors["address.country"] = "Country name must not exceed 50 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.address.country.trim())) {
+      newErrors["address.country"] = "Country name can only contain letters, spaces, dots, hyphens, and apostrophes";
+    }
+
     if (!formData.address.pincode.trim()) {
       newErrors["address.pincode"] = "Pincode is required";
+    } else if (!/^[1-9][0-9]{5}$/.test(formData.address.pincode.trim())) {
+      newErrors["address.pincode"] = "Please enter a valid 6-digit Indian pincode";
     }
+
+    // Services validation
     if (!formData.services) {
       newErrors.services = "Service selection is required";
     }
+
+    // Project Description validation
     if (!formData.projectDescription.trim()) {
       newErrors.projectDescription = "Project description is required";
+    } else if (formData.projectDescription.trim().length < 10) {
+      newErrors.projectDescription = "Project description must be at least 10 characters";
+    } else if (formData.projectDescription.trim().length > 1000) {
+      newErrors.projectDescription = "Project description must not exceed 1000 characters";
     }
+
+    // Size validation
     if (!formData.size.trim()) {
       newErrors.size = "Size is required";
+    } else if (!/^\d+X\d+$/.test(formData.size.trim())) {
+      newErrors.size = "Please enter size in format: 1200X1000";
     }
+
+    // Project Amount validation
     if (!formData.projectAmount || formData.projectAmount <= 0) {
-      newErrors.projectAmount =
-        "Project amount is required and must be positive";
+      newErrors.projectAmount = "Project amount is required and must be positive";
+    } else if (formData.projectAmount < 1000) {
+      newErrors.projectAmount = "Project amount must be at least ₹1,000";
+    } else if (formData.projectAmount > 100000000) {
+      newErrors.projectAmount = "Project amount must not exceed ₹10 crores";
+    }
+
+    // Project Date validation
+    if (!formData.projectDate) {
+      newErrors.projectDate = "Project date is required";
+    } else {
+      const selectedDate = new Date(formData.projectDate);
+      const today = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(today.getFullYear() + 1);
+
+      if (selectedDate < oneYearAgo) {
+        newErrors.projectDate = "Project date cannot be more than 1 year in the past";
+      } else if (selectedDate > oneYearFromNow) {
+        newErrors.projectDate = "Project date cannot be more than 1 year in the future";
+      }
+    }
+
+    // Comment validation (optional but if provided, validate length)
+    if (formData.comment && formData.comment.trim().length > 500) {
+      newErrors.comment = "Comment must not exceed 500 characters";
     }
 
     setErrors(newErrors);
@@ -417,9 +550,13 @@ export function AddProjectPage() {
                 label=""
                 placeholder="Enter contact number"
                 inputValue={contactInput}
-                onInputChange={(value) =>
-                  handleContactInputChange(value, setFormData)
-                }
+                onInputChange={(value) => {
+                  handleContactInputChange(value, setFormData);
+                  // Clear error when user starts typing
+                  if (errors.contactNumber) {
+                    setErrors((prev) => ({ ...prev, contactNumber: "" }));
+                  }
+                }}
                 selectedKey={selectedCustomer?._id}
                 onSelectionChange={(key) =>
                   handleCustomerSelection(key, setFormData)
@@ -444,6 +581,8 @@ export function AddProjectPage() {
                 variant="bordered"
                 isLoading={isSearching}
                 menuTrigger="input"
+                isInvalid={!!errors.contactNumber}
+                errorMessage={errors.contactNumber}
               >
                 {(item) => (
                   <AutocompleteItem
@@ -469,9 +608,13 @@ export function AddProjectPage() {
                 label=""
                 placeholder="Enter email address"
                 inputValue={emailInput}
-                onInputChange={(value) =>
-                  handleEmailInputChange(value, setFormData)
-                }
+                onInputChange={(value) => {
+                  handleEmailInputChange(value, setFormData);
+                  // Clear error when user starts typing
+                  if (errors.email) {
+                    setErrors((prev) => ({ ...prev, email: "" }));
+                  }
+                }}
                 selectedKey={selectedCustomer?._id}
                 onSelectionChange={(key) =>
                   handleCustomerSelection(key, setFormData)
@@ -496,6 +639,8 @@ export function AddProjectPage() {
                 variant="bordered"
                 isLoading={isSearching}
                 menuTrigger="input"
+                isInvalid={!!errors.email}
+                errorMessage={errors.email}
               >
                 {(item) => (
                   <AutocompleteItem key={item._id} textValue={item.email}>
@@ -527,6 +672,8 @@ export function AddProjectPage() {
                 onChange={(e) =>
                   handleInputChange("projectDate", e.target.value)
                 }
+                isInvalid={!!errors.projectDate}
+                errorMessage={errors.projectDate}
               />
             </div>
 
@@ -619,6 +766,8 @@ export function AddProjectPage() {
                 onChange={(e) =>
                   handleInputChange("address.country", e.target.value)
                 }
+                isInvalid={!!errors["address.country"]}
+                errorMessage={errors["address.country"]}
               />
             </div>
 
@@ -646,23 +795,22 @@ export function AddProjectPage() {
                   classNames={{
                     inputWrapper: " h-[50px] border-[#E0E5F2]",
                   }}
-                  placeholder="Size"
+                  placeholder="1200X1000"
                   radius="sm"
                   variant="bordered"
                   className="w-full rounded-r-none"
                   value={formData.size}
-                  onChange={(e) => handleInputChange("size", e.target.value)}
+                  onChange={handleSizeChange}
+                  onKeyDown={handleSizeKeyDown}
                   isInvalid={!!errors.size}
+                  errorMessage={errors.size}
                   endContent={
                     <span className="text-xs text-[#999999] border-[#00000080] border-l-medium px-3">
-                      Sqt
+                      Size
                     </span>
                   }
                 />
               </div>
-              {errors.size && (
-                <div className="text-red-500 text-sm mt-1">{errors.size}</div>
-              )}
             </div>
 
             <div>
@@ -726,6 +874,8 @@ export function AddProjectPage() {
                 }}
                 value={formData.comment}
                 onChange={(e) => handleInputChange("comment", e.target.value)}
+                isInvalid={!!errors.comment}
+                errorMessage={errors.comment}
               />
             </div>
             <div>

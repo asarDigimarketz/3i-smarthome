@@ -320,32 +320,32 @@ const Dashboard = () => {
       });
 
       // Fallback to static data
-      setServiceStats([
-        {
-          title: "Home Cinema",
-          count: 2,
-          color: "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]",
-          icon: "lucide:tv",
-        },
-        {
-          title: "Home Automation",
-          count: 1,
-          color: "bg-gradient-to-br from-[#026BB7] to-[#5DEAFF]",
-          icon: "lucide:home",
-        },
-        {
-          title: "Security System",
-          count: 1,
-          color: "bg-gradient-to-br from-[#014C95] to-[#36B9F6]",
-          icon: "lucide:shield",
-        },
-        {
-          title: "Outdoor Audio Solution",
-          count: 0,
-          color: "bg-gradient-to-br from-[#DF2795] to-[#EB7AB7]",
-          icon: "lucide:music",
-        },
-      ]);
+      // setServiceStats([
+      //   {
+      //     title: "Home Cinema",
+      //     count: 2,
+      //     color: "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]",
+      //     icon: "lucide:tv",
+      //   },
+      //   {
+      //     title: "Home Automation",
+      //     count: 1,
+      //     color: "bg-gradient-to-br from-[#026BB7] to-[#5DEAFF]",
+      //     icon: "lucide:home",
+      //   },
+      //   {
+      //     title: "Security System",
+      //     count: 1,
+      //     color: "bg-gradient-to-br from-[#014C95] to-[#36B9F6]",
+      //     icon: "lucide:shield",
+      //   },
+      //   {
+      //     title: "Outdoor Audio Solution",
+      //     count: 0,
+      //     color: "bg-gradient-to-br from-[#DF2795] to-[#EB7AB7]",
+      //     icon: "lucide:music",
+      //   },
+      // ]);
     } finally {
       setLoading(false);
     }

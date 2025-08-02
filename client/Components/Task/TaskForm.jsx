@@ -58,6 +58,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Track removed attachments
   const [removedBefore, setRemovedBefore] = useState([]);
@@ -155,10 +156,83 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  // Validate form data
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Title validation
+    if (!formData.title.trim()) {
+      newErrors.title = "Task title is required";
+    } else if (formData.title.trim().length < 3) {
+      newErrors.title = "Task title must be at least 3 characters";
+    } else if (formData.title.trim().length > 100) {
+      newErrors.title = "Task title must not exceed 100 characters";
+    }
+
+    // Start Date validation
+    if (!formData.startDate) {
+      newErrors.startDate = "Start date is required";
+    } else {
+      const startDate = new Date(formData.startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to compare dates only
+
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+      const twoYearsFromNow = new Date();
+      twoYearsFromNow.setFullYear(today.getFullYear() + 2);
+
+      if (startDate < oneYearAgo) {
+        newErrors.startDate = "Start date cannot be more than 1 year in the past";
+      } else if (startDate > twoYearsFromNow) {
+        newErrors.startDate = "Start date cannot be more than 2 years in the future";
+      }
+    }
+
+    // End Date validation
+    if (formData.endDate) {
+      const endDate = new Date(formData.endDate);
+      const startDate = new Date(formData.startDate);
+
+      const twoYearsFromNow = new Date();
+      twoYearsFromNow.setFullYear(new Date().getFullYear() + 2);
+
+      if (formData.startDate && endDate < startDate) {
+        newErrors.endDate = "End date cannot be earlier than start date";
+      } else if (endDate > twoYearsFromNow) {
+        newErrors.endDate = "End date cannot be more than 2 years in the future";
+      }
+    }
+
+    // Comment validation (optional but if provided, validate length)
+    if (formData.comment && formData.comment.trim().length > 500) {
+      newErrors.comment = "Comment must not exceed 500 characters";
+    }
+
+    // Assigned To validation
+    if (formData.assignedTo.length === 0) {
+      newErrors.assignedTo = "Please assign the task to at least one employee";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSelectChange = (name) => (value) => {
     setFormData({ ...formData, [name]: value });
+
+    // Clear error when user makes a selection
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleFileChange = (type, e) => {
@@ -228,10 +302,11 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
       return;
     }
 
-    if (!formData.title || !formData.startDate) {
+    // Validate form before submission
+    if (!validateForm()) {
       addToast({
-        title: "Error",
-        description: "Please fill in required fields (title and start date)",
+        title: "Validation Error",
+        description: "Please fix the errors and try again",
         color: "danger",
       });
       return;
@@ -373,6 +448,8 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
             radius="sm"
             onChange={handleChange}
             isRequired
+            isInvalid={!!errors.title}
+            errorMessage={errors.title}
             className="rounded-lg border-gray-200 w-full"
             classNames={{
               inputWrapper: "bg-[#EEEEEE] h-[48px] md:h-[100px]",
@@ -387,6 +464,8 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
             name="comment"
             value={formData.comment}
             onChange={handleChange}
+            isInvalid={!!errors.comment}
+            errorMessage={errors.comment}
             className="rounded-lg border-gray-200 w-full"
             classNames={{
               inputWrapper: "bg-[#EEEEEE] ",
@@ -405,6 +484,8 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
               value={formData.startDate}
               onChange={handleChange}
               isRequired
+              isInvalid={!!errors.startDate}
+              errorMessage={errors.startDate}
               className="rounded-lg border-gray-200 w-full"
               classNames={{
                 inputWrapper: "bg-[#EEEEEE] ",
@@ -420,6 +501,8 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
               name="endDate"
               value={formData.endDate}
               onChange={handleChange}
+              isInvalid={!!errors.endDate}
+              errorMessage={errors.endDate}
               className="rounded-lg border-gray-200 w-full"
               classNames={{
                 inputWrapper: "bg-[#EEEEEE] ",
@@ -444,6 +527,8 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
             onSelectionChange={(keys) =>
               handleSelectChange("assignedTo")([...keys])
             }
+            isInvalid={!!errors.assignedTo}
+            errorMessage={errors.assignedTo}
             className="rounded-lg border-gray-200 w-full"
             classNames={{
               base: "max-w-full",
@@ -505,7 +590,7 @@ const TaskForm = ({ onClose, userPermissions, task, refreshTasks, canEditTask })
           >
             <SelectItem key="new">New</SelectItem>
             <SelectItem key="inprogress">In Progress</SelectItem>
-            <SelectItem key="completed">Completed</SelectItem>
+            <SelectItem key="completed">Done</SelectItem>
           </Select>
         </div>
 

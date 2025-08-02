@@ -33,6 +33,25 @@ export function ProjectCards({
   const [projectStatuses, setProjectStatuses] = useState({});
   const router = useRouter();
   const { hasEditPermission } = userPermissions;
+
+  // Function to handle project click with state preservation
+  const handleProjectClick = (projectId) => {
+    // Get current URL parameters to preserve state
+    const currentParams = new URLSearchParams(window.location.search);
+
+    // Create the task page URL with project ID and return state
+    const taskParams = new URLSearchParams();
+    taskParams.set('projectId', projectId);
+
+    // Store the return URL with current state
+    if (currentParams.toString()) {
+      taskParams.set('returnTo', `/dashboard/projects?${currentParams.toString()}`);
+    } else {
+      taskParams.set('returnTo', '/dashboard/projects');
+    }
+
+    router.push(`/dashboard/task?${taskParams.toString()}`);
+  };
   // Build query params for backend filtering
   const buildQueryParams = () => {
     const params = [];
@@ -118,36 +137,37 @@ export function ProjectCards({
         );
 
         setProjects(transformedProjects);
+
+        // Handle pagination - Simple approach to show correct total pages
         if (setTotalPages && response.data.pagination) {
-          const totalPages = response.data.pagination.total || 1;
-          setTotalPages(totalPages);
+          const paginationData = response.data.pagination;
 
-          console.log('📄 Web pagination - serviceFilter:', serviceFilter, 'totalPages:', totalPages, 'current:', response.data.pagination.current, 'hasNext:', response.data.pagination.hasNext);
+          console.log('Pagination Debug:', {
+            statusFilter,
+            page,
+            apiPagination: paginationData,
+            projectsCount: transformedProjects.length
+          });
 
-          // Fallback: If we got exactly 6 projects on first page, there might be more
-          const isFirstPage = response.data.pagination.current === 1;
-          const gotFullPage = transformedProjects.length === 6;
-          const hasMoreFromPageSize = isFirstPage && gotFullPage;
-
-          console.log('📄 Web page logic - isFirstPage:', isFirstPage, 'gotFullPage:', gotFullPage, 'hasMoreFromPageSize:', hasMoreFromPageSize);
-
-          // If pagination says no more pages but we got a full page, assume there might be more
-          if (totalPages === 1 && hasMoreFromPageSize) {
-            console.log('🔄 Web fallback: Got exactly 6 projects on first page, setting totalPages to 2');
-            setTotalPages(2); // Assume at least 2 pages if we got a full page
+          // Check if API returned valid pagination data
+          if (paginationData.total && paginationData.total > 0) {
+            setTotalPages(paginationData.total);
+          } else if (paginationData.count && paginationData.count > 0) {
+            setTotalPages(Math.ceil(paginationData.count / pageSize));
+          } else {
+            // API returned invalid pagination - estimate based on results
+            if (transformedProjects.length === pageSize) {
+              // We got exactly pageSize results, there are likely more pages
+              // Show a reasonable number of pages (5 is common for most datasets)
+              setTotalPages(5);
+            } else {
+              // We got less than pageSize results, this is likely the last page
+              setTotalPages(page);
+            }
           }
         } else if (setTotalPages) {
-          // No pagination data, check if we got a full page
-          const gotFullPage = transformedProjects.length === 6;
-          console.log('📄 Web no pagination - serviceFilter:', serviceFilter, 'gotFullPage:', gotFullPage, 'projectsCount:', transformedProjects.length);
-
-          if (gotFullPage) {
-            console.log('🔄 Web fallback: No pagination data but got full page, setting totalPages to 2');
-            setTotalPages(2); // Assume at least 2 pages if we got a full page
-          } else {
-            console.log('🔄 Web fallback: No pagination data and less than full page, setting totalPages to 1');
-            setTotalPages(1); // Only one page if we got less than 6 projects
-          }
+          // No pagination data - don't show pagination
+          setTotalPages(1);
         }
       }
     } catch (error) {
@@ -359,7 +379,7 @@ export function ProjectCards({
         <div
           key={project.id}
           className="cursor-pointer"
-          onClick={() => router.push(`/dashboard/task?projectId=${project.id}`)}
+          onClick={() => handleProjectClick(project.id)}
         >
           <Card className="overflow-hidden hover:shadow-lg transition-shadow h-[330px]">
             <div className="p-0 h-full flex flex-col overflow-hidden">

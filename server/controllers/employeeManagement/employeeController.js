@@ -103,7 +103,7 @@ async function sendEmployeeNotification(userIds, notification) {
       } catch (error) {
         console.error(`Failed to send to token ${token}:`, error);
         failureCount++;
-        
+
         // Remove failed token
         await FCMToken.deleteOne({ token });
       }
@@ -158,7 +158,7 @@ const upload = multer({
 // Configure multer middleware
 exports.uploadFiles = upload.fields([
   { name: "avatar", maxCount: 1 },
-  { name: "documents"}, // use documents, not attachments
+  { name: "documents" }, // use documents, not attachments
 ]);
 
 // Helper function to generate employee ID
@@ -301,10 +301,10 @@ exports.getEmployees = async (req, res) => {
       try {
         const allEmployees = await Employee.find().sort({ dateOfHiring: 1, _id: 1 });
         await updateEmployeeIds(Employee, allEmployees);
-    } catch (error) {
-      console.error("Error during ID update:", error);
-      // Continue with existing IDs if update fails
-    }
+      } catch (error) {
+        console.error("Error during ID update:", error);
+        // Continue with existing IDs if update fails
+      }
     }
 
     // Fetch employees with pagination and search
@@ -419,10 +419,10 @@ exports.createEmployee = async (req, res) => {
       const avatar = req.files.avatar[0];
       // Use originalname if available, otherwise use filename
       const avatarFilename = avatar.originalname || avatar.filename || `avatar_${Date.now()}.jpg`;
-      const safeAvatarFilename = avatarFilename.replace(/[^a-zA-Z0-9.-]/g, '_');
-      
-      
-      
+      const safeAvatarFilename = avatarFilename
+
+
+
       employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${safeAvatarFilename}`;
     }
 
@@ -431,12 +431,12 @@ exports.createEmployee = async (req, res) => {
       employeeData.documents = req.files.documents.map((file) => {
         // Generate a proper filename if originalname is not available
         const filename = file.originalname || file.filename || `document_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pdf`;
-        
+
         // Ensure the filename is safe and unique
-        const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-        
-      
-        
+        const safeFilename = filename
+
+
+
         return {
           url: `${BACKEND_URL}/assets/images/employees/documents/${safeFilename}`,
           originalName: file.originalname || safeFilename,
@@ -466,7 +466,7 @@ exports.createEmployee = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 
@@ -621,10 +621,10 @@ exports.updateEmployee = async (req, res) => {
       const avatar = req.files.avatar[0];
       // Use originalname if available, otherwise use filename
       const avatarFilename = avatar.originalname || avatar.filename || `avatar_${Date.now()}.jpg`;
-      const safeAvatarFilename = avatarFilename.replace(/[^a-zA-Z0-9.-]/g, '_');
-      
-    
-      
+      const safeAvatarFilename = avatarFilename
+
+
+
       employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${safeAvatarFilename}`;
     } else if (req.body.existingAvatar) {
       employeeData.avatar = req.body.existingAvatar;
@@ -642,20 +642,20 @@ exports.updateEmployee = async (req, res) => {
     }
     employeeData.documents = Array.isArray(baseDocuments)
       ? baseDocuments.map((doc) =>
-          typeof doc === "object" ? doc : { url: doc }
-        )
+        typeof doc === "object" ? doc : { url: doc }
+      )
       : [];
-    
-    
+
+
     if (req.files && req.files.documents) {
       const newFiles = req.files.documents.map((file) => {
         // Generate a proper filename if originalname is not available
         const filename = file.originalname || file.filename || `document_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pdf`;
-        
+
         // Ensure the filename is safe and unique
-        const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-        
-          
+        const safeFilename = filename
+
+
         return {
           url: `${BACKEND_URL}/assets/images/employees/documents/${safeFilename}`,
           originalName: file.originalname || safeFilename,
@@ -735,9 +735,9 @@ exports.updateEmployee = async (req, res) => {
       if (employeeData.department && JSON.stringify(employeeData.department) !== JSON.stringify(originalEmployee.department)) changes.push('department');
       if (employeeData.status && employeeData.status !== originalEmployee.status) changes.push('status');
       if (roleData.role && roleData.role !== originalEmployee.role.role) changes.push('role');
-      
+
       const changesText = changes.length > 0 ? changes.join(', ') : 'details';
-      
+
       // Get users with permissions
       const adminUserIds = await getAllAdminUsers();
       const employeesWithPermission = await UserEmployeeSchema.find({
@@ -751,7 +751,7 @@ exports.updateEmployee = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 

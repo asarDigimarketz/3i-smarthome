@@ -30,11 +30,18 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
       // Build query parameters like ProjectCards.jsx
       const buildQueryParams = () => {
         const params = [];
+
+        // Add default status filter (new, in-progress, done) - excluding completed
+        params.push(`status=${encodeURIComponent("new,in-progress,done")}`);
+
         if (filter && filter !== "All") {
           params.push(`service=${encodeURIComponent(filter)}`);
         }
-        params.push(`limit=100`); // Get more projects
-        return params.length ? `?${params.join("&")}` : `?limit=100`;
+
+        // Use a high limit to get all projects (API defaults to 6 without limit)
+        params.push(`limit=9999`);
+
+        return params.length ? `?${params.join("&")}` : "";
       };
 
       const query = buildQueryParams();
@@ -136,12 +143,12 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
               value={proj._id}
               radius="md"
               textValue={`${proj.customerName} - ${proj.services}${proj.projectAmount
-                  ? ` (${new Intl.NumberFormat("en-IN", {
-                    style: "currency",
-                    currency: "INR",
-                    maximumFractionDigits: 0,
-                  }).format(proj.projectAmount)})`
-                  : ""
+                ? ` (${new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 0,
+                }).format(proj.projectAmount)})`
+                : ""
                 }`}
             >
               {proj.customerName} - {proj.services}

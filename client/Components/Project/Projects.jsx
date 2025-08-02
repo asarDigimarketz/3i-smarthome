@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import { addToast } from "@heroui/toast";
+
 import Link from "next/link";
 import { ProjectStatusDropdown } from "./ProjectStatusDropdown.jsx";
 import ProposalFilters from "../Proposal/ProposalFilters.jsx";
@@ -12,65 +12,137 @@ import { DateRangePicker } from "@heroui/date-picker";
 import DashboardHeader from "../header/DashboardHeader.jsx";
 import { Pagination } from "@heroui/pagination";
 import { usePermissions } from "../../lib/utils";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback } from "react";
 
 export function ProjectsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const {
     canCreate,
-    canEdit,
-
-
     getUserPermissions
   } = usePermissions();
 
   // Get permissions using the hook
   const userPermissions = getUserPermissions("projects");
 
-  // Filter states
+  // Initialize states from URL parameters
   const [dateRange, setDateRange] = useState(null);
-  const [serviceFilter, setServiceFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("new,in-progress,done");
-  const [searchValue, setSearchValue] = useState("");
-  const [selectedStatuses, setSelectedStatuses] = useState(new Set(["new", "in-progress", "done"])); // Default: all except "Completed" and "Dropped/Cancelled"
+  const [serviceFilter, setServiceFilter] = useState(searchParams.get("service") || "All");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "new,in-progress,done");
+  const [searchValue, setSearchValue] = useState(searchParams.get("search") || "");
+  const [selectedStatuses, setSelectedStatuses] = useState(() => {
+    const statusParam = searchParams.get("status");
+    if (statusParam === "all") {
+      return new Set(["All Status", "new", "in-progress", "done", "completed", "cancelled"]);
+    } else if (statusParam) {
+      return new Set(statusParam.split(","));
+    }
+    return new Set(["new", "in-progress", "done"]);
+  });
 
   // Pagination states
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(parseInt(searchParams.get("page")) || 1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 6; // Show 6 projects per page
 
+  // Function to update URL with current state
+  const updateURL = useCallback((newParams) => {
+    const params = new URLSearchParams(searchParams);
 
-
-  // Handlers for filters
-  const handleServiceChange = (service) => setServiceFilter(service);
-  const handleStatusChange = (statuses) => {
-    if (statuses === "all") {
-      // When "All Status" is selected, show ALL statuses including "Completed" and "Dropped/Cancelled"
-      setStatusFilter("all");
-      setSelectedStatuses(new Set(["All Status", "new", "in-progress", "done", "completed", "cancelled"]));
-    } else if (Array.isArray(statuses)) {
-      // Multiple statuses selected
-      if (statuses.length === 0) {
-        // No statuses selected, show default statuses
-        setStatusFilter("new,in-progress,done");
-        setSelectedStatuses(new Set(["new", "in-progress", "done"]));
+    // Update or remove parameters
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value && value !== "" && value !== "All" && value !== "all") {
+        params.set(key, value.toString());
       } else {
-        // Multiple specific statuses selected
-        setStatusFilter(statuses.join(",")); // Join multiple statuses
-        setSelectedStatuses(new Set(statuses));
+        params.delete(key);
+      }
+    });
+
+    // Always ensure page is set if > 1
+    if (newParams.page && newParams.page > 1) {
+      params.set("page", newParams.page.toString());
+    } else if (newParams.page === 1) {
+      params.delete("page");
+    }
+
+    const newURL = params.toString() ? `?${params.toString()}` : "";
+    router.replace(`/dashboard/projects${newURL}`, { scroll: false });
+  }, [router, searchParams]);
+
+
+
+  // Handlers for filters with URL updates
+  const handleServiceChange = (service) => {
+    setServiceFilter(service);
+    updateURL({ service, page: 1 });
+  };
+
+  const handleStatusChange = (statuses) => {
+    let newStatusFilter;
+    let newSelectedStatuses;
+
+    if (statuses === "all") {
+      newStatusFilter = "all";
+      newSelectedStatuses = new Set(["All Status", "new", "in-progress", "done", "completed", "cancelled"]);
+    } else if (Array.isArray(statuses)) {
+      if (statuses.length === 0) {
+        newStatusFilter = "new,in-progress,done";
+        newSelectedStatuses = new Set(["new", "in-progress", "done"]);
+      } else {
+        newStatusFilter = statuses.join(",");
+        newSelectedStatuses = new Set(statuses);
       }
     } else {
-      // Single status (legacy support)
-      setStatusFilter(statuses);
-      setSelectedStatuses(new Set([statuses]));
+      newStatusFilter = statuses;
+      newSelectedStatuses = new Set([statuses]);
     }
-    setPage(1); // Reset to first page when filter changes
-  };
-  const handleDateRangeChange = (range) => setDateRange(range);
-  const handleSearchChange = (e) => setSearchValue(e.target.value);
 
-  // Reset page to 1 when filters/search change
-  useEffect(() => {
+    setStatusFilter(newStatusFilter);
+    setSelectedStatuses(newSelectedStatuses);
     setPage(1);
-  }, [serviceFilter, dateRange, statusFilter, searchValue]);
+    updateURL({ status: newStatusFilter, page: 1 });
+  };
+
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+    // Note: Date range is complex to serialize to URL, keeping it in state only
+    setPage(1);
+    updateURL({ page: 1 });
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchValue(value);
+    setPage(1);
+    updateURL({ search: value, page: 1 });
+  };
+
+  // Handle pagination changes
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    updateURL({ page: newPage });
+  };
+
+  // Handle returning from task page - restore state if needed
+  useEffect(() => {
+    // Check if we're returning from task page and have stored state
+    const storedReturnTo = sessionStorage.getItem('projectsReturnTo');
+    if (storedReturnTo && storedReturnTo.includes('/dashboard/projects')) {
+      // Clean up the stored state
+      sessionStorage.removeItem('projectsReturnTo');
+
+      // If current URL doesn't have parameters but stored state does, restore it
+      const currentParams = new URLSearchParams(window.location.search);
+      const storedParams = new URLSearchParams(storedReturnTo.split('?')[1] || '');
+
+      if (!currentParams.toString() && storedParams.toString()) {
+        // Restore the state from stored URL
+        router.replace(storedReturnTo, { scroll: false });
+      }
+    }
+  }, [router]);
 
   return (
     <div>
@@ -155,15 +227,18 @@ export function ProjectsPage() {
           pageSize={pageSize}
           setTotalPages={setTotalPages}
         />
+
+
         {totalPages > 1 && (
           <div className="flex justify-center mt-6">
-            {console.log('📄 Web Projects component - totalPages:', totalPages, 'page:', page, 'serviceFilter:', serviceFilter)}
             <Pagination
               total={totalPages}
+              initialPage={1}
               page={page}
-              onChange={setPage}
+              onChange={handlePageChange}
               showControls
-              radius="sm"
+              siblings={0}
+              boundaries={1}
             />
           </div>
         )}

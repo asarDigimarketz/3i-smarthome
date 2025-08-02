@@ -18,12 +18,11 @@ const Task = () => {
   const {
     canView,
     canCreate,
-    canEdit,
-    canDelete,
     getUserPermissions
   } = usePermissions();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
+  const returnTo = searchParams.get("returnTo");
 
   // Get permissions using the hook
   const userPermissions = getUserPermissions("task");
@@ -32,7 +31,6 @@ const Task = () => {
   const [serviceFilter, setServiceFilter] = useState("All");
   // Add project state
   const [project, setProject] = useState(null);
-  const [projectLoading, setProjectLoading] = useState(false);
 
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -47,7 +45,6 @@ const Task = () => {
       }
 
       try {
-        setProjectLoading(true);
         const response = await apiClient.get(`/api/projects/${projectId}`);
 
         if (response.data.success) {
@@ -56,8 +53,6 @@ const Task = () => {
       } catch (error) {
         console.error("Error fetching project:", error);
         setProject(null);
-      } finally {
-        setProjectLoading(false);
       }
     };
 
@@ -68,6 +63,28 @@ const Task = () => {
   useEffect(() => {
     setShowTaskForm(false);
   }, [projectId]);
+
+  // Handle browser back button - Enhanced approach
+  useEffect(() => {
+    // Store the return URL in sessionStorage as a backup
+    if (returnTo) {
+      sessionStorage.setItem('projectsReturnTo', returnTo);
+    }
+
+    // Handle browser navigation
+    const handleBeforeUnload = () => {
+      // Clean up session storage when leaving the page normally
+      if (!returnTo) {
+        sessionStorage.removeItem('projectsReturnTo');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [returnTo]);
 
   // Handle service filter change
   const handleServiceChange = (service) => {
@@ -89,6 +106,16 @@ const Task = () => {
         title: "Select a Project",
         description: "Please select a project first to add a task",
         color: "warning",
+      });
+      return;
+    }
+
+    // Check if project is completed
+    if (project && project.projectStatus === "completed") {
+      addToast({
+        title: "Cannot Add Task",
+        description: "Cannot add task for completed projects",
+        color: "danger",
       });
       return;
     }

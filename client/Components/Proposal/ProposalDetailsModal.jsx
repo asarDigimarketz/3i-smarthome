@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { usePermissions } from "../../lib/utils";
+import { DeleteConfirmModal } from "../ui/delete-confirm-modal";
 
 const ProposalDetailsModal = ({
   isOpen,
@@ -35,6 +36,7 @@ const ProposalDetailsModal = ({
   const [selectedFile, setSelectedFile] = useState(null);
   const [showAmountInput, setShowAmountInput] = useState(false);
   const [newAmount, setNewAmount] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [originalStatus, setOriginalStatus] = useState(""); // Track original status
   // Form data state
   const [formData, setFormData] = useState({
@@ -251,11 +253,15 @@ const ProposalDetailsModal = ({
         submitData.append("attachments", selectedFile);
       }
 
-      const response = await apiClient.put(`/api/proposals/${proposalData._id}`, submitData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await apiClient.put(
+        `/api/proposals/${proposalData._id}`,
+        submitData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       if (response.data.success) {
         addToast({
@@ -293,7 +299,7 @@ const ProposalDetailsModal = ({
     router.push(`/dashboard/proposal/edit/${proposalData._id}`);
   };
 
-  // Handle delete
+  // Handle delete button click
   const handleDelete = () => {
     if (!canDelete("proposal")) {
       addToast({
@@ -303,108 +309,32 @@ const ProposalDetailsModal = ({
       });
       return;
     }
-    if (confirm("Are you sure you want to delete this proposal?")) {
-      onDelete && onDelete(proposalData._id);
-      onClose();
-    }
+    // Just open the confirmation modal
+    setShowDeleteModal(true);
   };
 
-  // Handle project confirmation
-  const handleProjectConfirmed = async () => {
+  // Handle actual deletion after confirmation
+  const handleConfirmDelete = () => {
     try {
       setLoading(true);
-      console.log('🔄 Starting project confirmation for proposal:', proposalData._id);
-
-      // First, update proposal status to Confirmed
-      const statusResponse = await apiClient.patch(`/api/proposals/${proposalData._id}/field`, {
-        field: "status",
-        value: "Confirmed",
-      });
-
-      console.log('✅ Status update response:', statusResponse.data);
-
-      if (statusResponse.data.success) {
-        // Check if the status update response indicates a project was already created
-        if (statusResponse.data.message?.includes("project created automatically")) {
-          console.log('✅ Project was created automatically during status update');
-          addToast({
-            title: "Success",
-            description: "Project confirmed and created successfully!",
-            color: "success",
-          });
-          onUpdate && onUpdate(); // Refresh the table
-          onClose();
-          return;
-        }
-
-        // Only try to create project if it wasn't created automatically
-        console.log('🏗️ Project not created automatically, creating manually...');
-        try {
-          const projectResponse = await apiClient.post(`/api/projects/from-proposal/${proposalData._id}`, {});
-
-          console.log('✅ Project creation response:', projectResponse.data);
-
-          if (projectResponse.data.success) {
-            addToast({
-              title: "Success",
-              description: "Project confirmed and created successfully!",
-              color: "success",
-            });
-            onUpdate && onUpdate(); // Refresh the table
-            onClose();
-          } else {
-            addToast({
-              title: "Warning",
-              description: "Proposal confirmed but failed to create project",
-              color: "warning",
-            });
-          }
-        } catch (projectError) {
-          console.error('❌ Error creating project from proposal:', projectError.response?.data);
-
-          // Handle specific error cases
-          if (projectError.response?.data?.message?.includes("already exists")) {
-            console.log('✅ Project already exists - treating as success');
-            addToast({
-              title: "Success",
-              description: "Project confirmed! (Project already exists for this proposal)",
-              color: "success",
-            });
-            onUpdate && onUpdate(); // Refresh the table
-            onClose();
-          } else if (projectError.response?.data?.message?.includes("Only confirmed proposals")) {
-            addToast({
-              title: "Error",
-              description: "Proposal status update failed. Please try again.",
-              color: "danger",
-            });
-          } else {
-            addToast({
-              title: "Error",
-              description: projectError.response?.data?.message || "Failed to create project from proposal",
-              color: "danger",
-            });
-          }
-        }
-      } else {
-        console.error('❌ Status update failed:', statusResponse.data);
-        addToast({
-          title: "Error",
-          description: "Failed to update proposal status",
-          color: "danger",
-        });
-      }
+      // Call the provided onDelete function
+      onDelete && onDelete(proposalData._id);
+      // Close both modals
+      setShowDeleteModal(false);
+      onClose();
     } catch (error) {
-      console.error("❌ Error confirming project:", error.response?.data);
+      console.error("Error deleting proposal:", error);
       addToast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to confirm project",
+        description: "Failed to delete proposal",
         color: "danger",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  // Handle project confirmation
 
   // Render amount section
   // Replace your renderAmountSection function with this fixed version:
@@ -469,7 +399,9 @@ const ProposalDetailsModal = ({
                   );
                   handleAmountSelect(key);
                 }}
-                disabledKeys={originalStatus === "Confirmed" ? amountOptions : ["close"]}
+                disabledKeys={
+                  originalStatus === "Confirmed" ? amountOptions : ["close"]
+                }
                 closeOnSelect={false}
               >
                 {amountOptions.map((amount) => (
@@ -526,339 +458,352 @@ const ProposalDetailsModal = ({
   );
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="lg"
-      aria-label="Proposal Details"
-      placement="center"
-      backdrop="blur"
-      scrollBehavior="inside"
-      hideCloseButton
-      classNames={{
-        backdrop: "bg-black/50 backdrop-blur-sm",
-        base: "border-none shadow-2xl",
-        header: "border-b-1 border-gray-200",
-        body: "py-6 !scrollbar-w-0 scrollbar-none overscroll-y-contain", // Hide scrollbar and its width
-        footer: "border-t-1 border-gray-200",
-      }}
-      motionProps={{
-        variants: {
-          enter: {
-            y: 0,
-            opacity: 1,
-            transition: {
-              duration: 0.3,
-              ease: "easeOut",
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        size="lg"
+        aria-label="Proposal Details"
+        placement="center"
+        backdrop="blur"
+        scrollBehavior="inside"
+        hideCloseButton
+        classNames={{
+          backdrop: "bg-black/50 backdrop-blur-sm",
+          base: "border-none shadow-2xl",
+          header: "border-b-1 border-gray-200",
+          body: "py-6 !scrollbar-w-0 scrollbar-none overscroll-y-contain", // Hide scrollbar and its width
+          footer: "border-t-1 border-gray-200",
+        }}
+        motionProps={{
+          variants: {
+            enter: {
+              y: 0,
+              opacity: 1,
+              transition: {
+                duration: 0.3,
+                ease: "easeOut",
+              },
+            },
+            exit: {
+              y: -20,
+              opacity: 0,
+              transition: {
+                duration: 0.2,
+                ease: "easeIn",
+              },
             },
           },
-          exit: {
-            y: -20,
-            opacity: 0,
-            transition: {
-              duration: 0.2,
-              ease: "easeIn",
-            },
-          },
-        },
-      }}
-    >
-      <ModalContent>
-        {(onClose) => (
-          <>
-            {/* Modal Header */}
-            <ModalHeader className="flex justify-between items-center bg-primary text-white px-6 py-4 rounded-t-lg">
-              <h2 className="text-xl font-semibold">Proposal Details</h2>
-              <Button
-                isIconOnly
-                radius="full"
-                onPress={onClose}
-                className="text-primary bg-white hover:bg-gray-100 min-w-8 w-8 h-8 "
-                aria-label="Close modal"
-              >
-                <X size={20} />
-              </Button>
-            </ModalHeader>
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              {/* Modal Header */}
+              <ModalHeader className="flex justify-between items-center bg-primary text-white px-6 py-4 rounded-t-lg">
+                <h2 className="text-xl font-semibold">Proposal Details</h2>
+                <Button
+                  isIconOnly
+                  radius="full"
+                  onPress={onClose}
+                  className="text-primary bg-white hover:bg-gray-100 min-w-8 w-8 h-8 "
+                  aria-label="Close modal"
+                >
+                  <X size={20} />
+                </Button>
+              </ModalHeader>
 
-            {/* Modal Body */}
-            <ModalBody className="px-6 space-y-4">
-              {/* Customer and Date Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Customer:
-                  </label>
-                  {isEditing ? (
-                    <Input
-                      value={formData.customerName}
-                      onChange={(e) =>
-                        handleInputChange("customerName", e.target.value)
-                      }
-                      variant="bordered"
-                    />
-                  ) : (
-                    <div className="text-black font-[400]">
-                      {formData.customerName}
-                    </div>
-                  )}
+              {/* Modal Body */}
+              <ModalBody className="px-6 space-y-4">
+                {/* Customer and Date Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Customer:
+                    </label>
+                    {isEditing ? (
+                      <Input
+                        value={formData.customerName}
+                        onChange={(e) =>
+                          handleInputChange("customerName", e.target.value)
+                        }
+                        variant="bordered"
+                      />
+                    ) : (
+                      <div className="text-black font-[400]">
+                        {formData.customerName}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Date:
+                    </label>
+                    <div className="text-black font-[400]">{formData.date}</div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Date:
-                  </label>
-                  <div className="text-black font-[400]">{formData.date}</div>
-                </div>
-              </div>
 
-              {/* Contact and Email Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Contact:
-                  </label>
-                  {isEditing ? (
-                    <Input
-                      value={formData.contactNumber}
-                      onChange={(e) =>
-                        handleInputChange("contactNumber", e.target.value)
-                      }
-                      variant="bordered"
-                    />
-                  ) : (
-                    <div className="text-black font-[400]">
-                      {formData.contactNumber}
-                    </div>
-                  )}
+                {/* Contact and Email Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Contact:
+                    </label>
+                    {isEditing ? (
+                      <Input
+                        value={formData.contactNumber}
+                        onChange={(e) =>
+                          handleInputChange("contactNumber", e.target.value)
+                        }
+                        variant="bordered"
+                      />
+                    ) : (
+                      <div className="text-black font-[400]">
+                        {formData.contactNumber}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Email Id:
+                    </label>
+                    {isEditing ? (
+                      <Input
+                        value={formData.email}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
+                        variant="bordered"
+                        type="email"
+                      />
+                    ) : (
+                      <div className="text-black font-[400]">
+                        {formData.email}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Email Id:
-                  </label>
-                  {isEditing ? (
-                    <Input
-                      value={formData.email}
-                      onChange={(e) =>
-                        handleInputChange("email", e.target.value)
-                      }
-                      variant="bordered"
-                      type="email"
-                    />
-                  ) : (
-                    <div className="text-black font-[400]">
-                      {formData.email}
-                    </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Address */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Address:
-                </label>
-                <div className="text-black font-[400]">
-                  {`${formData.address.addressLine}, ${formData.address.city}, ${formData.address.district}, ${formData.address.state}, ${formData.address.country} - ${formData.address.pincode}`}
-                </div>
-              </div>
-
-              {/* Service and Description Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Address */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">
-                    Service:
+                    Address:
                   </label>
                   <div className="text-black font-[400]">
-                    {formData.services}
+                    {`${formData.address.addressLine}, ${formData.address.city}, ${formData.address.district}, ${formData.address.state}, ${formData.address.country} - ${formData.address.pincode}`}
                   </div>
                 </div>
+
+                {/* Service and Description Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Service:
+                    </label>
+                    <div className="text-black font-[400]">
+                      {formData.services}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Description:
+                    </label>
+                    <div className="text-black font-[400] text-sm">
+                      {formData.projectDescription}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Size */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">
-                    Description:
+                    Size:
                   </label>
-                  <div className="text-black font-[400] text-sm">
-                    {formData.projectDescription}
+                  <div className="text-black font-[400]">
+                    {formData.size} <span className="text-gray-500">sqt</span>
                   </div>
                 </div>
-              </div>
 
-              {/* Size */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Size:
-                </label>
-                <div className="text-black font-[400]">
-                  {formData.size} <span className="text-gray-500">sqt</span>
+                {/* Amount with Dropdown */}
+                {renderAmountSection()}
+
+                {/* Comment */}
+                {renderCommentSection()}
+
+                {/* Status */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Status:
+                  </label>
+                  <Select
+                    selectedKeys={new Set([formData.status])}
+                    variant="bordered"
+                    radius="md"
+                    className="max-w-[160px]"
+                    aria-label="Proposal status"
+                    classNames={{
+                      trigger: "border-gray-300",
+                    }}
+                    onSelectionChange={(keys) => {
+                      const selectedKey = Array.from(keys)[0];
+                      if (statusOptions.some((s) => s.key === selectedKey)) {
+                        handleInputChange("status", selectedKey);
+                      }
+                    }}
+                    disallowEmptySelection={true}
+                    isDisabled={originalStatus === "Confirmed"}
+                  >
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status.key} value={status.key}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </Select>
                 </div>
-              </div>
 
-              {/* Amount with Dropdown */}
-              {renderAmountSection()}
-
-              {/* Comment */}
-              {renderCommentSection()}
-
-              {/* Status */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Status:
-                </label>
-                <Select
-                  selectedKeys={new Set([formData.status])}
-                  variant="bordered"
-                  radius="md"
-                  className="max-w-[160px]"
-                  aria-label="Proposal status"
-                  classNames={{
-                    trigger: "border-gray-300",
-                  }}
-                  onSelectionChange={(keys) => {
-                    const selectedKey = Array.from(keys)[0];
-                    if (statusOptions.some((s) => s.key === selectedKey)) {
-                      handleInputChange("status", selectedKey);
-                    }
-                  }}
-                  disallowEmptySelection={true}
-                  isDisabled={originalStatus === "Confirmed"}
-                >
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status.key} value={status.key}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </Select>
-              </div>
-
-              {/* Attachment */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Attachment:
-                </label>
-                {isEditing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="attachment-upload"
-                    />
-                    <label htmlFor="attachment-upload">
-                      <Button
-                        as="span"
-                        color="primary"
-                        size="sm"
-                        startContent={<Upload size={16} />}
-                        className="cursor-pointer"
-                        disabled={originalStatus === "Confirmed"}
-                      >
-                        {selectedFile ? "Change File" : "Upload File"}
-                      </Button>
-                    </label>
-                    <span className="text-sm text-gray-600">
-                      {selectedFile
-                        ? selectedFile.name
-                        : formData.attachments &&
-                          Array.isArray(formData.attachments) &&
-                          formData.attachments.length > 0
+                {/* Attachment */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Attachment:
+                  </label>
+                  {isEditing ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="attachment-upload"
+                      />
+                      <label htmlFor="attachment-upload">
+                        <Button
+                          as="span"
+                          color="primary"
+                          size="sm"
+                          startContent={<Upload size={16} />}
+                          className="cursor-pointer"
+                          disabled={originalStatus === "Confirmed"}
+                        >
+                          {selectedFile ? "Change File" : "Upload File"}
+                        </Button>
+                      </label>
+                      <span className="text-sm text-gray-600">
+                        {selectedFile
+                          ? selectedFile.name
+                          : formData.attachments &&
+                            Array.isArray(formData.attachments) &&
+                            formData.attachments.length > 0
                           ? formData.attachments.map((att, idx) => (
-                            <span
-                              key={att._id || att.filename || idx}
-                              className="block"
-                            >
-                              {att.originalName || att.filename}
-                            </span>
-                          ))
+                              <span
+                                key={att._id || att.filename || idx}
+                                className="block"
+                              >
+                                {att.originalName || att.filename}
+                              </span>
+                            ))
                           : formData.attachments &&
                             formData.attachments.originalName
-                            ? formData.attachments.originalName
-                            : "No file selected"}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 p-2 border border-gray-200 rounded-lg">
-                    {formData.attachments &&
+                          ? formData.attachments.originalName
+                          : "No file selected"}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2 p-2 border border-gray-200 rounded-lg">
+                      {formData.attachments &&
                       Array.isArray(formData.attachments) &&
                       formData.attachments.length > 0 ? (
-                      formData.attachments.map((att, idx) => (
-                        <div
-                          key={att._id || att.filename || idx}
-                          className="flex items-center gap-2"
-                        >
+                        formData.attachments.map((att, idx) => (
+                          <div
+                            key={att._id || att.filename || idx}
+                            className="flex items-center gap-2"
+                          >
+                            <FileText size={16} className="text-blue-600" />
+                            <a
+                              href={
+                                att.url ||
+                                att.attachmentUrl ||
+                                `/${att.filename}`
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-700 hover:underline"
+                            >
+                              {att.originalName || att.filename}
+                            </a>
+                          </div>
+                        ))
+                      ) : formData.attachments &&
+                        formData.attachments.originalName ? (
+                        <div className="flex items-center gap-2">
                           <FileText size={16} className="text-blue-600" />
                           <a
                             href={
-                              att.url || att.attachmentUrl || `/${att.filename}`
+                              formData.attachments.url ||
+                              formData.attachments.attachmentUrl ||
+                              `/${formData.attachments.filename}`
                             }
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-blue-700 hover:underline"
                           >
-                            {att.originalName || att.filename}
+                            {formData.attachments.originalName ||
+                              formData.attachments.filename}
                           </a>
                         </div>
-                      ))
-                    ) : formData.attachments &&
-                      formData.attachments.originalName ? (
-                      <div className="flex items-center gap-2">
-                        <FileText size={16} className="text-blue-600" />
-                        <a
-                          href={
-                            formData.attachments.url ||
-                            formData.attachments.attachmentUrl ||
-                            `/${formData.attachments.filename}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-700 hover:underline"
-                        >
-                          {formData.attachments.originalName ||
-                            formData.attachments.filename}
-                        </a>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-700">
-                        No attachment
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </ModalBody>
+                      ) : (
+                        <span className="text-sm text-gray-700">
+                          No attachment
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </ModalBody>
 
-            {/* Modal Footer */}
-            <ModalFooter className="px-6 py-4 flex justify-around">
-              <div className="flex gap-2">
+              {/* Modal Footer */}
+              <ModalFooter className="px-6 py-4 flex justify-around">
+                <div className="flex gap-2">
+                  <Button
+                    color="primary"
+                    onPress={handleSave}
+                    className="px-6"
+                    disabled={
+                      loading ||
+                      !canEdit("proposal") ||
+                      originalStatus === "Confirmed"
+                    }
+                    radius="md"
+                  >
+                    save
+                  </Button>
 
-                <Button
-                  color="primary"
-                  onPress={handleSave}
-                  className="px-6"
-                  disabled={loading || !canEdit("proposal") || originalStatus === "Confirmed"}
-                  radius="md"
-                >
-                  save
-                </Button>
+                  <Button
+                    onPress={handleEdit}
+                    className="px-6 bg-[#616161] text-white"
+                    disabled={
+                      loading ||
+                      !canEdit("proposal") ||
+                      originalStatus === "Confirmed"
+                    }
+                    radius="md"
+                  >
+                    Edit
+                  </Button>
 
-
-                <Button
-                  onPress={handleEdit}
-                  className="px-6 bg-[#616161] text-white"
-                  disabled={loading || !canEdit("proposal") || originalStatus === "Confirmed"}
-                  radius="md"
-                >
-                  Edit
-                </Button>
-
-                <Button
-                  onPress={handleDelete}
-                  className="px-6 text-white bg-[#999999]"
-                  disabled={loading || !canDelete("proposal") || originalStatus === "Confirmed"}
-                  radius="md"
-                >
-                  Delete
-                </Button>
-              </div>
-              {/* <Button
+                  <Button
+                    onPress={handleDelete}
+                    className="px-6 text-white bg-[#999999]"
+                    disabled={
+                      loading ||
+                      !canDelete("proposal") ||
+                      originalStatus === "Confirmed"
+                    }
+                    radius="md"
+                  >
+                    Delete
+                  </Button>
+                </div>
+                {/* <Button
                 color="success"
                 variant="solid"
                 className="px-6"
@@ -867,11 +812,19 @@ const ProposalDetailsModal = ({
               >
                 {loading ? "Confirming..." : originalStatus === "Confirmed" ? "Already Confirmed" : "Project Confirmed"}
               </Button> */}
-            </ModalFooter>
-          </>
-        )}
-      </ModalContent>
-    </Modal>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onDelete={handleConfirmDelete}
+        submitting={loading}
+      />
+    </>
   );
 };
 

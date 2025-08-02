@@ -371,10 +371,20 @@ projectSchema.statics.getProjectsCount = function (filters = {}) {
     service = "",
     startDate = "",
     endDate = "",
+    ...otherFilters
   } = filters;
 
-  let query = { ...filters };
+  // Start with other filters (like assignedEmployees)
+  let query = { ...otherFilters };
 
+  // Remove the filter parameters that need special handling
+  delete query.search;
+  delete query.status;
+  delete query.service;
+  delete query.startDate;
+  delete query.endDate;
+
+  // Add search functionality
   if (search) {
     query.$or = [
       { customerName: { $regex: search, $options: "i" } },
@@ -389,6 +399,7 @@ projectSchema.statics.getProjectsCount = function (filters = {}) {
     ];
   }
 
+  // Add status filter
   if (status) {
     if (status.includes(",")) {
       // Multiple statuses - use $in operator
@@ -400,6 +411,7 @@ projectSchema.statics.getProjectsCount = function (filters = {}) {
     }
   }
 
+  // Add service filter
   if (service) {
     query.services = service;
   }

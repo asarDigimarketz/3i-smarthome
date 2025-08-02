@@ -32,7 +32,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     city: "",
     district: "",
     state: "",
-    country: "",
+    country: "India",
     pincode: "",
     services: "",
     projectDescription: "",
@@ -43,6 +43,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     date: new Date().toISOString().split("T")[0],
     attachments: [],
   });
+  const [errors, setErrors] = useState({});
 
   // Autocomplete states for customer search
   const [customerOptions, setCustomerOptions] = useState([]);
@@ -127,7 +128,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       city: customer.address?.city || "",
       district: customer.address?.district || "",
       state: customer.address?.state || "",
-      country: customer.address?.country || "",
+      country: customer.address?.country || "India",
       pincode: customer.address?.pincode || "",
     }));
 
@@ -199,7 +200,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
           city: proposal.address?.city || "",
           district: proposal.address?.district || "",
           state: proposal.address?.state || "",
-          country: proposal.address?.country || "",
+          country: proposal.address?.country || "India",
           pincode: proposal.address?.pincode || "",
           services: proposal.services || "",
           projectDescription: proposal.projectDescription || "",
@@ -241,6 +242,192 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       ...prev,
       [field]: value,
     }));
+
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  // Handle size input with automatic X formatting
+  const handleSizeChange = (e) => {
+    let value = e.target.value;
+
+    // Only allow numbers and X
+    value = value.replace(/[^\dX]/g, '');
+
+    // Ensure only one X exists
+    const xCount = (value.match(/X/g) || []).length;
+    if (xCount > 1) {
+      // Keep only the first X
+      const firstXIndex = value.indexOf('X');
+      value = value.substring(0, firstXIndex + 1) + value.substring(firstXIndex + 1).replace(/X/g, '');
+    }
+
+    // Ensure X is not at the beginning or end
+    if (value.startsWith('X')) {
+      value = value.substring(1);
+    }
+    if (value.endsWith('X') && value.length > 1 && value.charAt(value.length - 2) === 'X') {
+      value = value.substring(0, value.length - 1);
+    }
+
+    handleInputChange("size", value);
+  };
+
+  // Handle size keydown for space bar
+  const handleSizeKeyDown = (e) => {
+    if (e.key === ' ') {
+      e.preventDefault();
+      const currentValue = formData.size;
+
+      // Only add X if there's no X already and there are digits
+      if (!currentValue.includes('X') && currentValue.length > 0 && /^\d+$/.test(currentValue)) {
+        handleInputChange("size", currentValue + 'X');
+      }
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Customer Name validation
+    if (!formData.customerName.trim()) {
+      newErrors.customerName = "Customer name is required";
+    } else if (formData.customerName.trim().length < 2) {
+      newErrors.customerName = "Customer name must be at least 2 characters";
+    } else if (formData.customerName.trim().length > 100) {
+      newErrors.customerName = "Customer name must not exceed 100 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.customerName.trim())) {
+      newErrors.customerName = "Customer name can only contain letters, spaces, dots, hyphens, and apostrophes";
+    }
+
+    // Contact Number validation
+    if (!formData.contactNumber.trim()) {
+      newErrors.contactNumber = "Contact number is required";
+    } else if (!/^\d{10}$/.test(formData.contactNumber.trim())) {
+      newErrors.contactNumber = "Please enter a valid 10-digit Indian mobile number";
+    }
+
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email.trim())) {
+      newErrors.email = "Please enter a valid email address";
+    } else if (formData.email.trim().length > 254) {
+      newErrors.email = "Email address is too long";
+    }
+
+    // Address validation
+    if (!formData.addressLine.trim()) {
+      newErrors.addressLine = "Address line is required";
+    } else if (formData.addressLine.trim().length < 5) {
+      newErrors.addressLine = "Address line must be at least 5 characters";
+    } else if (formData.addressLine.trim().length > 200) {
+      newErrors.addressLine = "Address line must not exceed 200 characters";
+    }
+
+    if (!formData.city.trim()) {
+      newErrors.city = "City is required";
+    } else if (formData.city.trim().length < 2) {
+      newErrors.city = "City name must be at least 2 characters";
+    } else if (formData.city.trim().length > 50) {
+      newErrors.city = "City name must not exceed 50 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.city.trim())) {
+      newErrors.city = "City name can only contain letters, spaces, dots, hyphens, and apostrophes";
+    }
+
+    if (!formData.district.trim()) {
+      newErrors.district = "District is required";
+    } else if (formData.district.trim().length < 2) {
+      newErrors.district = "District name must be at least 2 characters";
+    } else if (formData.district.trim().length > 50) {
+      newErrors.district = "District name must not exceed 50 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.district.trim())) {
+      newErrors.district = "District name can only contain letters, spaces, dots, hyphens, and apostrophes";
+    }
+
+    if (!formData.state.trim()) {
+      newErrors.state = "State is required";
+    } else if (formData.state.trim().length < 2) {
+      newErrors.state = "State name must be at least 2 characters";
+    } else if (formData.state.trim().length > 50) {
+      newErrors.state = "State name must not exceed 50 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.state.trim())) {
+      newErrors.state = "State name can only contain letters, spaces, dots, hyphens, and apostrophes";
+    }
+
+    if (!formData.country.trim()) {
+      newErrors.country = "Country is required";
+    } else if (formData.country.trim().length < 2) {
+      newErrors.country = "Country name must be at least 2 characters";
+    } else if (formData.country.trim().length > 50) {
+      newErrors.country = "Country name must not exceed 50 characters";
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.country.trim())) {
+      newErrors.country = "Country name can only contain letters, spaces, dots, hyphens, and apostrophes";
+    }
+
+    if (!formData.pincode.trim()) {
+      newErrors.pincode = "Pincode is required";
+    } else if (!/^[1-9][0-9]{5}$/.test(formData.pincode.trim())) {
+      newErrors.pincode = "Please enter a valid 6-digit Indian pincode";
+    }
+
+    // Services validation
+    if (!formData.services) {
+      newErrors.services = "Service selection is required";
+    }
+
+    // Project Description validation
+    if (!formData.projectDescription.trim()) {
+      newErrors.projectDescription = "Project description is required";
+    } else if (formData.projectDescription.trim().length < 10) {
+      newErrors.projectDescription = "Project description must be at least 10 characters";
+    } else if (formData.projectDescription.trim().length > 1000) {
+      newErrors.projectDescription = "Project description must not exceed 1000 characters";
+    }
+
+    // Size validation
+    if (!formData.size.trim()) {
+      newErrors.size = "Size is required";
+    } else if (!/^\d+X\d+$/.test(formData.size.trim())) {
+      newErrors.size = "Please enter size in format: 1200X1000";
+    }
+
+    // Project Amount validation
+    if (!formData.projectAmount || formData.projectAmount <= 0) {
+      newErrors.projectAmount = "Project amount is required and must be positive";
+    } else if (formData.projectAmount < 1000) {
+      newErrors.projectAmount = "Project amount must be at least ₹1,000";
+    } else if (formData.projectAmount > 100000000) {
+      newErrors.projectAmount = "Project amount must not exceed ₹10 crores";
+    }
+
+    // Date validation
+    if (!formData.date) {
+      newErrors.date = "Date is required";
+    } else {
+      const selectedDate = new Date(formData.date);
+      const today = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(today.getFullYear() + 1);
+
+      if (selectedDate < oneYearAgo) {
+        newErrors.date = "Date cannot be more than 1 year in the past";
+      } else if (selectedDate > oneYearFromNow) {
+        newErrors.date = "Date cannot be more than 1 year in the future";
+      }
+    }
+
+    // Comment validation (optional but if provided, validate length)
+    if (formData.comment && formData.comment.trim().length > 500) {
+      newErrors.comment = "Comment must not exceed 500 characters";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   // Handle file selection (multiple)
@@ -302,38 +489,19 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      addToast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly",
+        color: "danger",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Validate required fields
-      const requiredFields = [
-        "customerName",
-        "contactNumber",
-        "email",
-        "addressLine",
-        "city",
-        "district",
-        "state",
-        "country",
-        "pincode",
-        "services",
-        "projectDescription",
-        "projectAmount",
-        "size",
-      ];
-      const missingFields = requiredFields.filter((field) => !formData[field]);
-      if (missingFields.length > 0) {
-        addToast({
-          title: "Error",
-          description: `Please fill in all required fields: ${missingFields.join(
-            ", "
-          )}`,
-          color: "danger",
-        });
-        setLoading(false);
-        return;
-      }
-
       // Add current project amount to amountOptions if not already present
       const currentAmountFormatted = `₹${parseInt(
         formData.projectAmount
@@ -511,6 +679,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 onChange={(e) =>
                   handleInputChange("customerName", e.target.value)
                 }
+                isInvalid={!!errors.customerName}
+                errorMessage={errors.customerName}
                 required
               />
             </div>
@@ -523,7 +693,13 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 label=""
                 placeholder="Enter contact number"
                 inputValue={contactInput}
-                onInputChange={handleContactInputChange}
+                onInputChange={(value) => {
+                  handleContactInputChange(value);
+                  // Clear error when user starts typing
+                  if (errors.contactNumber) {
+                    setErrors((prev) => ({ ...prev, contactNumber: "" }));
+                  }
+                }}
                 selectedKey={selectedCustomer?._id}
                 onSelectionChange={handleCustomerSelection}
                 items={customerOptions}
@@ -546,6 +722,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 variant="bordered"
                 isLoading={isSearching}
                 menuTrigger="input"
+                isInvalid={!!errors.contactNumber}
+                errorMessage={errors.contactNumber}
               >
                 {(item) => (
                   <AutocompleteItem
@@ -571,7 +749,13 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 label=""
                 placeholder="Enter email address"
                 inputValue={emailInput}
-                onInputChange={handleEmailInputChange}
+                onInputChange={(value) => {
+                  handleEmailInputChange(value);
+                  // Clear error when user starts typing
+                  if (errors.email) {
+                    setErrors((prev) => ({ ...prev, email: "" }));
+                  }
+                }}
                 selectedKey={selectedCustomer?._id}
                 onSelectionChange={handleCustomerSelection}
                 items={customerOptions}
@@ -594,6 +778,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 variant="bordered"
                 isLoading={isSearching}
                 menuTrigger="input"
+                isInvalid={!!errors.email}
+                errorMessage={errors.email}
               >
                 {(item) => (
                   <AutocompleteItem key={item._id} textValue={item.email}>
@@ -623,6 +809,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 }}
                 value={formData.date}
                 onChange={(e) => handleInputChange("date", e.target.value)}
+                isInvalid={!!errors.date}
+                errorMessage={errors.date}
                 required
               />
             </div>
@@ -644,6 +832,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 onChange={(e) =>
                   handleInputChange("addressLine", e.target.value)
                 }
+                isInvalid={!!errors.addressLine}
+                errorMessage={errors.addressLine}
                 required
               />
             </div>
@@ -659,6 +849,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 }}
                 value={formData.city}
                 onChange={(e) => handleInputChange("city", e.target.value)}
+                isInvalid={!!errors.city}
+                errorMessage={errors.city}
                 required
               />
             </div>
@@ -674,6 +866,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 }}
                 value={formData.district}
                 onChange={(e) => handleInputChange("district", e.target.value)}
+                isInvalid={!!errors.district}
+                errorMessage={errors.district}
                 required
               />
             </div>
@@ -689,6 +883,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 }}
                 value={formData.state}
                 onChange={(e) => handleInputChange("state", e.target.value)}
+                isInvalid={!!errors.state}
+                errorMessage={errors.state}
                 required
               />
             </div>
@@ -704,6 +900,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 }}
                 value={formData.country}
                 onChange={(e) => handleInputChange("country", e.target.value)}
+                isInvalid={!!errors.country}
+                errorMessage={errors.country}
                 required
               />
             </div>
@@ -719,6 +917,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 }}
                 value={formData.pincode}
                 onChange={(e) => handleInputChange("pincode", e.target.value)}
+                type="number"
+                isInvalid={!!errors.pincode}
+                errorMessage={errors.pincode}
                 required
               />
             </div>
@@ -728,88 +929,108 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               <ServicesSelect
                 value={formData.services}
                 onChange={(value) => handleInputChange("services", value)}
+                isInvalid={!!errors.services}
+                errorMessage={errors.services}
+                required
                 aria-label="Select service"
               />
             </div>
+
             <div>
               <label className="block text-gray-700 mb-2">Status</label>
               <StatusSelect
                 value={formData.status}
                 onChange={(value) => handleInputChange("status", value)}
+                isInvalid={!!errors.status}
+                errorMessage={errors.status}
+                required
                 aria-label="Select status"
               />
             </div>
 
-            <div>
+            <div className="col-span-1 md:col-span-2">
               <label className="block text-gray-700 mb-2">
                 Project Amount *
               </label>
-              <div className="space-y-2">
-                <Select
-                  isDisabled={formData.status === "Confirmed"}
-                  placeholder="Select Amount"
-                  aria-label="Select project amount"
-                  radius="sm"
-                  variant="bordered"
-                  className="w-full"
-                  classNames={{
-                    trigger: "border-[#E0E5F2]  h-[50px]",
-                  }}
-                  value={
-                    formData.projectAmount
-                      ? `₹${parseInt(formData.projectAmount).toLocaleString(
-                        "en-IN"
-                      )}`
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const numericValue = value.replace(/[^\d]/g, "");
-                    handleInputChange("projectAmount", numericValue);
-                  }}
-                >
-                  {amountOptions.map((amount) => (
-                    <SelectItem key={amount} value={amount}>
-                      {amount}
-                    </SelectItem>
-                  ))}
-                </Select>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter Amount"
-                    type="number"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Select
+                    placeholder="Select or enter amount"
                     radius="sm"
                     variant="bordered"
-                    size="sm"
-                    className="flex-1"
+                    className="w-full"
                     classNames={{
-                      inputWrapper: " h-[50px] border-[#E0E5F2]",
+                      trigger: " h-[50px] border-[#E0E5F2]",
                     }}
-                    value={formData.projectAmount}
-                    onChange={(e) =>
-                      handleInputChange("projectAmount", e.target.value)
+                    selectedKeys={
+                      formData.projectAmount
+                        ? [`₹${parseInt(formData.projectAmount).toLocaleString(
+                          "en-IN"
+                        )}`]
+                        : []
                     }
-                  />
-                  <Button
-                    size="lg"
-                    radius="sm"
-                    color="primary"
-                    variant="bordered"
-                    onClick={() => {
-                      if (formData.projectAmount) {
-                        const newAmount = `₹${parseInt(
-                          formData.projectAmount
-                        ).toLocaleString("en-IN")}`;
-                        if (!amountOptions.includes(newAmount)) {
-                          setAmountOptions((prev) => [...prev, newAmount]);
-                        }
-                        // Clear the input after adding
-                        handleInputChange("projectAmount", "");
+                    onSelectionChange={(keys) => {
+                      const selectedAmount = Array.from(keys)[0];
+                      if (selectedAmount) {
+                        const numericValue = selectedAmount
+                          .replace(/[₹,]/g, "")
+                          .trim();
+                        handleInputChange("projectAmount", numericValue);
                       }
                     }}
+                    renderValue={() =>
+                      formData.projectAmount
+                        ? `₹${parseInt(formData.projectAmount).toLocaleString(
+                          "en-IN"
+                        )}`
+                        : ""
+                    }
                   >
-                    Add
-                  </Button>
+                    {amountOptions.map((amount) => (
+                      <SelectItem key={amount} value={amount}>
+                        {amount}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      placeholder="Enter Amount"
+                      type="number"
+                      radius="sm"
+                      variant="bordered"
+                      size="sm"
+                      className="flex-1"
+                      classNames={{
+                        inputWrapper: " h-[50px] border-[#E0E5F2]",
+                      }}
+                      value={formData.projectAmount}
+                      onChange={(e) =>
+                        handleInputChange("projectAmount", e.target.value)
+                      }
+                      isInvalid={!!errors.projectAmount}
+                      errorMessage={errors.projectAmount}
+                    />
+                    <Button
+                      size="lg"
+                      radius="sm"
+                      color="primary"
+                      variant="bordered"
+                      onClick={() => {
+                        if (formData.projectAmount) {
+                          const newAmount = `₹${parseInt(
+                            formData.projectAmount
+                          ).toLocaleString("en-IN")}`;
+                          if (!amountOptions.includes(newAmount)) {
+                            setAmountOptions((prev) => [...prev, newAmount]);
+                          }
+                          // Clear the input after adding
+                          handleInputChange("projectAmount", "");
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -818,7 +1039,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               <label className="block text-gray-700 mb-2">Size *</label>
               <div className="flex">
                 <Input
-                  placeholder="Size"
+                  placeholder="1200X1000"
                   radius="sm"
                   variant="bordered"
                   className="w-full rounded-r-none"
@@ -826,11 +1047,14 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                     inputWrapper: " h-[50px] border-[#E0E5F2] ",
                   }}
                   value={formData.size}
-                  onChange={(e) => handleInputChange("size", e.target.value)}
+                  onChange={handleSizeChange}
+                  onKeyDown={handleSizeKeyDown}
+                  isInvalid={!!errors.size}
+                  errorMessage={errors.size}
                   required
                   endContent={
                     <span className="text-xs text-[#999999] border-[#00000080] border-l-medium px-3">
-                      Sqt
+                      Size
                     </span>
                   }
                 />
@@ -849,8 +1073,11 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 }}
                 value={formData.comment}
                 onChange={(e) => handleInputChange("comment", e.target.value)}
+                isInvalid={!!errors.comment}
+                errorMessage={errors.comment}
               />
             </div>
+
             <div>
               <label className="block text-gray-700 mb-2">
                 Project Description *
@@ -867,6 +1094,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 onChange={(e) =>
                   handleInputChange("projectDescription", e.target.value)
                 }
+                isInvalid={!!errors.projectDescription}
+                errorMessage={errors.projectDescription}
                 required
               />
             </div>
@@ -874,11 +1103,10 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
             <div className="col-span-1 md:col-span-2 grid gap-y-4">
               <div className="flex items-center gap-4">
                 <label className="block text-gray-700 mb-2">
-                  Project Attachments
+                  Proposal Attachments
                 </label>
                 <input
                   type="file"
-                  name="attachments"
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   multiple
                   onChange={handleFileChange}
@@ -897,13 +1125,12 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                   </Button>
                 </label>
               </div>
-              {/* List all attachments (existing and new) */}
+
               <div className="flex flex-wrap gap-2 mt-2">
-                {/* Existing attachments (edit mode) */}
                 {Array.isArray(formData.attachments) &&
                   formData.attachments.map((att, idx) => (
                     <div
-                      key={att._id || att.url || att.filename}
+                      key={att._id || att.url}
                       className="flex items-center bg-gray-100 rounded px-2 py-1"
                     >
                       <a
@@ -931,7 +1158,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                       </Button>
                     </div>
                   ))}
-                {/* New files (not yet uploaded) */}
+
                 {selectedFiles.map((file, idx) => (
                   <div
                     key={file.name + idx}
@@ -952,11 +1179,12 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                     </Button>
                   </div>
                 ))}
+
                 {(!Array.isArray(formData.attachments) ||
                   formData.attachments.length === 0) &&
                   selectedFiles.length === 0 && (
                     <span className="text-gray-500 text-xs">
-                      *Attach project docs/pdf/jpeg/png
+                      *Attach proposal docs/pdf/jpeg/png
                     </span>
                   )}
               </div>
@@ -971,6 +1199,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                 variant="bordered"
                 radius="full"
                 className="px-8 text-primary"
+                isDisabled={loading}
               >
                 Cancel
               </Button>
@@ -981,8 +1210,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               radius="full"
               className="px-8"
               type="submit"
-              loading={loading}
-              disabled={loading}
+              isLoading={loading}
+              isDisabled={loading}
             >
               {loading ? "Saving..." : "Save"}
             </Button>

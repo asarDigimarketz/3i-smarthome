@@ -75,25 +75,23 @@ const ProposalTable = ({
             dateRange.start.month - 1, // Month is 0-indexed in Date constructor
             dateRange.start.day
           );
-          
+
           const endDate = new Date(
             dateRange.end.year,
             dateRange.end.month - 1, // Month is 0-indexed in Date constructor
             dateRange.end.day
           );
-          
+
           // Set start time to beginning of day (00:00:00)
           startDate.setHours(0, 0, 0, 0);
-          
+
           // Set end time to end of day (23:59:59.999) for same day filtering
           endDate.setHours(23, 59, 59, 999);
-          
-         
-          
+
           params.append("dateFrom", startDate.toISOString());
           params.append("dateTo", endDate.toISOString());
         } catch (dateError) {
-          console.error('Error converting proposal date range:', dateError);
+          console.error("Error converting proposal date range:", dateError);
           // Continue without date filtering if date conversion fails
         }
       }
@@ -106,7 +104,9 @@ const ProposalTable = ({
       // Add pagination
       params.append("page", page);
       params.append("limit", "5"); // Get more records for table
-      const response = await apiClient.get(`/api/proposals?${params.toString()}`);
+      const response = await apiClient.get(
+        `/api/proposals?${params.toString()}`
+      );
       if (response.data.success) {
         setProposals(response.data.data.proposals);
         if (setTotalPages && response.data.data.pagination) {
@@ -174,7 +174,10 @@ const ProposalTable = ({
         }
       }
 
-      const response = await apiClient.patch(`/api/proposals/${item._id}/field`, updateData);
+      const response = await apiClient.patch(
+        `/api/proposals/${item._id}/field`,
+        updateData
+      );
 
       if (response.data.success) {
         // Update local state
@@ -220,10 +223,6 @@ const ProposalTable = ({
   };
 
   const handleDelete = async (proposalId) => {
-    if (!confirm("Are you sure you want to delete this proposal?")) {
-      return;
-    }
-
     try {
       const response = await apiClient.delete(`/api/proposals/${proposalId}`);
 
@@ -245,6 +244,7 @@ const ProposalTable = ({
         description: error.response?.data?.error || "Failed to delete proposal",
         color: "danger",
       });
+      throw error; // Propagate error to the modal component
     }
   };
 
