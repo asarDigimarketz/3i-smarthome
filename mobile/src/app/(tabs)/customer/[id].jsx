@@ -25,12 +25,16 @@ import { TextInput } from 'react-native-paper';
 import ProjectCard from '../../../components/Common/ProjectCard';
 import { API_CONFIG } from '../../../../config';
 import auth from '../../../utils/auth';
+import apiClient from '../../../utils/apiClient';
+import { useAuth } from '../../../utils/AuthContext';
+import { getPageActions } from '../../../utils/permissions';
 
 const CustomerView = () => {
   const params = useLocalSearchParams();
   const router = useRouter();
   const customerId = params.id;
-  
+  const { user } = useAuth();
+  const actions = getPageActions(user, '/dashboard/customers');
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,20 +49,9 @@ const CustomerView = () => {
         setLoading(true);
       }
 
-      const response = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/customers/${customerId}`, {
-        method: 'GET',
-      });
+      const response = await apiClient.get(`/api/customers/${customerId}`);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          Alert.alert('Error', 'Customer not found');
-          router.back();
-          return;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       if (data.success && data.data && data.data.customer) {
         const customerData = data.data.customer;
@@ -74,10 +67,9 @@ const CustomerView = () => {
           services: customerData.services || [],
           amountSpend: customerData.formattedTotalSpent || `₹${customerData.totalSpent?.toLocaleString('en-IN') || '0'}`,
           totalProjects: customerData.totalProjects || 0,
-          status: customerData.status || 'Active',
           notes: customerData.notes || '',
           createdAt: customerData.createdAt,
-        };
+        };    
 
         // Format projects if available
         const customerProjects = customerData.projects ? customerData.projects.map(project => ({
@@ -137,13 +129,11 @@ const CustomerView = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/customers/${customerId}`, {
-                method: 'DELETE',
-              });
+              const response = await apiClient.delete(`/api/customers/${customerId}`);
 
-              const data = await response.json();
+              const data = response.data;
 
-              if (response.ok && data.success) {
+              if (data.success) {
                 Alert.alert('Success', 'Customer deleted successfully');
                 router.back();
               } else {
@@ -209,31 +199,18 @@ const CustomerView = () => {
             <ChevronLeft size={24} color="#000000" />
             <Text className="text-xl font-bold text-gray-900">Customers</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className="flex-row items-center bg-red-600 px-4 py-2 rounded-lg"
-            onPress={() => router.push("/(tabs)/proposal/AddProposal")}
-          >
-            <Text className="text-white font-semibold mr-1">Add</Text>
-            <Plus size={20} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
 
         <View className="bg-red-50 rounded-xl p-5 mb-5">
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-1">
               <Text className="text-2xl font-bold text-gray-900">{customer.name}</Text>
-              <View className="flex-row items-center mt-2">
-                <View className={`px-2 py-1 rounded-full ${customer.status === 'Active' ? 'bg-green-100' : 'bg-gray-100'}`}>
-                  <Text className={`text-xs font-semibold ${customer.status === 'Active' ? 'text-green-800' : 'text-gray-800'}`}>
-                    {customer.status}
-                  </Text>
-                </View>
-              </View>
+             
             </View>
             <TouchableOpacity 
               className="bg-white p-2 rounded-lg"
               onPress={() => router.push({ pathname: '/(tabs)/customer/EditCustomer', params: { id: customer.id } })}
+              disabled={!actions.edit}
             >
               <Edit size={20} color="#c92125" />
             </TouchableOpacity>
@@ -282,6 +259,7 @@ const CustomerView = () => {
               <TouchableOpacity 
                 className="mt-3 bg-red-600 px-4 py-2 rounded-lg"
                 onPress={() => router.push("/(tabs)/projects/AddProjects")}
+                disabled={!actions.create}
               >
                 <Text className="text-white font-semibold">Create Project</Text>
               </TouchableOpacity>

@@ -5,8 +5,8 @@ import { Text, TouchableOpacity, View, Alert, ActivityIndicator, ScrollView } fr
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { TextInput, Button } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import axios from 'axios'
 import { API_CONFIG } from '../../../../config'
+import apiClient from '../../../utils/apiClient'
 
 const emailProviders = [
   { label: "Gmail", value: "gmail", host: "smtp.gmail.com", port: "587" },
@@ -124,14 +124,7 @@ export default function EmailConfiguration() {
   const fetchEmailConfig = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(
-        `${API_URL}/api/settings/emailConfiguration`,
-        {
-          headers: {
-            "x-api-key": API_KEY,
-          },
-        }
-      )
+      const response = await apiClient.get('/api/settings/emailConfiguration')
       if (response.data.success && response.data.emailConfig) {
         setFormData(response.data.emailConfig)
       }
@@ -160,15 +153,7 @@ export default function EmailConfiguration() {
       setSaveLoading(true)
       setError(null)
       
-      const response = await axios.post(
-        `${API_URL}/api/settings/emailConfiguration`,
-        formData,
-        {
-          headers: {
-            "x-api-key": API_KEY,
-          },
-        }
-      )
+      const response = await apiClient.post('/api/settings/emailConfiguration', formData)
       
       if (response.data.success) {
         Alert.alert("Success", "Email configuration saved successfully")
@@ -192,18 +177,10 @@ export default function EmailConfiguration() {
       setTestLoading(true)
       setError(null)
       
-      const response = await axios.put(
-        `${API_URL}/api/settings/emailConfiguration`,
-        {
-          testEmail: testData.email,
-          message: testData.message || "This is a test email from your email configuration.",
-        },
-        {
-          headers: {
-            "x-api-key": API_KEY,
-          },
-        }
-      )
+      const response = await apiClient.put('/api/settings/emailConfiguration', {
+        testEmail: testData.email,
+        message: testData.message || "This is a test email from your email configuration.",
+      })
       
       if (response.data.success) {
         Alert.alert("Success", "Test email sent successfully")

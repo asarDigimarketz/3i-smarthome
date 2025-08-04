@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '../utils/AuthContext';
 import { sendTokenToServer, handleNotificationData } from '../utils/fcm';
+import StatusBarManager from '../components/Common/StatusBarManager';
 import "../../global.css";
 
 export default function RootLayout() {
@@ -14,6 +15,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      <StatusBarManager />
       <AuthProvider>
         <FCMInitializer />
         <Stack

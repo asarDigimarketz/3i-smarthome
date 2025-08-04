@@ -94,12 +94,7 @@ const TaskCard = ({ task, employees, handleEditTask, onDeleteTask }) => {
       }
 
       const fullUrl = getFullUrl(attachment.url);
-      console.log('📱 Opening attachment:', {
-        originalUrl: attachment.url,
-        fullUrl,
-        mimetype: attachment.mimetype,
-        name: attachment.originalName
-      });
+      
 
       // Check if it's an image
       if (attachment.mimetype?.startsWith('image/')) {

@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, View, ActivityIndicator } from 'react-native';
-import axios from 'axios';
+import { Image, View } from 'react-native';
 import { API_CONFIG } from '../../config';
 import { useAuth } from '../utils/AuthContext';
 import { getAccessibleRoutes } from '../utils/permissions';
+import apiClient from '../utils/apiClient';
 
 export default function SplashScreen() {
   const [logoUrl, setLogoUrl] = useState(null);
@@ -17,15 +17,7 @@ export default function SplashScreen() {
       try {
         console.log('🔄 Fetching logo from API for Splash...');
         
-        const response = await axios.get(
-          `${API_CONFIG.API_URL}/api/settings/general`,
-          {
-            headers: {
-              'x-api-key': API_CONFIG.API_KEY,
-            },
-            timeout: 8000, // Shorter timeout for splash screen
-          }
-        );
+        const response = await apiClient.get('/api/settings/general');
 
         const data = response.data as any;
         if (data.success && data.generalData) {
@@ -49,7 +41,7 @@ export default function SplashScreen() {
           }
         }
       } catch (error: any) {
-        console.error('❌ Error fetching logo for Splash:', error?.message || 'Unknown error');
+        // console.error('❌ Error fetching logo for Splash:', error?.message || 'Unknown error');
       } finally {
         setLoading(false);
       }
@@ -116,8 +108,8 @@ export default function SplashScreen() {
               console.log(`🚀 Navigating to: ${targetRoute}`);
               router.replace(targetRoute as any);
             } else {
-              console.log('❌ No accessible routes, redirecting to employee page');
-              router.replace('/(any)/employee');
+              console.log('❌ No accessible routes, redirecting to login');
+              router.replace('/(auth)/login');
             }
           }
         } else {
@@ -133,28 +125,17 @@ export default function SplashScreen() {
 
   return (
     <View className="flex-1 bg-black justify-center items-center">
-      {loading || authLoading ? (
-        <View className="items-center">
-          <ActivityIndicator size="large" color="white" />
-          <View style={{ height: 20 }} />
-          <Image
-            source={require('../../assets/icons/image15.png')}
-            style={{ width: 200, height: 70, resizeMode: 'contain', opacity: 0.5 }}
-          />
-        </View>
-      ) : (
-        <Image
-          source={
-            logoUrl 
-              ? { uri: logoUrl }
-              : require('../../assets/icons/image15.png')
-          }
-          style={{ width: 200, height: 70, resizeMode: 'contain' }}
-          onError={() => {
-            console.log('❌ Failed to load logo in Splash, using fallback');
-          }}
-        />
-      )}
+      <Image
+        source={
+          logoUrl 
+            ? { uri: logoUrl }
+            : require('../../assets/icons/image15.png')
+        }
+        style={{ width: 200, height: 70, resizeMode: 'contain' }}
+        onError={() => {
+          console.log('❌ Failed to load logo in Splash, using fallback');
+        }}
+      />
     </View>
   );
 } 

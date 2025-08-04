@@ -9,7 +9,7 @@ import { Image, Text, TouchableOpacity, useWindowDimensions, View, Alert } from 
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view"
 import { TextInput } from 'react-native-paper'
 import { API_CONFIG } from '../../../../config';
-import auth from '../../../utils/auth';
+import apiClient from '../../../utils/apiClient';
 
 const AddEmployee = () => {
   const { width } = useWindowDimensions()
@@ -43,20 +43,11 @@ const AddEmployee = () => {
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [documents, setDocuments] = useState([])
   const [roles, setRoles] = useState([]);
-  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   
-  // Updated departments to match EmployeeModal.jsx structure
-  const departments = [
-    { name: "Installation", createdAt: new Date() },
-    { name: "Service", createdAt: new Date() },
-    { name: "Sales", createdAt: new Date() },
-    { name: "Support", createdAt: new Date() },
-  ]
-
   const statusOptions = [
     { value: "active", color: "text-green-600", bg: "bg-green-50" },
     { value: "inactive", color: "text-red-600", bg: "bg-red-50" },
@@ -96,7 +87,7 @@ const AddEmployee = () => {
         setAvatarPreview(file.uri)
       }
     } catch (err) {
-      console.log("Avatar picker error:", err)
+      console.error('Avatar picker error:', err);
     }
   }
 
@@ -112,7 +103,7 @@ const AddEmployee = () => {
         setDocuments(prev => [...prev, ...result.assets])
       }
     } catch (err) {
-      console.log("Document picker error:", err)
+      console.error('Document picker error:', err);
     }
   }
 
@@ -242,10 +233,9 @@ const AddEmployee = () => {
         }));
         }
 
-      // Department data - send as JSON string like EmployeeModal.jsx
-      const selectedDepartment = departments.find((d) => d.name === formData.department);
-      if (selectedDepartment) {
-        formDataToSend.append("department", JSON.stringify(selectedDepartment));
+      // Department data - send as simple string since it's now an input field
+      if (formData.department) {
+        formDataToSend.append("department", formData.department);
       }
 
       // Avatar file
@@ -266,78 +256,134 @@ const AddEmployee = () => {
         });
       });
 
-      // Step 1: Create Employee record
-      const employeeRes = await auth.fetchWithAuth(
-        `${API_CONFIG.API_URL}/api/employeeManagement`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          body: formDataToSend,
+      // Step 1: Create Employee record with retry logic
+      let employeeRes;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          employeeRes = await apiClient.post(`/api/employeeManagement`, formDataToSend, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            timeout: 60000,
+          });
+          break; // Success, exit retry loop
+        } catch (error) {
+          retryCount++;
+          console.error(`Attempt ${retryCount} failed:`, error.message);
+          
+          if (retryCount >= maxRetries) {
+            throw error; // Re-throw the error after all retries
+          }
+          
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
         }
-      );
-
-      if (!employeeRes.ok) {
-        throw new Error(`HTTP error! status: ${employeeRes.status}`);
       }
 
-      const employeeData = await employeeRes.json();
+      const employeeData = employeeRes.data;
       if (!employeeData.success) {
         throw new Error(employeeData.message || 'Failed to add employee');
       }
 
-      // Step 2: Create UserEmployee record for authentication
+      // Step 2: Create UserEmployee record for authentication with retry logic
       try {
         const selectedRole = roles.find((r) => r._id === formData.role);
-        const registerResponse = await auth.fetchWithAuth(
-          `${API_CONFIG.API_URL}/api/auth/register`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: formData.email,
-              roleId: selectedRole?._id,
-              name: `${formData.firstName} ${formData.lastName}`,
-              // Let the server generate a proper password that meets validation requirements
-            }),
-          }
-        );
-
-        if (!registerResponse.ok) {
-          throw new Error(`HTTP error! status: ${registerResponse.status}`);
+        if (!selectedRole) {
+          console.error("Selected role not found:", formData.role);
+          Alert.alert(
+            "Warning", 
+            "Employee created but user account registration failed: Role not found"
+          );
+          router.back();
+          return;
         }
 
-        const registerData = await registerResponse.json();
+      
+        let registerResponse;
+        retryCount = 0;
+        
+        while (retryCount < maxRetries) {
+          try {
+            registerResponse = await apiClient.post(`/api/auth/register`, {
+              email: formData.email,
+              roleId: selectedRole._id,
+              name: `${formData.firstName} ${formData.lastName}`,
+              // Let the server generate a proper password that meets validation requirements
+            }, {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              timeout: 30000,
+            });
+            break; // Success, exit retry loop
+          } catch (error) {
+            retryCount++;
+            console.error(`User account creation attempt ${retryCount} failed:`, error.message);
+            
+            if (retryCount >= maxRetries) {
+              throw error; // Re-throw the error after all retries
+            }
+            
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+        }
+
+        const registerData = registerResponse.data;
+     
+        
         if (registerData.success) {
           Alert.alert(
             "Success", 
             "Employee created and user account registered successfully"
           );
         } else {
+          console.error("User account registration failed:", registerData);
           Alert.alert(
             "Warning", 
             "Employee created but user account registration failed: " + 
             (registerData?.message || "Unknown error")
           );
-      }
+        }
       } catch (error) {
         console.error("Error creating user account:", error);
+        console.error("Error response:", error.response?.data);
+        console.error("Error status:", error.response?.status);
         Alert.alert(
           "Warning", 
           "Employee created but failed to create user account. Please contact administrator."
         );
       }
 
-      router.back();
+      router.push('/(any)/employee');
     } catch (error) {
       console.error("Error submitting employee:", error);
-      Alert.alert(
-        "Error", 
-        error.response?.data?.message || error.message || "Failed to add employee"
-      );
+      
+      // Handle different types of errors
+      if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
+        Alert.alert(
+          "Network Error", 
+          "Unable to connect to the server. Please check your internet connection and try again."
+        );
+      } else if (error.response?.status === 400) {
+        Alert.alert(
+          "Validation Error", 
+          error.response?.data?.message || "Please check the form data and try again."
+        );
+      } else if (error.response?.status === 500) {
+        Alert.alert(
+          "Server Error", 
+          "Server error occurred. Please try again later."
+        );
+      } else {
+        Alert.alert(
+          "Error", 
+          error.response?.data?.message || error.message || "Failed to add employee"
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -347,17 +393,21 @@ const AddEmployee = () => {
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const res = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/rolesAndPermission`, {
-          method: 'GET',
-        });
-        const data = await res.json();
+        const res = await apiClient.get(`/api/rolesAndPermission`);
+        const data = res.data;
         if (data.success) {
-          setRoles(data.roles);
+          // Filter out invalid role objects
+          const validRoles = (data.roles || []).filter(role => 
+            role && typeof role === 'object' && role._id && role.role
+          );
+          setRoles(validRoles);
         } else {
           console.error("Failed to fetch roles:", data.message);
+          setRoles([]);
         }
       } catch (error) {
         console.error("Error fetching roles:", error);
+        setRoles([]);
       }
     };
     fetchRoles();
@@ -367,7 +417,7 @@ const AddEmployee = () => {
     <View className="flex-1 bg-white">
       <View className="bg-white p-4 shadow-sm flex-row items-center justify-between">
         <View className="flex-row items-center">
-          <TouchableOpacity className="mr-3" onPress={() => router.back()}>
+          <TouchableOpacity className="mr-3" onPress={() => router.push('/(any)/employee')}>
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
           <Text className="text-xl font-bold text-gray-800">Add Employee</Text>
@@ -535,36 +585,19 @@ const AddEmployee = () => {
           </View>
 
           <View className="space-y-4">
-            {/* Department Dropdown */}
+            {/* Department Input Field */}
             <View className="relative mb-4">
-              <TouchableOpacity
-                onPress={() => setShowDepartmentDropdown(!showDepartmentDropdown)}
-                className="flex-row items-center justify-between bg-gray-100 rounded-lg h-12 px-4 w-full"
-              >
-                <Text className={`$ {
-                  formData.department ? 'text-gray-800' : 'text-gray-500'
-                } text-base font-medium`}>
-                  {formData.department || 'Select Department'}
-                </Text>
-                <ChevronDown size={16} color="#6B7280" />
-              </TouchableOpacity>
-              {showDepartmentDropdown && (
-                <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
-                  {departments.map((dept) => (
-                    <TouchableOpacity
-                      key={dept.name}
-                      className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
-                      onPress={() => {
-                        handleInputChange('department', dept.name);
-                        setShowDepartmentDropdown(false);
-                      }}
-                    >
-                      <Text className="text-lg font-medium">
-                        {dept.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <TextInput
+                mode="outlined"
+                label="Department"
+                value={formData.department}
+                onChangeText={(text) => handleInputChange('department', text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
+                placeholder="Enter department name"
+              />
+              {errors.department && (
+                <Text className="text-red-600 text-sm mt-1">{errors.department}</Text>
               )}
             </View>
 
@@ -583,20 +616,28 @@ const AddEmployee = () => {
               </TouchableOpacity>
               {showRoleDropdown && (
                 <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
-                  {roles.map((role) => (
-                    <TouchableOpacity
-                      key={role._id}
-                      className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
-                      onPress={() => {
-                        handleInputChange('role', role._id);
-                        setShowRoleDropdown(false);
-                      }}
-                    >
-                      <Text className="text-lg font-medium">
-                        {role.role}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {roles.map((role) => {
+                    // Safety check to ensure role is a valid object
+                    if (!role || typeof role !== 'object') {
+                      console.error('Invalid role object:', role);
+                      return null;
+                    }
+                    
+                    return (
+                      <TouchableOpacity
+                        key={role._id || Math.random()}
+                        className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
+                        onPress={() => {
+                          handleInputChange('role', role._id);
+                          setShowRoleDropdown(false);
+                        }}
+                      >
+                        <Text className="text-lg font-medium">
+                          {role.role || 'Unknown Role'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -805,14 +846,14 @@ const AddEmployee = () => {
           <View className="flex-row justify-center space-x-6 mt-8 gap-4">
             <TouchableOpacity
               className="bg-gray-100 px-8 py-3 rounded-lg"
-              onPress={() => router.back()}
+              onPress={() => router.push('/(any)/employee')}
             >
               <Text className="text-gray-600 font-medium">Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               className="bg-red-600 px-8 py-3 rounded-lg"
-              onPress={handleSave}
+              onPress={handleSave || router.push('/(any)/employee')}
               disabled={loading}
             >
               {loading ? (

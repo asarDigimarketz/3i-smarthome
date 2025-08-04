@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Image, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import axios from 'axios';
 import { API_CONFIG } from '../../../config';
 import NotificationBadge from '../Common/NotificationBadge';
+import apiClient from '../../utils/apiClient';
 
 export default function Header({ onMenuPress }) {
   const insets = useSafeAreaInsets();
@@ -21,15 +21,7 @@ export default function Header({ onMenuPress }) {
         setLoading(true);
         console.log('🔄 Fetching logo from API for Header...');
         
-        const response = await axios.get(
-          `${API_CONFIG.API_URL}/api/settings/general`,
-          {
-            headers: {
-              'x-api-key': API_CONFIG.API_KEY,
-            },
-            timeout: 10000,
-          }
-        );
+        const response = await apiClient.get('/api/settings/general');
 
         if (response.data.success && response.data.generalData) {
           const generalData = response.data.generalData;
@@ -90,11 +82,16 @@ export default function Header({ onMenuPress }) {
           />
         )}
 
-        <View className="flex-row items-center space-x-3">
-          <NotificationBadge 
+        <View className="flex-row items-center space-x-3 gap-6">
+        <NotificationBadge 
             onPress={() => router.push('/notifications')}
             size={20}
             showCount={true}
+            
+            style={{
+              backgroundColor: 'white',
+              color: 'white'
+            }}
           />
           <TouchableOpacity 
             onPress={onMenuPress}

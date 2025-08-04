@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Image, Modal, ScrollView, Text, TouchableOpacity, View, Dimensions, Alert, Linking } from 'react-native';
 import ImageView from 'react-native-image-viewing';
 import { API_CONFIG } from '../../../config';
+import { useAuth } from '../../utils/AuthContext';
+import { getPageActions } from '../../utils/permissions';
 
 const getFullUrl = (url) => {
   if (!url) return '';
@@ -33,7 +35,8 @@ const TaskCard = ({ task, employees, handleEditTask, onDeleteTask }) => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageModalIndex, setImageModalIndex] = useState(0);
   const [imageModalImages, setImageModalImages] = useState([]);
-
+  const { user } = useAuth();
+  const actions = getPageActions(user, '/dashboard/tasks');
  
 
   // Format date exactly like web version
@@ -94,12 +97,7 @@ const TaskCard = ({ task, employees, handleEditTask, onDeleteTask }) => {
       }
 
       const fullUrl = getFullUrl(attachment.url);
-      console.log('📱 Opening attachment:', {
-        originalUrl: attachment.url,
-        fullUrl,
-        mimetype: attachment.mimetype,
-        name: attachment.originalName
-      });
+     
 
       // Check if it's an image
       if (attachment.mimetype?.startsWith('image/')) {
@@ -414,6 +412,7 @@ const TaskCard = ({ task, employees, handleEditTask, onDeleteTask }) => {
           <TouchableOpacity 
             className="w-8 h-8 bg-gray-100 rounded-lg items-center justify-center p-2"
             onPress={() => handleEditTask(task)}
+            disabled={!actions.edit}
           >
             <SquarePen size={16} color="#6B7280" />
           </TouchableOpacity>
@@ -421,6 +420,7 @@ const TaskCard = ({ task, employees, handleEditTask, onDeleteTask }) => {
             <TouchableOpacity 
               className="w-8 h-8 bg-red-100 rounded-lg items-center justify-center p-2"
               onPress={onDeleteTask}
+              disabled={!actions.delete}
             >
               <Trash2 size={16} color="#DC2626" />
             </TouchableOpacity>

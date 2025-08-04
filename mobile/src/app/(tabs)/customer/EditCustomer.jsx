@@ -5,17 +5,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_CONFIG } from '../../../../config';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { ArrowLeft, ChevronDown } from 'lucide-react-native';
+import apiClient from '../../../utils/apiClient';
 
 const EditCustomer = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const statusOptions = [
-    { value: 'Active', color: 'text-green-600', bg: 'bg-green-100' },
-    { value: 'Inactive', color: 'text-red-600', bg: 'bg-red-100' },
-  ];
   const [customer, setCustomer] = useState({
     customerName: '',
     contactNumber: '',
@@ -26,9 +22,11 @@ const EditCustomer = () => {
     state: '',
     country: 'India',
     pincode: '',
-    notes: '',
-    status: 'Active',
+    notes: ''
   });
+
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
 
   useEffect(() => {
     if (id) fetchCustomer();
@@ -37,15 +35,9 @@ const EditCustomer = () => {
   const fetchCustomer = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_CONFIG.API_URL}/api/customers/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_CONFIG.API_KEY,
-        },
-      });
-      const data = await response.json();
-      if (response.ok && data.success && data.data && data.data.customer) {
+      const response = await apiClient.get(`/api/customers/${id}`);
+      const data = response.data;
+      if (data.success && data.data && data.data.customer) {
         const c = data.data.customer;
         setCustomer({
           customerName: c.customerName || '',
@@ -58,7 +50,6 @@ const EditCustomer = () => {
           country: c.address?.country || 'India',
           pincode: c.address?.pincode || '',
           notes: c.notes || '',
-          status: c.status || 'Active',
         });
       } else {
         Alert.alert('Error', 'Failed to load customer data');
@@ -96,20 +87,12 @@ const EditCustomer = () => {
         email: customer.email,
         address: address,
         notes: customer.notes,
-        status: customer.status,
       };
-      const response = await fetch(`${API_CONFIG.API_URL}/api/customers/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_CONFIG.API_KEY,
-        },
-        body: JSON.stringify(customerData),
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
+      const response = await apiClient.put(`/api/customers/${id}`, customerData);
+      const data = response.data;
+      if (data.success) {
         Alert.alert('Success', 'Customer updated successfully');
-        router.back();
+        router.push('/(tabs)/customer');
       } else {
         Alert.alert('Error', data.message || 'Failed to update customer');
       }
@@ -257,42 +240,11 @@ const EditCustomer = () => {
               theme={{ colors: { primary: '#DC2626' } }}
             />
           </View>
-          {/* Status Dropdown */}
-          <View className="mb-4 relative">
-            <Text className="text-base font-medium text-gray-700 mb-2">Status</Text>
-            <TouchableOpacity
-              onPress={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="flex-row items-center justify-between bg-gray-100 rounded-lg h-14 px-4 w-full"
-            >
-              <Text className={`text-base font-medium ${customer.status === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
-                {customer.status || 'Status'}
-              </Text>
-              <ChevronDown size={16} color="#6B7280" />
-            </TouchableOpacity>
-            {showStatusDropdown && (
-              <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
-                {statusOptions.map((status) => (
-                  <TouchableOpacity
-                    key={status.value}
-                    className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
-                    onPress={() => {
-                      setCustomer({ ...customer, status: status.value });
-                      setShowStatusDropdown(false);
-                    }}
-                  >
-                    <Text className={`${status.color} text-lg font-medium`}>
-                      {status.value}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
           {/* Form Actions */}
           <View className="flex-row gap-3 mt-4">
             <TouchableOpacity 
               className="flex-1 bg-gray-200 py-3 rounded-lg"
-              onPress={() => router.back()}
+              onPress={() => router.push(`/(tabs)/customer/${id}`)}
               disabled={saving}
             >
               <Text className="text-gray-700 font-semibold text-center">Cancel</Text>

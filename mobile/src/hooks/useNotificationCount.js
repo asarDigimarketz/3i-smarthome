@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../utils/AuthContext';
 import { API_CONFIG } from '../../config';
 import auth from '../utils/auth';
+import apiClient from '../utils/apiClient';
 
 export const useNotificationCount = () => {
   const { user, isAuthenticated } = useAuth();
@@ -14,38 +15,16 @@ export const useNotificationCount = () => {
       return;
     }
 
-    const token = await auth.getToken();
-    if (!token) {
-      console.log('❌ No valid token for notification badge');
-      return;
-    }
-
     try {
       setLoading(true);
-      console.log('🔍 Fetching unread count...');
       
-      const response = await fetch(`${API_CONFIG.API_URL}/api/notifications/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'x-api-key': API_CONFIG.API_KEY,
-        },
-      });
+      const response = await apiClient.get('/api/notifications/stats');
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         if (data.success) {
           setUnreadCount(data.data.unread || 0);
-          console.log(`✅ Unread count: ${data.data.unread}`);
-        }
-      } else {
-        const errorText = await response.text();
-        console.log('❌ Badge response error:', errorText);
-        
-        // If token is invalid, don't show error, just don't update count
-        if (response.status === 401 || response.status === 403) {
-          console.log('Token invalid, skipping unread count update');
-          return;
+         
         }
       }
     } catch (error) {

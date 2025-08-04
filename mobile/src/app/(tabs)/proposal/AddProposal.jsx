@@ -14,9 +14,8 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { TextInput } from 'react-native-paper';
-import axios from 'axios';
 import { API_CONFIG } from '../../../../config';
-import auth from '../../../utils/auth';
+import apiClient from '../../../utils/apiClient'; 
 
 // 🔧 NETWORK CONFIGURATION - UPDATE WITH YOUR DEVELOPMENT MACHINE'S IP
 const API_BASE_URL = API_CONFIG.API_URL; // ✅ Your actual IP address
@@ -33,20 +32,20 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
   const [formData, setFormData] = useState({
     customerName: '',
     contactNumber: '',
-    emailId: '',
-    date: new Date().toISOString().split('T')[0], // Set default to today's date
-    addressLine1: '',
-    cityTownVillage: '',
+    email: '', // Changed from emailId to match web version
+    addressLine: '', // Changed from addressLine1 to match web version
+    city: '', // Changed from cityTownVillage to match web version
     district: '',
     state: '',
     country: '',
-    pinCode: '',
-    service: '',
+    pincode: '', // Changed from pinCode to match web version
+    services: '', // Changed from service to match web version
     projectDescription: '',
     projectAmount: '',
     size: '',
     status: 'Warm', // Set default status
     comment: '',
+    date: new Date().toISOString().split('T')[0], // Set default to today's date
     attachments: []
   });
 
@@ -102,18 +101,12 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
 
     setIsSearching(true);
     try {
-      const response = await auth.fetchWithAuth(
-        `${API_BASE_URL}/api/customers?search=${encodeURIComponent(search)}`,
-        {
-          method: 'GET',
-        }
-      );
+      const response = await apiClient.get(`/api/customers?search=${encodeURIComponent(search)}`);
 
-      if (!response.ok) {
+      const data = response.data;
+      if (!data.success) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const data = await response.json();
       let customers = data.data?.customers || [];
 
       // Filter for matches in either field
@@ -125,7 +118,7 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
 
       // Prioritize exact matches
       filtered = [
-        ...filtered.filter(
+        ...filtered.filter( 
           (c) =>
             c.email?.toLowerCase() === search.toLowerCase() ||
             c.contactNumber === search
@@ -165,13 +158,13 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
       ...prev,
       customerName: customer.customerName || '',
       contactNumber: customer.contactNumber || '',
-      emailId: customer.email || '',
-      addressLine1: customer.address?.addressLine || '',
-      cityTownVillage: customer.address?.city || '',
+      email: customer.email || '',
+      addressLine: customer.address?.addressLine || '',
+      city: customer.address?.city || '',
       district: customer.address?.district || '',
       state: customer.address?.state || '',
       country: customer.address?.country || '',
-      pinCode: customer.address?.pincode || '',
+      pincode: customer.address?.pincode || '',
     }));
 
     // Update input values
@@ -195,7 +188,7 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
   // Handle manual input changes
   const handleEmailInputChange = (value) => {
     setEmailInput(value);
-    setFormData((prev) => ({ ...prev, emailId: value }));
+    setFormData((prev) => ({ ...prev, email: value }));
 
     // Clear selection if input doesn't match selected customer
     if (selectedCustomer && selectedCustomer.email !== value) {
@@ -222,25 +215,26 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
   // Fetch proposal data for edit mode
   useEffect(() => {
     if (isEdit && proposalId) {
-      fetchProposalData();
+      // Use setTimeout to avoid state updates during render
+      const timer = setTimeout(() => {
+        fetchProposalData();
+      }, 0);
+      
+      return () => clearTimeout(timer);
     }
   }, [isEdit, proposalId]);
 
   const fetchProposalData = async () => {
     try {
       setLoading(true);
-      const response = await auth.fetchWithAuth(
-        `${API_BASE_URL}/api/proposals/${proposalId}`,
-        {
-          method: 'GET',
-        }
-      );
+      const response = await apiClient.get(`/api/proposals/${proposalId}`, {
+        timeout: 30000, // 30 seconds timeout
+      });
       
-      if (!response.ok) {
+      const data = response.data;
+      if (!data.success) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const data = await response.json();
       
       if (data.success) {
         const proposal = data.data.proposal;
@@ -248,14 +242,14 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
           ...prev,
           customerName: proposal.customerName || '',
           contactNumber: proposal.contactNumber || '',
-          emailId: proposal.email || '',
-          addressLine1: proposal.address?.addressLine || '',
-          cityTownVillage: proposal.address?.city || '',
+          email: proposal.email || '',
+          addressLine: proposal.address?.addressLine || '',
+          city: proposal.address?.city || '',
           district: proposal.address?.district || '',
           state: proposal.address?.state || '',
           country: proposal.address?.country || '',
-          pinCode: proposal.address?.pincode || '',
-          service: proposal.services || '',
+          pincode: proposal.address?.pincode || '',
+          services: proposal.services || '',
           projectDescription: proposal.projectDescription || '',
           projectAmount: proposal.projectAmount || '',
           size: proposal.size || '',
@@ -264,14 +258,33 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
           date: proposal.date
             ? new Date(proposal.date).toISOString().split('T')[0]
             : '',
-          attachments: Array.isArray(proposal.attachments)
-            ? proposal.attachments
+          attachments: Array.isArray(proposal.attachments) 
+            ? proposal.attachments.map(att => {
+                // Extract data from Mongoose document
+                const attachmentData = att._doc || att;
+                return {
+                  ...attachmentData,
+                  // Extract filename from URL if not present
+                  filename: attachmentData.filename || attachmentData.url?.split('/').pop(),
+                  // Extract originalName from filename if not present
+                  originalName: attachmentData.originalName || attachmentData.filename || attachmentData.url?.split('/').pop(),
+                  // Determine mimetype from file extension if not present
+                  mimetype: attachmentData.mimetype || getMimeTypeFromUrl(attachmentData.url)
+                };
+              })
             : [],
         }));
 
         // Update input values for edit mode
         setEmailInput(proposal.email || '');
         setContactInput(proposal.contactNumber || '');
+        
+        // Ensure formData is properly synchronized
+        setFormData((prev) => ({
+          ...prev,
+          email: proposal.email || '',
+          contactNumber: proposal.contactNumber || '',
+        }));
 
         if (proposal.amountOptions) {
           setAmountOptions(proposal.amountOptions);
@@ -283,6 +296,29 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getMimeTypeFromUrl = (url) => {
+    if (!url) return 'application/octet-stream';
+    
+    const extension = url.split('.').pop()?.toLowerCase();
+    const mimeTypes = {
+      'pdf': 'application/pdf',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'bmp': 'image/bmp',
+      'webp': 'image/webp',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'txt': 'text/plain',
+      'rtf': 'application/rtf'
+    };
+    
+    return mimeTypes[extension] || 'application/octet-stream';
   };
 
   const showDatePicker = () => {
@@ -338,7 +374,7 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
         setSelectedFiles((prev) => [...prev, ...validFiles]);
       }
     } catch (err) {
-      console.log('Document picker error:', err);
+      console.error('Document picker error:', err);
     }
   };
 
@@ -363,42 +399,37 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
   };
 
   const validateForm = () => {
-    // Enhanced validation to match web version
+    // Validate required fields - matching web version exactly
     const requiredFields = [
       'customerName',
       'contactNumber', 
-      'emailId',
-      'addressLine1',
-      'cityTownVillage',
+      'email',
+      'addressLine',
+      'city',
       'district',
       'state',
       'country',
-      'pinCode',
-      'service',
+      'pincode',
+      'services',
       'projectDescription',
       'projectAmount',
       'size'
     ];
 
-    const missingFields = requiredFields.filter((field) => {
-      const value = field === 'emailId' ? emailInput : 
-                   field === 'contactNumber' ? contactInput : 
-                   formData[field];
-      return !value || value.trim() === '';
-    });
-
+    const missingFields = requiredFields.filter((field) => !formData[field]);
+    
     if (missingFields.length > 0) {
       const fieldLabels = {
         customerName: 'Customer Name',
         contactNumber: 'Contact Number',
-        emailId: 'Email ID',
-        addressLine1: 'Address Line',
-        cityTownVillage: 'City/Town/Village',
+        email: 'Email ID',
+        addressLine: 'Address Line',
+        city: 'City/Town/Village',
         district: 'District',
         state: 'State',
         country: 'Country',
-        pinCode: 'Pin Code',
-        service: 'Service',
+        pincode: 'Pin Code',
+        services: 'Service',
         projectDescription: 'Project Description',
         projectAmount: 'Project Amount',
         size: 'Size'
@@ -406,45 +437,6 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
       
       const missingLabels = missingFields.map(field => fieldLabels[field]).join(', ');
       Alert.alert('Validation Error', `Please fill in all required fields: ${missingLabels}`);
-      return false;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const emailToValidate = emailInput || formData.emailId;
-    if (!emailRegex.test(emailToValidate)) {
-      Alert.alert('Validation Error', 'Please enter a valid email address');
-      return false;
-    }
-
-    // Validate phone number (enhanced check)
-    const contactToValidate = contactInput || formData.contactNumber;
-    const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
-    if (!phoneRegex.test(contactToValidate)) {
-      Alert.alert('Validation Error', 'Please enter a valid contact number (minimum 10 digits)');
-      return false;
-    }
-
-    // Validate project amount
-    const amount = parseInt(formData.projectAmount);
-    if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Validation Error', 'Please enter a valid project amount');
-      return false;
-    }
-
-    // Validate size format (Length X Width) - enhanced
-    if (formData.size) {
-      const sizePattern = /^\d{1,6}(\.\d{1,2})?\s*[xX]\s*\d{1,6}(\.\d{1,2})?$/;
-      if (!sizePattern.test(formData.size.trim())) {
-        Alert.alert('Validation Error', 'Size must be in format: Length X Width (e.g., 1200.36 X 1600.63)');
-        return false;
-      }
-    }
-
-    // Validate pin code
-    const pinCodePattern = /^\d{5,6}$/;
-    if (!pinCodePattern.test(formData.pinCode)) {
-      Alert.alert('Validation Error', 'Please enter a valid 5-6 digit pin code');
       return false;
     }
 
@@ -457,169 +449,134 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
     }
 
     setLoading(true);
-    
-    try {
-      console.log(`🚀 Starting proposal ${isEdit ? 'update' : 'creation'}...`);
-      console.log('📋 Form Data:', formData);
 
+    try {
       // Add current project amount to amountOptions if not already present
       const currentAmountFormatted = `₹${parseInt(formData.projectAmount).toLocaleString('en-IN')}`;
       if (!amountOptions.includes(currentAmountFormatted)) {
         setAmountOptions((prev) => [...prev, currentAmountFormatted]);
       }
-      
-      // Prepare FormData for file upload
+
+      // Create FormData for file upload - matching web version exactly
       const submitData = new FormData();
-      
-      // Add form fields
+
+      // Add all form fields - matching web version structure
       submitData.append('customerName', formData.customerName);
       submitData.append('contactNumber', formData.contactNumber);
-      submitData.append('email', formData.emailId);
-      submitData.append('date', formData.date || new Date().toISOString());
+      submitData.append('email', formData.email);
+      submitData.append('date', formData.date);
       
-      // Address object - mapping to server expected field names
-      const address = {
-        addressLine: formData.addressLine1,        // Server expects 'addressLine'
-        city: formData.cityTownVillage,           // Server expects 'city'
+      // Address object - matching web version exactly
+      submitData.append('address', JSON.stringify({
+        addressLine: formData.addressLine,
+        city: formData.city,
         district: formData.district,
         state: formData.state,
         country: formData.country,
-        pincode: formData.pinCode                 // Server expects 'pincode' (lowercase)
-      };
-      console.log('🏠 Address Object (mapped for server):', address);
-      submitData.append('address', JSON.stringify(address));
+        pincode: formData.pincode,
+      }));
       
-      submitData.append('services', formData.service);
+      submitData.append('services', formData.services);
       submitData.append('projectDescription', formData.projectDescription);
       submitData.append('projectAmount', formData.projectAmount);
       submitData.append('size', formData.size);
-      submitData.append('status', formData.status || 'Warm');
-      submitData.append('comment', formData.comment || '');
+      submitData.append('status', formData.status);
+      submitData.append('comment', formData.comment);
 
-      // Include updated amountOptions with the current amount
+      // Include updated amountOptions with the current amount - matching web version
       const updatedAmountOptions = amountOptions.includes(currentAmountFormatted)
         ? amountOptions
         : [...amountOptions, currentAmountFormatted];
       submitData.append('amountOptions', JSON.stringify(updatedAmountOptions));
 
-      // Add files if selected (multiple files support)
+      // Add files if selected - matching web version exactly
       if (selectedFiles.length > 0) {
         selectedFiles.forEach((file) => {
-          submitData.append('attachments', {
+          // Create proper file object for FormData
+          const fileObject = {
             uri: file.uri,
-            type: file.mimeType,
-            name: file.name
-          });
+            type: file.mimeType || 'application/octet-stream',
+            name: file.name || 'document'
+          };
+          submitData.append('attachments', fileObject);
         });
       }
 
-      // Add removed attachments for edit mode
+      // Add removed attachments for edit mode - matching web version
       if (isEdit && removedAttachments.length > 0) {
         const filenames = removedAttachments
           .map((att) => att && (att.filename || (att._doc && att._doc.filename)))
-          .filter(Boolean);
+          .filter(Boolean); // Remove null/undefined
         if (filenames.length > 0) {
           submitData.append('removeAttachments', JSON.stringify(filenames));
         }
       }
 
-      // Make API call
-      const url = isEdit
-        ? `${API_BASE_URL}/api/proposals/${proposalId}`
-        : `${API_BASE_URL}/api/proposals`;
-
-      const method = isEdit ? 'put' : 'post';
-
-      console.log('🔗 API URL:', url);
-      console.log('🔑 API Key:', API_CONFIG.API_KEY ? 'Set' : 'Not Set');
-      console.log('📤 Sending request...');
-
-      const response = await auth.fetchWithAuth(url, {
-        method: method.toUpperCase(),
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        body: submitData
-      });
-
-      console.log('📥 Response Status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Make API call - matching web version exactly
+      let response;
+      if (isEdit) {
+        response = await apiClient.put(`/api/proposals/${proposalId}`, submitData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 60000, // 60 seconds timeout for file uploads
+        });
+      } else {
+        response = await apiClient.post('/api/proposals', submitData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 60000, // 60 seconds timeout for file uploads
+        });
       }
 
-      const data = await response.json();
-      console.log('📥', data);
-
-      if (data.success) {
-        console.log(`✅ Proposal ${isEdit ? 'updated' : 'created'} successfully!`);
-        
+      if (response.data.success) {
         let message = isEdit
           ? 'Proposal updated successfully!'
           : 'Proposal created successfully!';
 
         // Check if project was automatically created
-        if (data.data.project) {
+        if (response.data.data.project) {
           message += ' A project has been automatically created from this confirmed proposal.';
         }
 
         // Check if customer was created
-        if (data.data.customer) {
+        if (response.data.data.customer) {
           message += ' Customer information has been saved.';
         }
 
         Alert.alert('Success', message, [
           {
             text: 'OK',
-            onPress: () => router.back()
+            onPress: () => router.push('/(tabs)/proposal')
           }
         ]);
       } else {
-        console.error('❌ API returned success: false');
-        console.error('❌ Error message:', data.error);
-        Alert.alert('Error', data.error || `Failed to ${isEdit ? 'update' : 'create'} proposal`);
+        throw new Error(response.data.error || 'Failed to save proposal');
       }
     } catch (error) {
-      console.error(`🚨 Error ${isEdit ? 'updating' : 'creating'} proposal:`);
-      console.error('🚨 Error type:', error.name);
-      console.error('🚨 Error message:', error.message);
+      console.error(`Error ${isEdit ? 'updating' : 'creating'} proposal:`, error);
       
-      if (error.response) {
+      let errorMessage = 'Network error. Please check your connection.';
+      
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.response) {
         // Server responded with error status
-        console.error('🚨 Response status:', error.response.status);
-        console.error('🚨 Response headers:', error.response.headers);
-        console.error('🚨 Response data:', error.response.data);
-        
-        let errorMessage = 'Server error occurred';
-        if (error.response.data?.error) {
-          errorMessage = error.response.data.error;
-        } else if (error.response.status === 400) {
-          errorMessage = 'Invalid data sent to server. Please check all fields.';
-        } else if (error.response.status === 401) {
-          errorMessage = 'Unauthorized. Please check your API key.';
-        } else if (error.response.status === 404) {
-          errorMessage = 'API endpoint not found. Please check server configuration.';
-        } else if (error.response.status >= 500) {
-          errorMessage = 'Server error. Please try again later.';
-        }
-        
-        Alert.alert('Error', errorMessage);
+        errorMessage = error.response.data?.error || `Server error: ${error.response.status}`;
       } else if (error.request) {
-        // Network error
-        console.error('🚨 Network Error - Request made but no response received');
-        console.error('🚨 Request details:', error.request);
-        Alert.alert('Network Error', 'No response from server. Please check your internet connection and server status.');
-      } else {
-        // Other error
-        console.error('🚨 Unexpected Error:', error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please try again.';
       }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
-      console.log(`🏁 ${isEdit ? 'Update' : 'Create'} operation completed`);
       setLoading(false);
     }
   };
-
+  
   function formatSizeInput(text) {
     // Remove all non-numeric, non-dot, non-X, non-space characters
     let cleaned = text.replace(/[^0-9.xX\s]/g, '');
@@ -642,7 +599,7 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
         <View className="flex-row items-center">
           <TouchableOpacity 
             className="mr-3"
-            onPress={() => router.back()}
+            onPress={() => router.push('/(tabs)/proposal')}
           >
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
@@ -784,8 +741,8 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
               <TextInput
                 mode="outlined"
                 label="Address Line 1"
-                value={formData.addressLine1}
-                onChangeText={(text) => setFormData({...formData, addressLine1: text})}
+                value={formData.addressLine}
+                onChangeText={(text) => setFormData({...formData, addressLine: text})}
                 outlineColor="#E5E7EB"
                 activeOutlineColor="#DC2626"
               />
@@ -794,8 +751,8 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
               <TextInput
                 mode="outlined"
                 label="City / Town / Village"
-                value={formData.cityTownVillage}
-                onChangeText={(text) => setFormData({...formData, cityTownVillage: text})}
+                value={formData.city}
+                onChangeText={(text) => setFormData({...formData, city: text})}
                 outlineColor="#E5E7EB"
                 activeOutlineColor="#DC2626"
               />
@@ -840,8 +797,8 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
               <TextInput
                 mode="outlined"
                 label="Pin Code"
-                value={formData.pinCode}
-                onChangeText={(text) => setFormData({...formData, pinCode: text})}
+                value={formData.pincode}
+                onChangeText={(text) => setFormData({...formData, pincode: text})}
                 keyboardType="number-pad"
                 outlineColor="#E5E7EB"
                 activeOutlineColor="#DC2626"
@@ -861,15 +818,15 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
                   className="flex-row items-center justify-between bg-gray-100 rounded-lg h-14 px-4 w-full"
                 >
                   <Text className={`${
-                    formData.service ? 
-                      formData.service === 'Home Cinema' ? 'text-purple-600' :
-                      formData.service === 'Security System' ? 'text-cyan-600' :
-                      formData.service === 'Home Automation' ? 'text-blue-600' :
-                      formData.service === 'Outdoor Audio' ? 'text-pink-600' :
+                    formData.services ? 
+                      formData.services === 'Home Cinema' ? 'text-purple-600' :
+                      formData.services === 'Security System' ? 'text-cyan-600' :
+                      formData.services === 'Home Automation' ? 'text-blue-600' :
+                      formData.services === 'Outdoor Audio Solution' ? 'text-pink-600' :
                       'text-gray-500'
                     : 'text-gray-500'
                   } text-base font-medium`}>
-                    {formData.service || 'Service'}
+                    {formData.services || 'Service'}
                   </Text>
                   <ChevronDown size={16} color="#6B7280" />
                 </TouchableOpacity>
@@ -881,7 +838,7 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
                         key={service.value}
                         className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
                         onPress={() => {
-                          setFormData({ ...formData, service: service.value });
+                          setFormData({ ...formData, services: service.value });
                           setShowServiceDropdown(false);
                         }}
                       >
@@ -909,7 +866,7 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
 
           <View className={`${isTablet ? 'flex-row space-x-4' : ''}`}>
             <View className={`${isTablet ? 'flex-1' : 'mb-4'}`}>
-              <View className="space-y-2">
+              <View className="space-y-2 gap-4">
                 {/* Amount Dropdown */}
                 {amountOptions.length > 0 && (
                   <View className="relative">
@@ -961,7 +918,7 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
                     />
                   </View>
                   <TouchableOpacity
-                    className="bg-red-600 px-4 py-1 rounded-lg flex items-center justify-center"
+                    className="bg-red-600 px-4 h-14 mt-2 rounded-lg flex items-center justify-center"
                     onPress={() => {
                       if (formData.projectAmount) {
                         const newAmount = `₹${parseInt(formData.projectAmount).toLocaleString('en-IN')}`;
@@ -1110,7 +1067,7 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
           <View className="flex-row justify-center space-x-4 mt-8 gap-2">
             <TouchableOpacity 
               className="bg-gray-100 px-8 py-3 rounded-lg"
-              onPress={() => router.back()}
+              onPress={() => router.push('/(tabs)/proposal')}
               disabled={loading}
             >
               <Text className="text-gray-600 font-medium">Cancel</Text>
@@ -1127,7 +1084,9 @@ const AddProposal = ({ isEdit = false, proposalId = null }) => {
                   <Text className="text-white font-medium ml-2">Saving...</Text>
                 </>
               ) : (
-                <Text className="text-white font-medium">Save Proposal</Text>
+                <Text className="text-white font-medium">
+                  {isEdit ? 'Update Proposal' : 'Save Proposal'}
+                </Text>
               )}
             </TouchableOpacity>
           </View>

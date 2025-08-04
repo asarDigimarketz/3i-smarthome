@@ -14,8 +14,9 @@ import { useRouter } from 'expo-router'
 import { API_CONFIG } from '../../../../config'
 import { TextInput } from 'react-native-paper'
 import PermissionGuard from '../../../components/Common/PermissionGuard'
-import auth from '../../../utils/auth'
-
+import apiClient from '../../../utils/apiClient'
+import { useAuth } from '../../../utils/AuthContext'
+import { getPageActions } from '../../../utils/permissions'
 // Avatar helper
 const fallbackAvatar = 'https://img.heroui.chat/image/avatar?w=200&h=200&u=1';
 const getAvatarUrl = (avatar) => {
@@ -48,7 +49,8 @@ const Employee = () => {
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDepartment, setSelectedDepartment] = useState('All');
   const [showDepartmentFilter, setShowDepartmentFilter] = useState(false);
-
+  const { user } = useAuth();
+  const actions = getPageActions(user, '/dashboard/employees');
   const statusOptions = ["All", "active", "inactive"]
   const departmentOptions = [
     'All',
@@ -84,16 +86,13 @@ const Employee = () => {
 
   const handleMenuPress = () => {
     // This will be handled by the parent layout or navigation
-    console.log('Menu pressed');
   };
 
   // Fetch employees function
   const fetchEmployees = async () => {
     try {
-      const response = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/employeeManagement`, {
-        method: 'GET'
-      });
-      const data = await response.json();
+      const response = await apiClient.get('/api/employeeManagement');
+      const data = response.data;
       setEmployees(data.employees || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -129,13 +128,15 @@ const Employee = () => {
       <TouchableOpacity 
         className="bg-white rounded-xl p-4 mb-3 shadow-sm border border-[#DC2626]"
         onPress={() => router.push(`/(any)/employee/${item.employeeId}`)}
+        disabled={!actions.view}
       >
         {/* Header: Avatar + Name + Status */}
         <View className="flex-row items-center justify-between mb-3">
-          <View className="flex-row items-center flex-1">
+          <View className="flex-row items-center flex-1 gap-4">
             <Image
               source={{ uri: getAvatarUrl(item.avatar) }}
-              className="w-12 h-12 rounded-full mr-3"
+              className="w-16 h-16 rounded-full"
+              defaultSource={{ uri: 'https://img.heroui.chat/image/avatar?w=200&h=200&u=1' }}
             />
             <View className="flex-1">
               <Text className="text-lg font-bold text-gray-900">
@@ -166,7 +167,9 @@ const Employee = () => {
           <View>
             <Text className="text-xs text-gray-500 mb-1">Department</Text>
             <Text className="text-sm font-semibold text-gray-900">
-              {item.department?.name || 'N/A'}
+              {typeof item.department === "object" && item.department !== null
+                ? item.department.name
+                : item.department || 'N/A'}
             </Text>
           </View>
         </View>
@@ -265,6 +268,7 @@ const Employee = () => {
               <TouchableOpacity 
                 className="bg-red-600 h-10 px-3 py-2 rounded-lg flex-row items-center ml-2"
                 onPress={() => router.push('/(any)/employee/AddEmployee')}
+                disabled={!actions.add}
               >
                 <Plus size={18} color="white" strokeWidth={2} />
                 <Text className="text-white ml-1 font-medium text-sm">Add</Text>

@@ -6,6 +6,7 @@ import { API_CONFIG } from '../../../../config';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { ArrowLeft } from 'lucide-react-native';
 import { ChevronDown } from 'lucide-react-native';
+import apiClient from '../../../utils/apiClient';
 
 const AddCustomer = () => {
   const router = useRouter();
@@ -20,14 +21,11 @@ const AddCustomer = () => {
     state: '',
     country: 'India',
     pincode: '',
-    notes: '',
-    status: 'Active'
+    notes: ''
   });
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const statusOptions = [
-    { value: 'Active', color: 'text-green-600', bg: 'bg-green-100' },
-    { value: 'Inactive', color: 'text-red-600', bg: 'bg-red-100' },
-  ];
+
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
 
   // Add new customer function
   const addCustomer = async () => {
@@ -53,20 +51,12 @@ const AddCustomer = () => {
         email: newCustomer.email,
         address: address,
         notes: newCustomer.notes,
-        status: newCustomer.status,
       };
-      const response = await fetch(`${API_CONFIG.API_URL}/api/customers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_CONFIG.API_KEY,
-        },
-        body: JSON.stringify(customerData),
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
+      const response = await apiClient.post('/api/customers', customerData);
+      const data = response.data;
+      if (data.success) {
         Alert.alert('Success', 'Customer added successfully');
-        router.back();
+        router.push('/(tabs)/customer');
       } else {
         Alert.alert('Error', data.message || 'Failed to add customer');
       }
@@ -211,42 +201,11 @@ const AddCustomer = () => {
               theme={{ colors: { primary: '#DC2626' } }}
             />
           </View>
-         {/* Status Dropdown */}
-         <View className="mb-4 relative">
-           <Text className="text-base font-medium text-gray-700 mb-2">Status</Text>
-           <TouchableOpacity
-             onPress={() => setShowStatusDropdown(!showStatusDropdown)}
-             className="flex-row items-center justify-between bg-gray-100 rounded-lg h-14 px-4 w-full"
-           >
-             <Text className={`text-base font-medium ${newCustomer.status === 'Active' ? 'text-green-600' : 'text-gray-600'}`}>
-               {newCustomer.status || 'Status'}
-             </Text>
-             <ChevronDown size={16} color="#6B7280" />
-           </TouchableOpacity>
-           {showStatusDropdown && (
-             <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
-               {statusOptions.map((status) => (
-                 <TouchableOpacity
-                   key={status.value}
-                   className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
-                   onPress={() => {
-                     setNewCustomer({ ...newCustomer, status: status.value });
-                     setShowStatusDropdown(false);
-                   }}
-                 >
-                   <Text className={`${status.color} text-lg font-medium`}>
-                     {status.value}
-                   </Text>
-                 </TouchableOpacity>
-               ))}
-             </View>
-           )}
-         </View>
           {/* Form Actions */}
           <View className="flex-row gap-3 mt-4">
             <TouchableOpacity 
               className="flex-1 bg-gray-200 py-3 rounded-lg"
-              onPress={() => router.back()}
+              onPress={() => router.push('/(tabs)/customer')}
               disabled={addingCustomer}
             >
               <Text className="text-gray-700 font-semibold text-center">Cancel</Text>

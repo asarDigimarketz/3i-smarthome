@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, ScrollView, Text, View, RefreshControl } from "react-native";
+import { SafeAreaView, ScrollView, Text, View, RefreshControl, TouchableOpacity } from "react-native";
+import { RefreshCw } from 'lucide-react-native';
 import ProjectCard from "../../components/Common/ProjectCard";
 import { ActivitiesSection } from "../../components/Home/ActivityItem";
 import { DashboardSection } from "../../components/Home/DashboardCard";
@@ -8,7 +9,7 @@ import { hasPagePermission } from '../../utils/permissions';
 import { API_CONFIG } from '../../../config';
 import PermissionGuard from '../../components/Common/PermissionGuard';
 import auth from '../../utils/auth';
-import axios from 'axios';
+import apiClient from '../../utils/apiClient';
 
 // Helper function to map server status to mobile status
 const mapServerToMobileStatus = (serverStatus: any): string => {
@@ -60,6 +61,7 @@ export default function Index() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [refreshingProjects, setRefreshingProjects] = useState<boolean>(false);
 
   const API_BASE_URL = API_CONFIG.API_URL;
   const API_KEY = API_CONFIG.API_KEY;
@@ -68,13 +70,7 @@ export default function Index() {
       setLoading(true);
       setError(null);
       try {
-      const token = await auth.getToken();
-      const response = await axios.get(`${API_BASE_URL}/api/projects?limit=5&sort=-projectDate`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'x-api-key': API_KEY,
-          },
-        });
+      const response = await apiClient.get('/api/projects?limit=5&sort=-projectDate');
         const data = response.data as any;
         if (data && data.success) {
           const projectsArray = data.projects || data.data || [];
@@ -93,6 +89,31 @@ export default function Index() {
       } finally {
         setLoading(false);
       }
+  }, []);
+
+  const refreshRecentProjects = useCallback(async () => {
+    setRefreshingProjects(true);
+    setError(null);
+    try {
+      const response = await apiClient.get('/api/projects?limit=5&sort=-projectDate');
+      const data = response.data as any;
+      if (data && data.success) {
+        const projectsArray = data.projects || data.data || [];
+        const transformed = projectsArray
+          .map(transformProjectData)
+          .filter((p: any) => p !== null)
+          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 5);
+        setRecentProjects(transformed);
+      } else {
+        setRecentProjects([]);
+      }
+    } catch (err) {
+      setError('Failed to load recent projects' as string);
+      setRecentProjects([]);
+    } finally {
+      setRefreshingProjects(false);
+    }
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -135,7 +156,20 @@ export default function Index() {
           <ActivitiesSection />
           {/* Recent Projects Section */}
           <View className="mb-2">
-            <Text className="text-xl font-bold text-gray-600 my-4">Recent Projects</Text>
+            <View className="flex-row items-center justify-between my-4">
+              <Text className="text-xl font-bold text-gray-600">Recent Projects</Text>
+              <TouchableOpacity 
+                onPress={refreshRecentProjects}
+                disabled={refreshingProjects}
+                className="p-2"
+              >
+                <RefreshCw 
+                  size={18} 
+                  color="#DC2626" 
+                  className={refreshingProjects ? 'animate-spin' : ''}
+                />
+              </TouchableOpacity>
+            </View>
             {loading ? (
               <Text className="text-gray-500">Loading...</Text>
             ) : error ? (

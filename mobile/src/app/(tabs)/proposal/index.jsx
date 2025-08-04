@@ -1,8 +1,7 @@
 import { useRouter } from 'expo-router';
-import { Plus, Search, ChevronDown, Phone, MapPin } from 'lucide-react-native';
+import { Plus, Search, ChevronDown, Phone, MapPin, CheckCircle } from 'lucide-react-native';
 import { useState, useEffect, useRef } from 'react';
 import { FlatList, Text, View, Alert, ActivityIndicator, Button } from 'react-native';
-import axios from 'axios';
 import FilterTabs from '../../../components/Common/FilterTabs';
 import PermissionGuard from '../../../components/Common/PermissionGuard';
 import { useAuth } from '../../../utils/AuthContext';
@@ -10,13 +9,16 @@ import { hasPagePermission, getPageActions } from '../../../utils/permissions';
 import { TouchableOpacity } from 'react-native';
 import { TextInput } from 'react-native-paper';
 import { API_CONFIG } from '../../../../config'; // adjust path as needed
-import auth from '../../../utils/auth';
+
+import apiClient from '../../../utils/apiClient';
 
 const API_BASE_URL = API_CONFIG.API_URL;
 const API_KEY = API_CONFIG.API_KEY;
 
 function getStatusClassNames(status) {
   switch (status) {
+    case 'All Status':
+      return 'bg-gray-100 text-gray-600 border border-gray-300';
     case 'Hot':
       return 'bg-red-100 text-red-600 border border-red-300';
     case 'Cold':
@@ -37,7 +39,7 @@ const ProposalList = () => {
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [showStatusFilter, setShowStatusFilter] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedStatuses, setSelectedStatuses] = useState(new Set(['Hot', 'Cold', 'Warm', 'Scrap'])); // Default: all except "Confirmed"
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,7 +49,7 @@ const ProposalList = () => {
 
   // Add status options array
   const statusOptions = [
-    'All',
+    'All Status',
     'Hot',
     'Cold',
     'Warm',
@@ -71,12 +73,16 @@ const ProposalList = () => {
       // Add search filter for customer name
       if (searchText && searchText.trim()) {
         params.search = searchText.trim();
-        console.log('🔍 Searching for customer name:', searchText.trim());
       }
 
       // Add status filter
-      if (selectedStatus && selectedStatus !== 'All') {
-        params.status = selectedStatus;
+      if (selectedStatuses.size > 0) {
+        // Check if "All Status" is selected
+        if (selectedStatuses.has('All Status')) {
+          // Don't add any status filter - show all
+        } else {
+          params.status = Array.from(selectedStatuses).join(',');
+        }
       }
 
       // Add service filter (from activeTab)
@@ -84,26 +90,12 @@ const ProposalList = () => {
         params.service = activeTab;
       }
 
-      console.log('📤 Fetching proposals with params:', params);
-      console.log('🔗 API URL:', `${API_BASE_URL}/api/proposals`);
-      console.log('🔑 API Key:', API_KEY ? 'Set' : 'Not Set');
+      const response = await apiClient.get('/api/proposals', { params });
 
-      const response = await auth.fetchWithAuth(`${API_BASE_URL}/api/proposals`, {
-        method: 'GET',
-        params,
-      });
-
-     
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
       
       if (data.success) {
         const proposals = data.data.proposals || [];
-        console.log('✅ Proposals fetched successfully:', proposals.length, 'items');
         // Additional client-side filtering for customer name if needed
         let filteredProposals = proposals;
         if (searchText && searchText.trim()) {
@@ -111,25 +103,18 @@ const ProposalList = () => {
             proposal.customerName && 
             proposal.customerName.toLowerCase().includes(searchText.toLowerCase().trim())
           );
-          console.log('🔍 Client-side filtered proposals:', filteredProposals.length, 'items');
         }
         setProposals(filteredProposals);
       } else {
-        console.error('❌ API returned success: false');
-        console.error('❌ Error message:', data.error);
+        console.error('API returned success: false');
+        console.error('Error message:', data.error);
         Alert.alert('Error', data.error || 'Failed to fetch proposals');
       }
     } catch (error) {
-      console.error('🚨 Error fetching proposals:');
-      console.error('🚨 Error type:', error.name);
-      console.error('🚨 Error message:', error.message);
+      console.error('Error fetching proposals:', error);
       
       if (error.response) {
         // Server responded with error status
-        console.error('🚨 Response status:', error.response.status);
-        console.error('🚨 Response headers:', error.response.headers);
-        console.error('🚨 Response data:', error.response.data);
-        
         let errorMessage = 'Server error occurred';
         if (error.response.data?.error) {
           errorMessage = error.response.data.error;
@@ -144,16 +129,12 @@ const ProposalList = () => {
         Alert.alert('Error', errorMessage);
       } else if (error.request) {
         // Network error
-        console.error('🚨 Network Error - Request made but no response received');
-        console.error('🚨 Request details:', error.request);
         Alert.alert('Network Error', 'No response from server. Please check your internet connection and server status.');
       } else {
         // Other error
-        console.error('🚨 Unexpected Error:', error);
         Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       }
     } finally {
-      console.log('🏁 Fetch operation completed');
       setLoading(false);
       setRefreshing(false);
     }
@@ -170,7 +151,6 @@ const ProposalList = () => {
     
     // Set new timeout for debounced search
     searchTimeoutRef.current = setTimeout(() => {
-      console.log('🔍 Debounced search triggered for:', text);
       fetchProposals();
     }, 300); // 300ms delay
   };
@@ -178,7 +158,7 @@ const ProposalList = () => {
   // Load proposals on component mount and when filters change
   useEffect(() => {
     fetchProposals();
-  }, [selectedStatus, activeTab]); // Removed searchText from dependencies as it's handled by debouncing
+  }, [selectedStatuses, activeTab]); // Removed searchText from dependencies as it's handled by debouncing
 
   // Clean up timeout on unmount
   useEffect(() => {
@@ -297,10 +277,15 @@ const ProposalList = () => {
 
               <View className="relative ml-2">
               <TouchableOpacity
-                className={`border border-gray-200 rounded-lg px-4 py-2 flex-row items-center ${getStatusClassNames(selectedStatus)}`}
+                className={`border border-gray-200 rounded-lg px-4 py-2 flex-row items-center justify-between ${getStatusClassNames(selectedStatuses.size === 0 ? 'All Status' : Array.from(selectedStatuses)[0])}`}
                 onPress={() => setShowStatusFilter(!showStatusFilter)}
               >
-                <Text className="mr-2">{selectedStatus}</Text>
+                <Text>
+                  {selectedStatuses.size === 0 ? 'All Status' : 
+                   selectedStatuses.has('All Status') ? 'All Status' :
+                   selectedStatuses.size === 1 ? Array.from(selectedStatuses)[0] :
+                   `${selectedStatuses.size} Statuses`}
+                </Text>
                 <ChevronDown size={16} color="#6B7280" />
               </TouchableOpacity>
 
@@ -308,24 +293,48 @@ const ProposalList = () => {
                 <View className="absolute top-11 right-0 bg-white rounded-lg shadow-xl z-10 w-32">
                   {statusOptions.map((status) => {
                     const { text } = getStatusClassNames(status);
+                    const isSelected = selectedStatuses.has(status);
                     return (
                       <TouchableOpacity
                         key={status}
-                        className="px-3 py-2 border-b border-gray-100 active:bg-gray-50"
+                        className={`px-3 py-2 active:bg-gray-50 flex-row items-center justify-between ${
+                          status === statusOptions[statusOptions.length - 1] ? '' : 'border-b border-gray-100'
+                        }`}
                         onPress={() => {
-                          setSelectedStatus(status);
+                          const newSelectedStatuses = new Set(selectedStatuses);
+                          if (status === 'All Status') {
+                            // When "All Status" is selected, select all statuses
+                            setSelectedStatuses(new Set(['All Status', 'Hot', 'Cold', 'Warm', 'Scrap', 'Confirmed']));
+                          } else if (newSelectedStatuses.has(status)) {
+                            newSelectedStatuses.delete(status);
+                            // If "All Status" is selected and we're deselecting a specific status, remove "All Status"
+                            if (newSelectedStatuses.has('All Status')) {
+                              newSelectedStatuses.delete('All Status');
+                            }
+                            setSelectedStatuses(newSelectedStatuses);
+                          } else {
+                            newSelectedStatuses.add(status);
+                            // If we're selecting a specific status, remove "All Status"
+                            if (newSelectedStatuses.has('All Status')) {
+                              newSelectedStatuses.delete('All Status');
+                            }
+                            setSelectedStatuses(newSelectedStatuses);
+                          }
                           setShowStatusFilter(false);
                         }}
                       >
                         <Text
                           className={`${
-                            status === selectedStatus
-                              ? text
-                              : 'text-gray-600'
+                            status === 'All Status'
+                              ? 'text-gray-600'
+                              : status === selectedStatuses.size === 0 ? 'text-gray-600' : 'text-gray-600'
                           } text-sm font-medium`}
                         >
                           {status}
                         </Text>
+                        {isSelected && (
+                          <CheckCircle size={16} color="#10B981" />
+                        )}
                       </TouchableOpacity>
                     );
                   })}
@@ -334,15 +343,16 @@ const ProposalList = () => {
             </View>
 
               {/* Add Button */}
-            {actions.add && (
+           
               <TouchableOpacity 
                 className="bg-red-600 h-10 px-3 rounded-lg flex-row items-center ml-2"
                 onPress={() => router.push('/(tabs)/proposal/AddProposal')}
+                disabled={!actions.add}
               >
                 <Plus size={18} color="white" strokeWidth={2} />
                 <Text className="text-white ml-1 font-medium text-sm">Add</Text>
               </TouchableOpacity>
-            )}
+          
             </View>
           </View>
 

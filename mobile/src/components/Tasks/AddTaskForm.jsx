@@ -7,7 +7,7 @@ import { TextInput as PaperTextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { API_CONFIG } from '../../../config';
 import auth from '../../utils/auth';
-import axios from 'axios';
+import apiClient from '../../utils/apiClient';
 
 const AddTaskForm = ({
   newTask,
@@ -237,6 +237,14 @@ const AddTaskForm = ({
         ...prev,
         [activeDateField]: selectedDate
       }));
+      
+      // If start date is changed, ensure end date is after start date
+      if (activeDateField === 'startDate') {
+        setNewTask(prev => ({
+          ...prev,
+          endDate: selectedDate > prev.endDate ? selectedDate : prev.endDate
+        }));
+      }
     }
     setShowDatePicker(false);
     setActiveDateField(null);
@@ -245,6 +253,11 @@ const AddTaskForm = ({
   const openDatePicker = (field) => {
     setActiveDateField(field);
     setShowDatePicker(true);
+  };
+
+  // Get minimum date for end date picker
+  const getMinDateForEndDate = () => {
+    return newTask.startDate || new Date();
   };
 
   // --- SUBMIT LOGIC ---
@@ -267,6 +280,12 @@ const AddTaskForm = ({
     }
     if (!newTask.startDate) {
       Alert.alert('Validation Error', 'Start date is required');
+      return;
+    }
+    
+    // Validate end date is after start date
+    if (newTask.endDate && newTask.endDate <= newTask.startDate) {
+      Alert.alert('Validation Error', 'End date must be after start date');
       return;
     }
     
@@ -321,18 +340,11 @@ const AddTaskForm = ({
         status: newTask.status
       });
 
-      const token = await auth.getToken();
-      const response = await axios.post(
-        `${API_CONFIG.API_URL}/api/tasks`,
-        formData,
-        {
+      const response = await apiClient.post('/api/tasks', formData, {
         headers: {
-            'Authorization': `Bearer ${token}`,
-          'x-api-key': API_CONFIG.API_KEY,
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       const data = response.data;
       
@@ -657,6 +669,7 @@ const AddTaskForm = ({
           mode="date"
           display="default"
           onChange={handleDateChange}
+          minimumDate={activeDateField === 'endDate' ? getMinDateForEndDate() : new Date()} // Disable past dates and ensure end date is after start date
         />
       )}
     </View>
