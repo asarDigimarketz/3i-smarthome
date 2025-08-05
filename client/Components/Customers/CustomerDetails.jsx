@@ -1,5 +1,5 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardBody } from "@heroui/card";
@@ -12,13 +12,17 @@ import { Pagination } from "@heroui/pagination";
 import { usePermissions } from "../../lib/utils";
 
 const CustomerDetail = () => {
-  const { canEdit,  } = usePermissions();
+  const { canEdit } = usePermissions();
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [projectPage, setProjectPage] = useState(1);
   const [projectTotalPages, setProjectTotalPages] = useState(1);
+
+  // Get return URL from search params or default to customers page
+  const returnUrl = searchParams.get('returnUrl') || '/dashboard/customers';
 
   // Fetch customer data
   const fetchCustomer = async () => {
@@ -42,6 +46,7 @@ const CustomerDetail = () => {
       fetchCustomer();
     }
   }, [id]);
+
   const getServiceColor = (service) => {
     switch (service) {
       case "Home Cinema":
@@ -56,6 +61,7 @@ const CustomerDetail = () => {
         return "bg-gradient-to-br from-[#613EFF] to-[#9CBFFF]";
     }
   };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -85,13 +91,12 @@ const CustomerDetail = () => {
         <div className="flex gap-2">
           <Button
             as={Link}
-            href="/dashboard/customers"
+            href={returnUrl}
             variant="flat"
             startContent={<ArrowLeft />}
           >
             Back
           </Button>
-       
         </div>
       </div>
       <div className="bg-white rounded-xl shadow-lg p-6">
@@ -113,11 +118,9 @@ const CustomerDetail = () => {
                   </div>
                   <div className="flex items-start gap-2">
                     <MapPin className="text-primary mt-1" width={18} />
-                    <span>{`${customer.address?.addressLine || ""} , ${
-                      customer.address?.city || ""
-                    } , ${customer.address?.district || ""} - ${
-                      customer.address?.pincode || ""
-                    }`}</span>
+                    <span>{`${customer.address?.addressLine || ""} , ${customer.address?.city || ""
+                      } , ${customer.address?.district || ""} - ${customer.address?.pincode || ""
+                      }`}</span>
                   </div>
                 </div>
               </div>
@@ -186,15 +189,12 @@ const CustomerDetail = () => {
                     customer={customer.customerName}
                     status={project.projectStatus}
                     service={service}
-                    amount={`₹${
-                      project.projectAmount?.toLocaleString("en-IN") || "0"
-                    }`}
+                    amount={`₹${project.projectAmount?.toLocaleString("en-IN") || "0"
+                      }`}
                     date={new Date(project.projectDate).toLocaleDateString()}
-                    address={`${project.address?.addressLine || ""} , ${
-                      project.address?.city || ""
-                    } , ${project.address?.district || ""} - ${
-                      project.address?.pincode || ""
-                    }`}
+                    address={`${project.address?.addressLine || ""} , ${project.address?.city || ""
+                      } , ${project.address?.district || ""} - ${project.address?.pincode || ""
+                      }`}
                     progress={progress}
                     assignedEmployees={project.assignedEmployees || []}
                     color={getServiceColor(service)}

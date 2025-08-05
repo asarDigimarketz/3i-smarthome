@@ -1,5 +1,5 @@
 // Shared customer autocomplete logic for AddProject and AddProposal
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import apiClient from "../../lib/axios";
 
 export function useCustomerAutocomplete() {
@@ -8,18 +8,12 @@ export function useCustomerAutocomplete() {
   const [contactInput, setContactInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const timeoutRef = useRef(null);
 
-  // Debounce function for API calls
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
-    };
-  };
+  // Using useRef for debouncing instead of a separate debounce function
 
   // Fetch customers by email or contact
-  const fetchCustomers = async (search) => {
+  const fetchCustomers = useCallback(async (search) => {
     if (!search || search.length < 2) {
       setCustomerOptions([]);
       return;
@@ -61,13 +55,20 @@ export function useCustomerAutocomplete() {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, []);
 
-  // Debounced version
-  const debouncedFetchCustomers = useCallback(
-    debounce(fetchCustomers, 300),
-    []
-  );
+  // Debounced version - using useRef to store timeout
+  const debouncedFetchCustomers = useCallback((query) => {
+    // Clear previous timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Set new timeout
+    timeoutRef.current = setTimeout(() => {
+      fetchCustomers(query);
+    }, 300);
+  }, [fetchCustomers]);
 
   // Autofill form fields
   const autofillCustomer = (customer, setFormData) => {

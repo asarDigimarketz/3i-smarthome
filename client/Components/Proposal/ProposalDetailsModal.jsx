@@ -296,7 +296,12 @@ const ProposalDetailsModal = ({
       return;
     }
     onClose(); // Close modal first
-    router.push(`/dashboard/proposal/edit/${proposalData._id}`);
+    
+    // Get current URL parameters to preserve pagination state
+    const currentParams = new URLSearchParams(window.location.search);
+    const returnUrl = currentParams.toString() ? `?${currentParams.toString()}` : '';
+    
+    router.push(`/dashboard/proposal/edit/${proposalData._id}?returnUrl=${encodeURIComponent('/dashboard/proposal' + returnUrl)}`);
   };
 
   // Handle delete button click

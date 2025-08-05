@@ -2,30 +2,29 @@ import mongoose from "mongoose";
 
 /**
  * Connect to MongoDB using the MONGO_URI environment variable
- * Includes proper error handling and connection logging
+ * Includes proper error handling and connection reuse
  */
 const connectDB = async () => {
   try {
-    // MongoDB connection with recommended options
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    // Check if already connected
+    if (mongoose.connections[0].readyState) {
+      return mongoose.connections[0];
+    }
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    // MongoDB connection with modern options
+    const conn = await mongoose.connect(process.env.MONGO_URI);
 
-    // Log database name for debugging
-    console.log(`Database Name: ${conn.connection.name}`);
+
+
+    return conn;
   } catch (error) {
     console.error("MongoDB connection error:", error.message);
-    // Exit process with failure code
-    process.exit(1);
+    throw error; // Don't exit process, let the caller handle the error
   }
 };
 
 // Handle connection events
 mongoose.connection.on("connected", () => {
-  console.log("Mongoose connected to MongoDB");
 });
 
 mongoose.connection.on("error", (err) => {
@@ -33,13 +32,11 @@ mongoose.connection.on("error", (err) => {
 });
 
 mongoose.connection.on("disconnected", () => {
-  console.log("Mongoose disconnected from MongoDB");
 });
 
 // Graceful shutdown
 process.on("SIGINT", async () => {
   await mongoose.connection.close();
-  console.log("MongoDB connection closed through app termination");
   process.exit(0);
 });
 

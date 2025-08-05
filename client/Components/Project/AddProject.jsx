@@ -490,8 +490,13 @@ export function AddProjectPage() {
             : "Project created successfully",
           color: "success",
         });
+        if (projectId) {
+          router.back();
 
-        router.push("/dashboard/projects");
+        } else {
+          router.push("/dashboard/projects");
+
+        }
       } else {
         throw new Error(response.data.message || "Failed to save project");
       }
@@ -504,7 +509,6 @@ export function AddProjectPage() {
           "Failed to save project",
         color: "danger",
       });
-      console.log(error.response.data.message);
     } finally {
       setIsLoading(false);
     }

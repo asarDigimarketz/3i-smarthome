@@ -13,13 +13,17 @@ import { Upload, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete";
 import apiClient from "../../lib/axios";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { addToast } from "@heroui/toast";
 import { usePermissions } from "../../lib/utils";
 
 export function AddProposalPage({ isEdit = false, proposalId = null }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { canCreate, canEdit, canView } = usePermissions();
+  
+  // Get return URL from search params or default to proposal page
+  const returnUrl = searchParams.get('returnUrl') || '/dashboard/proposal';
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]); // For new uploads (multiple)
   const [removedAttachments, setRemovedAttachments] = useState([]); // For removing existing attachments (edit mode)
@@ -600,7 +604,11 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
           description: message,
           color: "success",
         });
-        router.push("/dashboard/proposal");
+        if (isEdit) {
+          router.push(returnUrl);
+        } else {
+          router.push("/dashboard/proposal");
+        }
       }
     } catch (error) {
       console.error("Error creating proposal:", error);
@@ -955,7 +963,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Select
-                    placeholder="Select or enter amount"
+                    placeholder="Select  amount"
                     radius="sm"
                     variant="bordered"
                     className="w-full"
@@ -1031,35 +1039,38 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                       Add
                     </Button>
                   </div>
+
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2">Size *</label>
+                  <div className="flex">
+                    <Input
+                      placeholder="1200X1000"
+                      radius="sm"
+                      variant="bordered"
+                      className="w-full rounded-r-none"
+                      classNames={{
+                        inputWrapper: " h-[50px] border-[#E0E5F2] ",
+                      }}
+                      value={formData.size}
+                      onChange={handleSizeChange}
+                      onKeyDown={handleSizeKeyDown}
+                      isInvalid={!!errors.size}
+                      errorMessage={errors.size}
+                      required
+                      endContent={
+                        <span className="text-xs text-[#999999] border-[#00000080] border-l-medium px-3">
+                          Size
+                        </span>
+                      }
+                    />
+                  </div>
                 </div>
               </div>
+
             </div>
 
-            <div>
-              <label className="block text-gray-700 mb-2">Size *</label>
-              <div className="flex">
-                <Input
-                  placeholder="1200X1000"
-                  radius="sm"
-                  variant="bordered"
-                  className="w-full rounded-r-none"
-                  classNames={{
-                    inputWrapper: " h-[50px] border-[#E0E5F2] ",
-                  }}
-                  value={formData.size}
-                  onChange={handleSizeChange}
-                  onKeyDown={handleSizeKeyDown}
-                  isInvalid={!!errors.size}
-                  errorMessage={errors.size}
-                  required
-                  endContent={
-                    <span className="text-xs text-[#999999] border-[#00000080] border-l-medium px-3">
-                      Size
-                    </span>
-                  }
-                />
-              </div>
-            </div>
+
 
             <div>
               <label className="block text-gray-700 mb-2">Comment</label>
@@ -1194,7 +1205,7 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
           <Divider className="my-6" />
 
           <div className="flex justify-end gap-4">
-            <Link href="/dashboard/proposal">
+            <Link href={returnUrl}>
               <Button
                 variant="bordered"
                 radius="full"

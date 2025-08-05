@@ -133,7 +133,7 @@ const General = ({ initialHotelData }) => {
   // Handle form submission with permission check
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!canEdit("settings")) {
       addToast({
         title: "Access Denied",
@@ -163,12 +163,9 @@ const General = ({ initialHotelData }) => {
       // Add logo file if exists
       if (companyData.newLogo && companyData.newLogo instanceof File) {
         formData.append("logo", companyData.newLogo);
-        console.log("Adding logo file to FormData:", companyData.newLogo.name);
       }
 
-      console.log("Sending FormData with entries:");
       for (let [key, value] of formData.entries()) {
-        console.log(key, value);
       }
 
       const response = await apiClient.put(`/api/settings/general`, formData, {
@@ -574,14 +571,14 @@ const General = ({ initialHotelData }) => {
 
         <div aria-label="Form Actions" className="flex justify-end">
           {canEdit("settings") && (
-          <Button
-            radius="full"
-            className=" bg-primary text-white  w-1/6"
-            type="submit"
-            disabled={isLoading}
-          >
-            {isLoading ? "Saving..." : "Save"}
-          </Button>
+            <Button
+              radius="full"
+              className=" bg-primary text-white  w-1/6"
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? "Saving..." : "Save"}
+            </Button>
           )}
         </div>
       </form>

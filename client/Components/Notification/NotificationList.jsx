@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardBody } from '@heroui/card';
-import { Button } from '@heroui/button';
-import { Avatar } from '@heroui/avatar';
-import { Check, Trash2, RefreshCw, CheckCheck, Trash2Icon } from 'lucide-react';
-import { useSession } from 'next-auth/react';
-import { addToast } from '@heroui/toast';
-import { useNotificationCount } from '../../hooks/useNotificationCount';
-import apiClient from '../../lib/axios';
+import { useState, useEffect } from "react";
+import { Card, CardBody } from "@heroui/card";
+import { Button } from "@heroui/button";
+import { Avatar } from "@heroui/avatar";
+import { Check, Trash2, RefreshCw, CheckCheck, Trash2Icon } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { addToast } from "@heroui/toast";
+import { useNotificationCount } from "../../hooks/useNotificationCount";
+import apiClient from "../../lib/axios";
 import {
   Modal,
   ModalContent,
@@ -16,7 +16,7 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-} from '@heroui/modal';
+} from "@heroui/modal";
 
 const NotificationList = () => {
   const { data: session } = useSession();
@@ -30,7 +30,7 @@ const NotificationList = () => {
   const {
     isOpen: isMarkAllOpen,
     onOpen: onMarkAllOpen,
-    onClose: onMarkAllClose
+    onClose: onMarkAllClose,
   } = useDisclosure();
 
   const fetchNotifications = async (pageNum = 1, isRefresh = false) => {
@@ -43,24 +43,29 @@ const NotificationList = () => {
         setLoading(true);
       }
 
-      const response = await apiClient.get(`/api/notifications?page=${pageNum}&limit=20`);
+      const response = await apiClient.get(
+        `/api/notifications?page=${pageNum}&limit=20`
+      );
       const data = response.data;
 
       if (data.success && data.data) {
         if (isRefresh || pageNum === 1) {
           setNotifications(data.data.notifications || []);
         } else {
-          setNotifications(prev => [...prev, ...(data.data.notifications || [])]);
+          setNotifications((prev) => [
+            ...prev,
+            ...(data.data.notifications || []),
+          ]);
         }
         setHasMore(data.data.pagination?.hasNext || false);
         setPage(pageNum);
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error("Error fetching notifications:", error);
       addToast({
-        title: 'Error',
-        description: 'Failed to load notifications',
-        color: 'danger',
+        title: "Error",
+        description: "Failed to load notifications",
+        color: "danger",
       });
     } finally {
       setLoading(false);
@@ -70,14 +75,14 @@ const NotificationList = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      const response = await apiClient.put(`/api/notifications/${notificationId}/read`);
+      const response = await apiClient.put(
+        `/api/notifications/${notificationId}/read`
+      );
 
       if (response.data.success) {
-        setNotifications(prev =>
-          prev.map(notif =>
-            notif._id === notificationId
-              ? { ...notif, isRead: true }
-              : notif
+        setNotifications((prev) =>
+          prev.map((notif) =>
+            notif._id === notificationId ? { ...notif, isRead: true } : notif
           )
         );
 
@@ -85,71 +90,75 @@ const NotificationList = () => {
         refreshCount();
 
         addToast({
-          title: 'Success',
-          description: 'Notification marked as read',
-          color: 'success',
+          title: "Success",
+          description: "Notification marked as read",
+          color: "success",
         });
       }
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error("Error marking notification as read:", error);
       addToast({
-        title: 'Error',
-        description: 'Failed to mark notification as read',
-        color: 'danger',
+        title: "Error",
+        description: "Failed to mark notification as read",
+        color: "danger",
       });
     }
   };
 
   const deleteNotification = async (notificationId) => {
     try {
-      const response = await apiClient.delete(`/api/notifications/${notificationId}`);
+      const response = await apiClient.delete(
+        `/api/notifications/${notificationId}`
+      );
 
       if (response.data.success) {
-        setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
-
-        // Refresh the notification badge count
-        refreshCount();
-
-        addToast({
-          title: 'Success',
-          description: 'Notification deleted',
-          color: 'success',
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-      addToast({
-        title: 'Error',
-        description: 'Failed to delete notification',
-        color: 'danger',
-      });
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      const response = await apiClient.put('/api/notifications/read-all');
-
-      if (response.data.success) {
-        setNotifications(prev =>
-          prev.map(notif => ({ ...notif, isRead: true }))
+        setNotifications((prev) =>
+          prev.filter((notif) => notif._id !== notificationId)
         );
 
         // Refresh the notification badge count
         refreshCount();
 
         addToast({
-          title: 'Success',
-          description: `Marked ${response.data.data.updatedCount} notifications as read`,
-          color: 'success',
+          title: "Success",
+          description: "Notification deleted",
+          color: "success",
         });
       }
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error("Error deleting notification:", error);
       addToast({
-        title: 'Error',
-        description: 'Failed to mark notifications as read',
-        color: 'danger',
+        title: "Error",
+        description: "Failed to delete notification",
+        color: "danger",
+      });
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const response = await apiClient.put("/api/notifications/read-all");
+
+      if (response.data.success) {
+        setNotifications((prev) =>
+          prev.map((notif) => ({ ...notif, isRead: true }))
+        );
+
+        // Refresh the notification badge count
+        refreshCount();
+
+        addToast({
+          title: "Success",
+          description: `Marked ${response.data.data.updatedCount} notifications as read`,
+          color: "success",
+        });
+      }
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      addToast({
+        title: "Error",
+        description: "Failed to mark notifications as read",
+        color: "danger",
       });
     }
     onMarkAllClose();
@@ -157,29 +166,42 @@ const NotificationList = () => {
 
   const deleteAllNotifications = async () => {
     try {
-      const response = await apiClient.delete('/api/notifications/delete-all');
+      const response = await apiClient.delete("/api/notifications/delete-all");
+
+      // Close the modal first
+      onClose();
 
       if (response.data.success) {
+        // Get the count of deleted notifications
+        const deletedCount = notifications.length;
+
+        // Clear the notifications list
         setNotifications([]);
 
         // Refresh the notification badge count
         refreshCount();
 
         addToast({
-          title: 'Success',
-          description: `Deleted ${response.data.data.deletedCount} notifications`,
-          color: 'success',
+          title: "Success",
+          description: `Successfully deleted ${deletedCount} notifications`,
+          color: "success",
         });
+      } else {
+        throw new Error(
+          response.data.message || "Failed to delete notifications"
+        );
       }
     } catch (error) {
-      console.error('Error deleting all notifications:', error);
+      console.error("Error deleting all notifications:", error);
       addToast({
-        title: 'Error',
-        description: 'Failed to delete notifications',
-        color: 'danger',
+        title: "Error",
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to delete notifications",
+        color: "danger",
       });
     }
-    onClose();
   };
 
   const formatTimeAgo = (dateString) => {
@@ -187,56 +209,57 @@ const NotificationList = () => {
     const date = new Date(dateString);
     const diffInSeconds = Math.floor((now - date) / 1000);
 
-    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 60) return "Just now";
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
     return `${Math.floor(diffInSeconds / 86400)}d ago`;
   };
 
   const getNotificationIcon = (type) => {
     switch (type) {
-      case 'task_created':
-      case 'task_updated':
-      case 'task_completed':
-        return '📋';
-      case 'project_created':
-      case 'project_updated':
-      case 'project_deleted':
-        return '📁';
-      case 'proposal_created':
-      case 'proposal_updated':
-      case 'proposal_deleted':
-        return '📄';
-      case 'employee_created':
-      case 'employee_updated':
-      case 'employee_deleted':
-        return '👤';
+      case "task_created":
+      case "task_updated":
+      case "task_completed":
+        return "📋";
+      case "project_created":
+      case "project_updated":
+      case "project_deleted":
+        return "📁";
+      case "proposal_created":
+      case "proposal_updated":
+      case "proposal_deleted":
+        return "📄";
+      case "employee_created":
+      case "employee_updated":
+      case "employee_deleted":
+        return "👤";
       default:
-        return '🔔';
+        return "🔔";
     }
   };
 
   const getNotificationColor = (type) => {
     switch (type) {
-      case 'task_completed':
-      case 'project_completed':
-        return 'bg-green-100 text-green-800';
-      case 'task_created':
-      case 'project_created':
-      case 'proposal_created':
-      case 'employee_created':
-        return 'bg-blue-100 text-blue-800';
-      case 'task_updated':
-      case 'project_updated':
-      case 'proposal_updated':
-      case 'employee_updated':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'project_deleted':
-      case 'proposal_deleted':
-      case 'employee_deleted':
-        return 'bg-red-100 text-red-800';
+      case "task_completed":
+      case "project_completed":
+        return "bg-green-100 text-green-800";
+      case "task_created":
+      case "project_created":
+      case "proposal_created":
+      case "employee_created":
+        return "bg-blue-100 text-blue-800";
+      case "task_updated":
+      case "project_updated":
+      case "proposal_updated":
+      case "employee_updated":
+        return "bg-yellow-100 text-yellow-800";
+      case "project_deleted":
+      case "proposal_deleted":
+      case "employee_deleted":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -318,7 +341,9 @@ const NotificationList = () => {
         <Card className="bg-gray-50">
           <CardBody className="text-center py-8">
             <div className="text-4xl mb-4">🔔</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No notifications
+            </h3>
             <p className="text-gray-500">You're all caught up!</p>
           </CardBody>
         </Card>
@@ -327,13 +352,18 @@ const NotificationList = () => {
           {notifications.map((notification) => (
             <Card
               key={notification._id}
-              className={`transition-all hover:shadow-md ${!notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/50' : ''
-                }`}
+              className={`transition-all hover:shadow-md ${
+                !notification.isRead
+                  ? "border-l-4 border-l-blue-500 bg-blue-50/50"
+                  : ""
+              }`}
             >
               <CardBody className="p-4">
                 <div className="flex items-start gap-3">
                   <Avatar
-                    className={`w-10 h-10 text-lg ${getNotificationColor(notification.type)}`}
+                    className={`w-10 h-10 text-lg ${getNotificationColor(
+                      notification.type
+                    )}`}
                   >
                     {getNotificationIcon(notification.type)}
                   </Avatar>
@@ -391,11 +421,7 @@ const NotificationList = () => {
 
           {hasMore && (
             <div className="text-center py-4">
-              <Button
-                variant="light"
-                onPress={loadMore}
-                isLoading={loading}
-              >
+              <Button variant="light" onPress={loadMore} isLoading={loading}>
                 Load More
               </Button>
             </div>
@@ -411,7 +437,8 @@ const NotificationList = () => {
           </ModalHeader>
           <ModalBody>
             <p>
-              Are you sure you want to delete all notifications? This action cannot be undone.
+              Are you sure you want to delete all notifications? This action
+              cannot be undone.
             </p>
           </ModalBody>
           <ModalFooter>
@@ -433,7 +460,8 @@ const NotificationList = () => {
           </ModalHeader>
           <ModalBody>
             <p>
-              Are you sure you want to mark all notifications as read? This will update all unread notifications.
+              Are you sure you want to mark all notifications as read? This will
+              update all unread notifications.
             </p>
           </ModalBody>
           <ModalFooter>
@@ -450,4 +478,4 @@ const NotificationList = () => {
   );
 };
 
-export default NotificationList; 
+export default NotificationList;

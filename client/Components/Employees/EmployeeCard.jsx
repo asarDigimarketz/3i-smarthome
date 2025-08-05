@@ -14,6 +14,7 @@ const EmployeeCard = ({
   avatar,
   userPermissions = {},
   onEmployeeUpdate,
+  returnUrl = "",
 }) => {
   const cardContent = (
     <CardBody className="p-0">
@@ -79,10 +80,15 @@ const EmployeeCard = ({
 
   // If user has view permission, make it a clickable link, otherwise just a card
   if (userPermissions.hasViewPermission || userPermissions.hasEditPermission) {
+    // Build the URL with return URL to preserve current state
+    const currentParams = new URLSearchParams(window.location.search);
+    const currentReturnUrl = currentParams.toString() ? `?${currentParams.toString()}` : '';
+    const detailsUrl = `/dashboard/employees/${id}?returnUrl=${encodeURIComponent('/dashboard/employees' + currentReturnUrl)}`;
+
     return (
       <Card
         as={Link}
-        href={`/dashboard/employees/${id}`}
+        href={detailsUrl}
         isPressable
         className="border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow bg-white 2xl:min-w-[400px] 2xl:max-w-[480px]"
         style={{ boxShadow: "0 1px 4px 0 rgba(0,0,0,0.04)" }}

@@ -6,9 +6,8 @@ async function getEmailConfig() {
   try {
     // First, try to get configuration from database
     const dbConfig = await emailConfigurationSchema.findOne();
-    
+
     if (dbConfig && dbConfig.smtpHost && dbConfig.smtpUsername && dbConfig.smtpPassword) {
-      console.log('📧 Using database email configuration');
       return {
         host: dbConfig.smtpHost,
         port: parseInt(dbConfig.smtpPort) || 587,
@@ -27,7 +26,6 @@ async function getEmailConfig() {
       };
     } else {
       // Fallback to environment variables
-      console.log('📧 Using environment variables for email configuration');
       return {
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT) || 587,
@@ -71,7 +69,7 @@ async function sendEmail(userEmail, subject, message) {
   try {
     // Get dynamic email configuration
     const emailConfig = await getEmailConfig();
-    
+
     // Validate required configuration
     if (!emailConfig.host || !emailConfig.auth.user || !emailConfig.auth.pass) {
       throw new Error('Email configuration is incomplete. Please check SMTP settings.');
@@ -86,11 +84,9 @@ async function sendEmail(userEmail, subject, message) {
       html: message,
     };
 
-    console.log('📧 Sending email to:', userEmail);
-    console.log('📧 Using SMTP host:', emailConfig.host);
-    
+
+
     await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully');
   } catch (error) {
     console.error('❌ Email send error:', error);
     throw error;

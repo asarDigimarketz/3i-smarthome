@@ -1,24 +1,34 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, Suspense } from "react"
-import { Input } from "@heroui/input"
-import { Button } from "@heroui/button"
-import { useRouter, useSearchParams } from "next/navigation"
-import { addToast } from "@heroui/toast"
-import { CheckCircle, Lock, Eye, EyeOff, Shield, User } from "lucide-react"
-import Link from "next/link"
-import { validatePassword } from "../../utils/passwordValidation"
-import { getGeneralDetails } from "@/lib/GeneralDetails"
-import Image from "next/image"
+import { useState, useEffect, Suspense } from "react";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
+import { useRouter, useSearchParams } from "next/navigation";
+import { addToast } from "@heroui/toast";
+import { CheckCircle, Lock, Eye, EyeOff, Shield, User } from "lucide-react";
+import Link from "next/link";
+import { validatePassword } from "../../utils/passwordValidation";
+import { getGeneralDetails } from "@/lib/GeneralDetails";
+import Image from "next/image";
 
 const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
   <div className="flex items-center gap-1.5">
-    <div className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${met ? "bg-green-400" : "bg-red-400"}`} />
-    <span className={`transition-colors duration-200 ${met ? "text-green-400" : "text-red-400"}`}>{text}</span>
+    <div
+      className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${
+        met ? "bg-green-400" : "bg-red-400"
+      }`}
+    />
+    <span
+      className={`transition-colors duration-200 ${
+        met ? "text-green-400" : "text-red-400"
+      }`}
+    >
+      {text}
+    </span>
   </div>
-)
+);
 
 const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
   <div className="fixed inset-0 backdrop-blur-xl bg-gradient-to-br from-slate-900/95 via-red-900/90 to-red-800/95 flex flex-col items-center justify-center z-50">
@@ -33,7 +43,12 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
         <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-500 rounded-full animate-pulse flex items-center justify-center">
           {hotelLogo ? (
             <div className="relative w-10 h-10">
-              <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain" />
+              <Image
+                src={hotelLogo || "/placeholder.svg"}
+                alt="Hotel Logo"
+                fill
+                className="object-contain"
+              />
             </div>
           ) : (
             <Lock className="w-8 h-8 text-white" />
@@ -53,20 +68,20 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
       <div className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 rounded-full animate-progress-infinite"></div>
     </div>
   </div>
-)
+);
 
 const ResetPasswordContent = () => {
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
-  const [hotelLogo, setHotelLogo] = useState<string | null>(null)
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get("token")
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [hotelLogo, setHotelLogo] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   useEffect(() => {
     if (!token) {
@@ -74,39 +89,39 @@ const ResetPasswordContent = () => {
         title: "Error",
         description: "Invalid reset link. Please request a new one.",
         color: "danger",
-      })
-      router.push("/forgot-password")
+      });
+      router.push("/forgot-password");
     }
-  }, [token, router])
+  }, [token, router]);
 
   useEffect(() => {
     async function fetchHotelDetails() {
-      const generalData = await getGeneralDetails()
+      const generalData = await getGeneralDetails();
       if (generalData?.logo) {
-        setHotelLogo(generalData.logo)
+        setHotelLogo(generalData.logo);
       }
     }
-    fetchHotelDetails()
-  }, [])
+    fetchHotelDetails();
+  }, []);
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value
-    setPassword(newPassword)
-    const { errors } = validatePassword(newPassword)
-    setPasswordErrors(errors)
-  }
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    const { errors } = validatePassword(newPassword);
+    setPasswordErrors(errors);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const { isValid } = validatePassword(password)
+    const { isValid } = validatePassword(password);
     if (!isValid) {
       addToast({
         title: "Invalid Password",
         description: "Please ensure your password meets all requirements",
         color: "danger",
-      })
-      return
+      });
+      return;
     }
 
     if (password !== confirmPassword) {
@@ -114,45 +129,45 @@ const ResetPasswordContent = () => {
         title: "Error",
         description: "Passwords do not match.",
         color: "danger",
-      })
-      return
+      });
+      return;
     }
-    setLoading(true)
+    setLoading(true);
 
     try {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword: password }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
       if (response.ok) {
-        setIsSubmitted(true)
+        setIsSubmitted(true);
         addToast({
           title: "Success",
           description: "Your password has been reset successfully.",
           color: "success",
-        })
-        setTimeout(() => router.push("/login"), 3000)
+        });
+        setTimeout(() => router.push("/login"), 3000);
       } else {
         addToast({
           title: "Error",
           description: data.error || "An error occurred. Please try again.",
           color: "danger",
-        })
+        });
       }
     } catch {
       addToast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         color: "danger",
-      })
+      });
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
-  if (!token) return null
+  if (!token) return null;
 
   if (isSubmitted) {
     return (
@@ -170,9 +185,12 @@ const ResetPasswordContent = () => {
               <div className="mb-8 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-red-400 to-red-500 shadow-lg">
                 <CheckCircle className="h-10 w-10 text-white" />
               </div>
-              <h2 className="mb-4 text-3xl font-bold text-white">Password Reset Successful</h2>
+              <h2 className="mb-4 text-3xl font-bold text-white">
+                Password Reset Successful
+              </h2>
               <p className="mb-8 text-gray-300">
-                Your password has been reset successfully. You will be redirected to the login page shortly.
+                Your password has been reset successfully. You will be
+                redirected to the login page shortly.
               </p>
               <Link
                 href="/login"
@@ -187,7 +205,7 @@ const ResetPasswordContent = () => {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -208,12 +226,17 @@ const ResetPasswordContent = () => {
             {hotelLogo && (
               <div className="mb-8 flex justify-center">
                 <div className="relative w-24 h-24 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-2xl p-4 backdrop-blur-sm border border-white/10">
-                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-2" />
+                  <Image
+                    src={hotelLogo || "/placeholder.svg"}
+                    alt="Hotel Logo"
+                    fill
+                    className="object-contain p-2"
+                  />
                 </div>
               </div>
             )}
             <h1 className="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
-              Hotel Management
+              3i Smart Home
             </h1>
             <p className="text-xl text-gray-300 mb-8">Secure Your Account</p>
           </div>
@@ -250,8 +273,12 @@ const ResetPasswordContent = () => {
                     {feature.icon}
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">{feature.title}</h3>
-                    <p className="text-gray-300 text-sm">{feature.description}</p>
+                    <h3 className="text-lg font-semibold text-white mb-1">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-300 text-sm">
+                      {feature.description}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -268,20 +295,31 @@ const ResetPasswordContent = () => {
             {hotelLogo && (
               <div className="mb-8 flex justify-center lg:hidden">
                 <div className="relative w-20 h-20 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
-                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-1" />
+                  <Image
+                    src={hotelLogo || "/placeholder.svg"}
+                    alt="Hotel Logo"
+                    fill
+                    className="object-contain p-1"
+                  />
                 </div>
               </div>
             )}
 
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Reset Password</h2>
-              <p className="text-gray-300">Enter your new password below to reset your account</p>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Reset Password
+              </h2>
+              <p className="text-gray-300">
+                Enter your new password below to reset your account
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* New Password Input */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200">New Password</label>
+                <label className="text-sm font-medium text-gray-200">
+                  New Password
+                </label>
                 <div className="relative">
                   <Input
                     placeholder="Enter new password"
@@ -296,15 +334,22 @@ const ResetPasswordContent = () => {
                         onClick={() => setShowPassword(!showPassword)}
                         className="text-red-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-red-400/20"
                       >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
                       </button>
                     }
                     isRequired
                     value={password}
                     onChange={handlePasswordChange}
                     classNames={{
-                      inputWrapper: `bg-transparent ${passwordErrors.length > 0 ? "border-red-500/40" : "border-red-400/40"
-                        } focus:border-red-500 h-[50px]`,
+                      inputWrapper: `bg-transparent ${
+                        passwordErrors.length > 0
+                          ? "border-red-500/40"
+                          : "border-red-400/40"
+                      } focus:border-red-500 h-[50px]`,
                       input: "text-white placeholder:text-red-100",
                     }}
                     className="mb-4"
@@ -316,11 +361,26 @@ const ResetPasswordContent = () => {
                   {password && (
                     <div className="text-xs space-y-1.5">
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                        <RequirementItem met={password.length >= 8} text="8+ characters" />
-                        <RequirementItem met={/[A-Z]/.test(password)} text="Uppercase letter" />
-                        <RequirementItem met={/[a-z]/.test(password)} text="Lowercase letter" />
-                        <RequirementItem met={/\d/.test(password)} text="Number" />
-                        <RequirementItem met={/[@$!%*?&]/.test(password)} text="Special character" />
+                        <RequirementItem
+                          met={password.length >= 8}
+                          text="8+ characters"
+                        />
+                        <RequirementItem
+                          met={/[A-Z]/.test(password)}
+                          text="Uppercase letter"
+                        />
+                        <RequirementItem
+                          met={/[a-z]/.test(password)}
+                          text="Lowercase letter"
+                        />
+                        <RequirementItem
+                          met={/\d/.test(password)}
+                          text="Number"
+                        />
+                        <RequirementItem
+                          met={/[@$!%*?&]/.test(password)}
+                          text="Special character"
+                        />
                       </div>
                     </div>
                   )}
@@ -329,7 +389,9 @@ const ResetPasswordContent = () => {
 
               {/* Confirm Password Input */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200">Confirm Password</label>
+                <label className="text-sm font-medium text-gray-200">
+                  Confirm Password
+                </label>
                 <div className="relative">
                   <Input
                     placeholder="Confirm new password"
@@ -341,17 +403,24 @@ const ResetPasswordContent = () => {
                     endContent={
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         className="text-red-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-red-400/20"
                       >
-                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
                       </button>
                     }
                     isRequired
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     classNames={{
-                      inputWrapper: "bg-transparent border-red-400/40 focus:border-red-500 h-[50px]",
+                      inputWrapper:
+                        "bg-transparent border-red-400/40 focus:border-red-500 h-[50px]",
                       input: "text-white placeholder:text-red-100",
                     }}
                     className="mb-4"
@@ -379,7 +448,7 @@ const ResetPasswordContent = () => {
               </Button>
 
               <div className="mt-8 text-center">
-                <p className="text-gray-400 text-sm mb-4">
+                <p className="text-white text-sm mb-4">
                   Remember your password?{" "}
                   <Link
                     href="/login"
@@ -388,15 +457,17 @@ const ResetPasswordContent = () => {
                     Back to Login
                   </Link>
                 </p>
-                <p className="text-gray-400 text-xs">Secured by advanced encryption</p>
+                <p className="text-white text-xs">
+                  Secured by advanced encryption
+                </p>
               </div>
             </form>
           </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 // Update the loading state to match the theme
 export default function ResetPassword() {
@@ -413,5 +484,5 @@ export default function ResetPassword() {
     >
       <ResetPasswordContent />
     </Suspense>
-  )
+  );
 }

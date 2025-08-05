@@ -6,7 +6,7 @@ const registerToken = async (req, res) => {
   try {
     const { token, userId, deviceType, platform } = req.body;
 
-   
+
 
     if (!token || !deviceType || !platform) {
       return res.status(400).json({
@@ -27,7 +27,6 @@ const registerToken = async (req, res) => {
       existingToken.lastUsed = Date.now();
       await existingToken.save();
 
-      console.log('✅ FCM token updated:', existingToken._id, 'with userId:', existingToken.userId);
 
       return res.status(200).json({
         success: true,
@@ -46,7 +45,6 @@ const registerToken = async (req, res) => {
 
     await newToken.save();
 
-    console.log('✅ FCM token created:', newToken._id, 'with userId:', newToken.userId);
 
     res.status(201).json({
       success: true,
@@ -84,7 +82,6 @@ const sendNotificationToUser = async (userId, notification) => {
     });
 
     if (tokens.length === 0) {
-      console.log(`No active tokens found for user: ${userId}`);
       return { success: false, message: 'No active tokens found' };
     }
 
@@ -112,7 +109,7 @@ const sendNotificationToUser = async (userId, notification) => {
       } catch (error) {
         console.error(`Failed to send to token ${token}:`, error);
         failureCount++;
-        
+
         // Remove failed token
         await FCMToken.deleteOne({ token });
       }
@@ -163,7 +160,7 @@ const sendNotificationToAll = async (notification) => {
       } catch (error) {
         console.error(`Failed to send to token ${token}:`, error);
         failureCount++;
-        
+
         // Remove failed token
         await FCMToken.deleteOne({ token });
       }
@@ -191,24 +188,19 @@ const testNotification = async (req, res) => {
     const { userId, type = 'test' } = req.body;
 
     // First, test Firebase initialization
-    console.log('Testing Firebase initialization...');
     const admin = getAdmin();
-    console.log('✅ Admin instance obtained');
-    
+
     const messaging = admin.messaging();
-    console.log('✅ Messaging service obtained');
-    
+
     // Check if send method is available (fallback for sendMulticast)
     if (typeof messaging.send !== 'function') {
       console.error('❌ send method is not available');
-      console.log('Available methods:', Object.getOwnPropertyNames(messaging));
       return res.status(500).json({
         success: false,
         message: 'Firebase messaging not properly initialized',
         availableMethods: Object.getOwnPropertyNames(messaging),
       });
     }
-    console.log('✅ send function is available');
 
     let notification;
     switch (type) {
@@ -226,7 +218,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_reassigned':
         notification = {
           title: 'Task Reassigned',
@@ -241,7 +233,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_updated':
         notification = {
           title: 'Task Updated',
@@ -256,7 +248,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_created':
         notification = {
           title: 'New Task Created in Project',
@@ -271,7 +263,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_created_admin':
         notification = {
           title: 'New Task Created',
@@ -287,7 +279,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_completed':
         notification = {
           title: 'Task Completed',
@@ -301,7 +293,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_completed_project':
         notification = {
           title: 'Task Completed in Project',
@@ -316,7 +308,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_completed_admin':
         notification = {
           title: 'Task Completed',
@@ -331,7 +323,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_updated_project':
         notification = {
           title: 'Task Updated in Project',
@@ -346,7 +338,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_updated_admin':
         notification = {
           title: 'Task Updated',
@@ -361,7 +353,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'task_reassigned_admin':
         notification = {
           title: 'Task Reassigned',
@@ -377,7 +369,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       case 'project_completed':
         notification = {
           title: 'Project Completed!',
@@ -392,7 +384,7 @@ const testNotification = async (req, res) => {
           },
         };
         break;
-      
+
       default:
         notification = {
           title: 'Dk Test Notification',

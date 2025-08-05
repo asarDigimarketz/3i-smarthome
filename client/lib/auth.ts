@@ -13,7 +13,6 @@ export async function resendVerificationEmail(email: string) {
 
     // If the user is not found in the regular users, try superadmin
     if (response.status === 404) {
-      console.log("User not found in regular users, trying superadmin");
       response = await fetch("/api/superadmin/resend-verification", {
         method: "POST",
         headers: {

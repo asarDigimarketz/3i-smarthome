@@ -15,12 +15,10 @@ const deleteFile = (filePath) => {
       ? filePath
       : path.join(process.cwd(), "public", filePath.replace(/^\//, ""));
 
-    console.log("Attempting to delete file at:", fullPath);
 
     fs.access(fullPath, fs.constants.F_OK, (err) => {
       if (err) {
         // File does not exist, resolve without error
-        console.log("File does not exist, skipping deletion:", fullPath);
         resolve();
       } else {
         fs.unlink(fullPath, (err) => {
@@ -30,7 +28,6 @@ const deleteFile = (filePath) => {
             reject(err);
           } else {
             // Successfully deleted
-            console.log("Successfully deleted old logo file:", fullPath);
             resolve();
           }
         });
@@ -67,7 +64,6 @@ const saveFile = async (logoFile, oldLogoPath) => {
     const filePath = path.join(uploadDir, filename);
     fs.copyFileSync(logoFile.path, filePath);
 
-    console.log("New logo saved successfully:", filename);
 
     // Return the public URL path similar to taskRoutes.js pattern
     return `/assets/images/logo/${filename}`;
@@ -111,7 +107,6 @@ const cleanupOldLogos = async (currentLogoPath) => {
         const filePath = path.join(logoDir, file);
         try {
           fs.unlinkSync(filePath);
-          console.log("Cleaned up old logo file:", file);
         } catch (err) {
           console.error("Error cleaning up old logo file:", file, err);
         }

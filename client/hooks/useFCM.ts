@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { requestNotificationPermission, getFCMToken, onForegroundMessage } from '../lib/firebase';
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import {
+  requestNotificationPermission,
+  getFCMToken,
+  onForegroundMessage,
+} from "../lib/firebase";
 
 interface FCMTokenData {
   token: string;
   userId?: string;
-  deviceType: 'web';
-  platform: 'web';
+  deviceType: "web";
+  platform: "web";
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export const useFCM = () => {
   const { data: session } = useSession();
@@ -21,35 +25,33 @@ export const useFCM = () => {
     try {
       const currentUserId = session?.user?.id;
       if (!currentUserId) {
-        console.log('No user ID available, skipping FCM token registration');
         return false;
       }
 
       const tokenData: FCMTokenData = {
         token,
         userId: currentUserId,
-        deviceType: 'web',
-        platform: 'web',
+        deviceType: "web",
+        platform: "web",
       };
 
       const response = await fetch(`${API_BASE_URL}/api/fcm/token`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || '',
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
         },
         body: JSON.stringify(tokenData),
       });
 
       if (response.ok) {
-        console.log('FCM token sent to server successfully');
         return true;
       } else {
-        console.error('Failed to send FCM token to server:', response.status);
+        console.error("Failed to send FCM token to server:", response.status);
         return false;
       }
     } catch (error) {
-      console.error('Error sending FCM token to server:', error);
+      console.error("Error sending FCM token to server:", error);
       return false;
     }
   };
@@ -61,14 +63,13 @@ export const useFCM = () => {
 
       // Wait for session to be available
       if (!session?.user?.id) {
-        console.log('Waiting for session to be available...');
         return;
       }
 
       // Request permission
       const hasPermission = await requestNotificationPermission();
       if (!hasPermission) {
-        setError('Notification permission denied');
+        setError("Notification permission denied");
         setIsLoading(false);
         return;
       }
@@ -77,14 +78,14 @@ export const useFCM = () => {
       const fcmToken = await getFCMToken();
       if (fcmToken) {
         setToken(fcmToken);
-        
+
         // Send token to server
         await sendTokenToServer(fcmToken);
       } else {
-        setError('Failed to get FCM token');
+        setError("Failed to get FCM token");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
@@ -99,13 +100,11 @@ export const useFCM = () => {
   useEffect(() => {
     // Handle foreground messages
     const unsubscribe = onForegroundMessage((payload) => {
-      console.log('Foreground message received:', payload);
-      
       // Show notification
       if (payload.notification) {
-        new Notification(payload.notification.title || 'New Message', {
+        new Notification(payload.notification.title || "New Message", {
           body: payload.notification.body,
-          icon: '/icon.png',
+          icon: "/icon.png",
         });
       }
     });
@@ -119,4 +118,4 @@ export const useFCM = () => {
     error,
     initializeFCM,
   };
-}; 
+};

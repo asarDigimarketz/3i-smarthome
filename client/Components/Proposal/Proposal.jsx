@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link.js";
 import ProposalFilters from "./ProposalFilters.jsx";
 import ProposalTable from "./ProposalTable.jsx";
@@ -14,6 +15,9 @@ import DashboardHeader from "../header/DashboardHeader.jsx";
 import { usePermissions } from "../../lib/utils";
 
 function App() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const {
     canCreate,
     canEdit,
@@ -25,7 +29,7 @@ function App() {
   // Get permissions using the hook
   const userPermissions = getUserPermissions("proposal");
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page')) || 1);
   const [dateRange, setDateRange] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -36,6 +40,41 @@ function App() {
 
   // Debounce search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  // Update URL when pagination or filters change
+  const updateURL = useCallback((page, pushState = false) => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set('page', page.toString());
+    const newURL = params.toString() ? `?${params.toString()}` : '';
+    const fullURL = `/dashboard/proposal${newURL}`;
+
+    if (pushState) {
+      router.push(fullURL, { scroll: false });
+    } else {
+      router.replace(fullURL, { scroll: false });
+    }
+  }, [router]);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const page = parseInt(urlParams.get('page')) || 1;
+      setCurrentPage(page);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Initial fetch when component mounts - use URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialPage = parseInt(urlParams.get('page')) || 1;
+    if (initialPage !== currentPage) {
+      setCurrentPage(initialPage);
+    }
+  }, []);
 
   // Debounce search query
   useEffect(() => {
@@ -79,6 +118,12 @@ function App() {
       }
     }
     setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  // Handle pagination changes
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    updateURL(page, true);
   };
 
   // Handle service filter change (from ProposalFilters)
@@ -180,13 +225,18 @@ function App() {
                 setTotalPages={setTotalPages}
               />
             </div>
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-end mt-6" data-no-navigate>
               <Pagination
                 total={totalPages}
-                initialPage={1}
+                initialPage={currentPage}
                 page={currentPage}
-                onChange={setCurrentPage}
+                onChange={handlePageChange}
                 showControls
+                color="primary"
+                variant="flat"
+                className="pagination"
+                data-no-navigate
+                key={`pagination-${currentPage}-${totalPages}`}
               />
             </div>
           </div>

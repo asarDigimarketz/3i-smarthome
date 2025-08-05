@@ -6,12 +6,12 @@ const User = require('../models/user');
  * Create a single notification
  */
 const createNotification = async ({
-      userId,
-      type,
-      title,
-      body,
-      data = {},
-      priority = 'medium',
+  userId,
+  type,
+  title,
+  body,
+  data = {},
+  priority = 'medium',
   taskId = null,
   projectId = null,
   proposalId = null,
@@ -44,11 +44,11 @@ const createNotification = async ({
  */
 const createBulkNotifications = async ({
   userIds,
-        type,
-        title,
-        body,
-        data = {},
-        priority = 'medium',
+  type,
+  title,
+  body,
+  data = {},
+  priority = 'medium',
   taskId = null,
   projectId = null,
   proposalId = null,
@@ -57,14 +57,14 @@ const createBulkNotifications = async ({
 }) => {
   try {
     const notifications = userIds.map(userId => ({
-        userId,
-        type,
-        title,
-        body,
-        data,
-        priority,
-        taskId,
-        projectId,
+      userId,
+      type,
+      title,
+      body,
+      data,
+      priority,
+      taskId,
+      projectId,
       proposalId,
       triggeredBy,
       triggeredByModel
@@ -82,14 +82,14 @@ const createBulkNotifications = async ({
  * Create task-related notifications
  */
 const createTaskNotification = async ({
-      userIds,
-      type,
-      title,
-      body,
-      data = {},
-      priority = 'medium',
-      taskId,
-      projectId,
+  userIds,
+  type,
+  title,
+  body,
+  data = {},
+  priority = 'medium',
+  taskId,
+  projectId,
   triggeredBy,
   triggeredByModel = 'UserEmployee'
 }) => {
@@ -171,19 +171,17 @@ const createProposalNotification = async ({
   try {
     // Get users with proposal permissions
     const usersWithPermission = await getUsersWithPermission('proposals', 'view');
-    
+
     if (usersWithPermission.length === 0) {
-      console.log('No users found with proposal permissions');
       return [];
     }
 
     // Filter out the user who triggered the action
-    const recipientUsers = usersWithPermission.filter(user => 
+    const recipientUsers = usersWithPermission.filter(user =>
       user._id.toString() !== triggeredBy?.toString()
     );
 
     if (recipientUsers.length === 0) {
-      console.log('No recipients found for proposal notification');
       return [];
     }
 
@@ -222,19 +220,17 @@ const createProjectNotification = async ({
   try {
     // Get users with project permissions
     const usersWithPermission = await getUsersWithPermission('projects', 'view');
-    
+
     if (usersWithPermission.length === 0) {
-      console.log('No users found with project permissions');
       return [];
     }
 
     // Filter out the user who triggered the action
-    const recipientUsers = usersWithPermission.filter(user => 
+    const recipientUsers = usersWithPermission.filter(user =>
       user._id.toString() !== triggeredBy?.toString()
     );
 
     if (recipientUsers.length === 0) {
-      console.log('No recipients found for project notification');
       return [];
     }
 
@@ -273,19 +269,17 @@ const createEmployeeNotification = async ({
   try {
     // Get users with employee management permissions
     const usersWithPermission = await getUsersWithPermission('employees', 'view');
-    
+
     if (usersWithPermission.length === 0) {
-      console.log('No users found with employee permissions');
       return [];
     }
 
     // Filter out the user who triggered the action
-    const recipientUsers = usersWithPermission.filter(user => 
+    const recipientUsers = usersWithPermission.filter(user =>
       user._id.toString() !== triggeredBy?.toString()
     );
 
     if (recipientUsers.length === 0) {
-      console.log('No recipients found for employee notification');
       return [];
     }
 
@@ -366,7 +360,6 @@ const deleteOldNotifications = async (daysOld = 30) => {
       isRead: true
     });
 
-    console.log(`Deleted ${result.deletedCount} old notifications`);
     return result.deletedCount;
   } catch (error) {
     console.error('Error deleting old notifications:', error);

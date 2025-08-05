@@ -108,10 +108,8 @@ exports.updateGeneralDetails = [
         // Get old general data to delete old logo if exists
         const oldGeneral = await GeneralModel.findOne();
         if (oldGeneral && oldGeneral.logo) {
-          console.log("Deleting old logo:", oldGeneral.logo);
           try {
             await deleteFile(oldGeneral.logo);
-            console.log("Old logo deleted successfully");
           } catch (deleteError) {
             console.error("Error deleting old logo file:", deleteError);
             // Don't throw error here, just log it as the upload should continue
@@ -120,7 +118,6 @@ exports.updateGeneralDetails = [
 
         // Set new logo path
         cleanUpdateData.logo = `/assets/images/logo/${logoFile.filename}`;
-        console.log("New logo will be saved as:", cleanUpdateData.logo);
       }
 
       // Update General details

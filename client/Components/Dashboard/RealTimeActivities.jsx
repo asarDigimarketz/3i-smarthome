@@ -21,7 +21,6 @@ const RealTimeActivities = () => {
       setLoading(true);
       const token = await getAuthToken();
       if (!token) {
-        console.log("No session token available");
         return;
       }
 
@@ -50,7 +49,7 @@ const RealTimeActivities = () => {
   useEffect(() => {
     if (session?.user) {
       fetchRecentNotifications();
-      
+
       // Refresh every 60 seconds
       const interval = setInterval(fetchRecentNotifications, 60000);
       return () => clearInterval(interval);
@@ -61,7 +60,7 @@ const RealTimeActivities = () => {
     const now = new Date();
     const date = new Date(dateString);
     const diffInSeconds = Math.floor((now - date) / 1000);
-    
+
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -182,16 +181,15 @@ const RealTimeActivities = () => {
             {recentNotifications.map((notification) => (
               <div
                 key={notification._id}
-                className={`flex items-start gap-4 p-4 rounded-xl transition-all hover:shadow-md ${
-                  !notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/50' : 'bg-white'
-                }`}
+                className={`flex items-start gap-4 p-4 rounded-xl transition-all hover:shadow-md ${!notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/50' : 'bg-white'
+                  }`}
               >
                 <Avatar
                   className={`w-12 h-12 text-lg ${getNotificationColor(notification.type)}`}
                 >
                   {getNotificationIcon(notification.type)}
                 </Avatar>
-                
+
                 <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-gray-900 truncate">
                     {notification.title}

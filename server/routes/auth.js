@@ -25,13 +25,11 @@ router.post('/mobile-login', async (req, res) => {
       user = await User.findOne({ email });
       userType = 'admin';
     }
-    console.log('Login attempt:', { found: !!user, userType });
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match result:', isMatch ? 'success' : 'failed');
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
     const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-    
+
     // Prepare user response based on user type
     let userResponse;
     if (userType === 'employee') {
@@ -95,7 +93,7 @@ router.post('/mobile-login', async (req, res) => {
         ]
       };
     }
-    
+
     res.status(200).json({
       token,
       user: userResponse,
@@ -109,21 +107,20 @@ router.post('/mobile-login', async (req, res) => {
 // Register Employee (for mobile, Express backend)
 router.post('/register', async (req, res) => {
   try {
-    console.log('Register request received');
     const { email, roleId, name, password } = req.body;
-    
+
     // Check if user already exists
     const existingUser = await UserEmployee.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Employee already exists' });
     }
-    
+
     // Fetch role and permissions
     const role = await Role.findById(roleId);
     if (!role) {
       return res.status(404).json({ success: false, message: 'Role not found' });
     }
-    
+
     // Generate a random password if not provided
     let finalPassword = password;
     if (!finalPassword) {
@@ -132,25 +129,25 @@ router.post('/register', async (req, res) => {
       const lowercase = 'abcdefghijklmnopqrstuvwxyz';
       const numbers = '0123456789';
       const special = '@$!%*?&';
-      
+
       let generatedPassword = '';
       generatedPassword += uppercase[Math.floor(Math.random() * uppercase.length)];
       generatedPassword += lowercase[Math.floor(Math.random() * lowercase.length)];
       generatedPassword += numbers[Math.floor(Math.random() * numbers.length)];
       generatedPassword += special[Math.floor(Math.random() * special.length)];
-      
+
       // Fill the rest with random characters
       const allChars = uppercase + lowercase + numbers + special;
       for (let i = 4; i < 12; i++) {
         generatedPassword += allChars[Math.floor(Math.random() * allChars.length)];
       }
-      
+
       // Shuffle the password
       finalPassword = generatedPassword.split('').sort(() => Math.random() - 0.5).join('');
     }
-    
+
     const hashedPassword = await bcrypt.hash(finalPassword, 10);
-    
+
     // Create new user with only the fields that UserEmployee schema expects
     const newEmployee = new UserEmployee({
       email,
@@ -158,9 +155,9 @@ router.post('/register', async (req, res) => {
       role: roleId,
       permissions: role.permissions || [],
     });
-    
+
     await newEmployee.save();
-    
+
     // Send email with the generated password (only if password was auto-generated)
     if (!password) {
       try {
@@ -179,17 +176,17 @@ router.post('/register', async (req, res) => {
         // Don't fail the registration if email fails
       }
     }
-    
-    res.status(201).json({ 
-      success: true, 
-      message: password ? 'Employee registered successfully' : 'Employee registered successfully and email sent' 
+
+    res.status(201).json({
+      success: true,
+      message: password ? 'Employee registered successfully' : 'Employee registered successfully and email sent'
     });
   } catch (err) {
     console.error('Registration error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Registration failed', 
-      error: err.message 
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed',
+      error: err.message
     });
   }
 });
@@ -197,42 +194,41 @@ router.post('/register', async (req, res) => {
 // Update Employee Role
 router.put('/updateRole', async (req, res) => {
   try {
-    console.log('Update role request received');
     const { email, roleId } = req.body;
-    
+
     // Find employee by email
     const employee = await UserEmployee.findOne({ email });
     if (!employee) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Employee not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
       });
     }
-    
+
     // Verify role exists
     const role = await Role.findById(roleId);
     if (!role) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Role not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Role not found'
       });
     }
-    
+
     // Update role and permissions
     employee.role = roleId;
     employee.permissions = role.permissions || [];
     await employee.save();
-    
-    res.status(200).json({ 
-      success: true, 
-      message: 'Role updated successfully' 
+
+    res.status(200).json({
+      success: true,
+      message: 'Role updated successfully'
     });
   } catch (err) {
     console.error('Role update error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Role update failed', 
-      error: err.message 
+    res.status(500).json({
+      success: false,
+      message: 'Role update failed',
+      error: err.message
     });
   }
 });
@@ -254,17 +250,17 @@ router.get('/mobile-profile', authenticateToken, async (req, res) => {
     // Try to find user in UserEmployee (employees) first
     let user = await UserEmployee.findById(req.user.id).populate('role');
     let userType = 'employee';
-    
+
     if (!user) {
       // If not found, try User (admin)
       user = await User.findById(req.user.id).select('-password');
       userType = 'admin';
     }
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     // Prepare user response based on user type
     let userResponse;
     if (userType === 'employee') {
@@ -328,7 +324,7 @@ router.get('/mobile-profile', authenticateToken, async (req, res) => {
         ]
       };
     }
-    
+
     res.json({ user: userResponse });
   } catch (err) {
     console.error('Mobile profile error:', err);
@@ -341,7 +337,7 @@ router.get('/test-deep-link', (req, res) => {
   const testToken = 'test-token-123';
   const encodedToken = Buffer.from(testToken).toString('base64');
   const resetUrl = `mobileapp://reset-password?token=${encodedToken}`;
-  
+
   res.json({
     success: true,
     message: 'Test deep link generated',
@@ -363,11 +359,11 @@ router.get('/test-deep-link', (req, res) => {
 router.post('/mobile-forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
       });
     }
 
@@ -383,9 +379,9 @@ router.post('/mobile-forgot-password', async (req, res) => {
     }
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User with this email does not exist' 
+      return res.status(404).json({
+        success: false,
+        message: 'User with this email does not exist'
       });
     }
 
@@ -413,7 +409,7 @@ router.post('/mobile-forgot-password', async (req, res) => {
         { new: true }
       );
     }
-    
+
     // Email template for OTP
     const message = `
       <h1>Password Reset OTP</h1>
@@ -439,15 +435,15 @@ router.post('/mobile-forgot-password', async (req, res) => {
 
     await sendEmail(user.email, 'Password Reset OTP', message);
 
-    res.status(200).json({ 
-      success: true, 
-      message: 'OTP sent to your email successfully' 
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email successfully'
     });
   } catch (err) {
     console.error('Forgot password error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'An error occurred while processing your request' 
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while processing your request'
     });
   }
 });
@@ -456,17 +452,17 @@ router.post('/mobile-forgot-password', async (req, res) => {
 router.post('/mobile-verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
-    
+
     if (!email || !otp) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email and OTP are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required'
       });
     }
 
     // First check if it's a hotel admin
     const User = require('../models/user');
-    let user = await User.findOne({ 
+    let user = await User.findOne({
       email,
       resetPasswordToken: otp,
       resetPasswordExpire: { $gt: Date.now() }
@@ -475,7 +471,7 @@ router.post('/mobile-verify-otp', async (req, res) => {
 
     if (!user) {
       // If not found, check if it's an employee
-      user = await UserEmployee.findOne({ 
+      user = await UserEmployee.findOne({
         email,
         resetPasswordToken: otp,
         resetPasswordExpire: { $gt: Date.now() }
@@ -484,9 +480,9 @@ router.post('/mobile-verify-otp', async (req, res) => {
     }
 
     if (!user) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid or expired OTP' 
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP'
       });
     }
 
@@ -507,16 +503,16 @@ router.post('/mobile-verify-otp', async (req, res) => {
       });
     }
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       message: 'OTP verified successfully',
       tempToken: tempToken
     });
   } catch (err) {
     console.error('OTP verification error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'An error occurred while verifying OTP' 
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while verifying OTP'
     });
   }
 });
@@ -525,11 +521,11 @@ router.post('/mobile-verify-otp', async (req, res) => {
 router.post('/mobile-reset-password', async (req, res) => {
   try {
     const { tempToken, newPassword } = req.body;
-    
+
     if (!tempToken || !newPassword) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Temporary token and new password are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Temporary token and new password are required'
       });
     }
 
@@ -549,9 +545,9 @@ router.post('/mobile-reset-password', async (req, res) => {
     }
 
     if (!user) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid or expired temporary token' 
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired temporary token'
       });
     }
 
@@ -573,15 +569,15 @@ router.post('/mobile-reset-password', async (req, res) => {
       });
     }
 
-    res.status(200).json({ 
-      success: true, 
-      message: 'Password reset successfully' 
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully'
     });
   } catch (err) {
     console.error('Reset password error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'An error occurred while resetting your password' 
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while resetting your password'
     });
   }
 });

@@ -38,11 +38,9 @@ async function getAllAdminUsers() {
 async function sendProjectNotification(userIds, notification) {
   try {
     if (!userIds || userIds.length === 0) {
-      console.log('No users to send project notification to');
       return;
     }
 
-    console.log('User IDs for project notification:', userIds);
 
     // Save notifications to database first
     try {
@@ -56,7 +54,6 @@ async function sendProjectNotification(userIds, notification) {
         triggeredBy: notification.triggeredBy,
         triggeredByModel: notification.triggeredByModel
       });
-      console.log(`Saved ${savedNotifications.length} project notifications to database`);
     } catch (dbError) {
       console.error('Error saving project notifications to database:', dbError);
       // Continue with FCM sending even if database save fails
@@ -69,7 +66,6 @@ async function sendProjectNotification(userIds, notification) {
     });
 
     if (tokens.length === 0) {
-      console.log(`No active FCM tokens found for User IDs: ${userIds.join(', ')}`);
       return;
     }
 
@@ -103,16 +99,14 @@ async function sendProjectNotification(userIds, notification) {
       } catch (error) {
         console.error(`Failed to send to token ${token}:`, error);
         failureCount++;
-        
+
         // Remove failed token
         await FCMToken.deleteOne({ token });
       }
     }
 
-    console.log(`Project notification sent: ${successCount} successful, ${failureCount} failed`);
 
     if (failureCount > 0) {
-      console.log(`Removed ${failureCount} failed FCM tokens`);
     }
 
     return {
@@ -209,9 +203,8 @@ const createProject = async (req, res) => {
         originalName: file.originalName,
         mimetype: file.mimetype,
         size: file.size,
-        url: `${
-          process.env.BACKEND_URL || "http://localhost:5000"
-        }/assets/images/projects/attachments/${file.filename}`,
+        url: `${process.env.BACKEND_URL || "http://localhost:5000"
+          }/assets/images/projects/attachments/${file.filename}`,
       }));
     }
 
@@ -572,9 +565,8 @@ const updateProject = async (req, res) => {
         originalName: file.originalName,
         mimetype: file.mimetype,
         size: file.size,
-        url: `${
-          process.env.BACKEND_URL || "http://localhost:5000"
-        }/assets/images/projects/attachments/${file.filename}`,
+        url: `${process.env.BACKEND_URL || "http://localhost:5000"
+          }/assets/images/projects/attachments/${file.filename}`,
       }));
       baseAttachments = baseAttachments.concat(newAttachments);
     }
@@ -652,7 +644,7 @@ const updateProject = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 
@@ -664,9 +656,9 @@ const updateProject = async (req, res) => {
         if (updateData.services && updateData.services !== originalProject.services) changes.push('services');
         if (updateData.projectStatus && updateData.projectStatus !== originalProject.projectStatus) changes.push('project status');
         if (updateData.comment !== undefined && updateData.comment !== originalProject.comment) changes.push('comment');
-        
+
         const changesText = changes.length > 0 ? changes.join(', ') : 'details';
-        
+
         const notification = {
           type: 'project_updated',
           title: 'Project Updated',
@@ -783,7 +775,7 @@ const updateProjectField = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 
@@ -884,7 +876,7 @@ const deleteProject = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 

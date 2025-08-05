@@ -22,13 +22,12 @@ const initializeFirebase = (serviceAccount, projectId) => {
       // Delete existing app if already initialized
       admin.apps.forEach(app => app.delete());
     }
-   
+
     firebaseApp = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       projectId: projectId
     });
-   
-    console.log('Firebase initialized successfully');
+
     return true;
   } catch (error) {
     console.error('Firebase initialization error:', error);
@@ -40,27 +39,27 @@ const initializeFirebase = (serviceAccount, projectId) => {
 app.post('/api/configure-firebase', async (req, res) => {
   try {
     const { projectId, serviceAccount } = req.body;
-   
+
     if (!projectId || !serviceAccount) {
       return res.status(400).json({
         success: false,
         message: 'Project ID and service account are required'
       });
     }
-   
+
     // Validate service account structure
     const requiredFields = ['type', 'project_id', 'private_key', 'client_email'];
     const missingFields = requiredFields.filter(field => !serviceAccount[field]);
-   
+
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
         message: `Missing required fields: ${missingFields.join(', ')}`
       });
     }
-   
+
     const initialized = initializeFirebase(serviceAccount, projectId);
-   
+
     if (initialized) {
       res.json({
         success: true,
@@ -91,16 +90,16 @@ app.post('/api/send-notification', async (req, res) => {
         message: 'Firebase not configured. Please configure first.'
       });
     }
-   
+
     const { token, title, body, data = {} } = req.body;
-   
+
     if (!token || !title || !body) {
       return res.status(400).json({
         success: false,
         message: 'Token, title, and body are required'
       });
     }
-   
+
     const message = {
       notification: {
         title: title,
@@ -109,15 +108,15 @@ app.post('/api/send-notification', async (req, res) => {
       data: data,
       token: token
     };
-   
+
     const response = await admin.messaging().send(message);
-   
+
     res.json({
       success: true,
       message: 'Notification sent successfully',
       messageId: response
     });
-   
+
   } catch (error) {
     console.error('Send notification error:', error);
     res.status(500).json({
@@ -137,23 +136,23 @@ app.post('/api/send-bulk-notifications', async (req, res) => {
         message: 'Firebase not configured. Please configure first.'
       });
     }
-   
+
     const { tokens, title, body, data = {} } = req.body;
-   
+
     if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Tokens array is required and must not be empty'
       });
     }
-   
+
     if (!title || !body) {
       return res.status(400).json({
         success: false,
         message: 'Title and body are required'
       });
     }
-   
+
     const message = {
       notification: {
         title: title,
@@ -162,9 +161,9 @@ app.post('/api/send-bulk-notifications', async (req, res) => {
       data: data,
       tokens: tokens
     };
-   
+
     const response = await admin.messaging().sendMulticast(message);
-   
+
     res.json({
       success: true,
       message: 'Bulk notifications sent',
@@ -172,7 +171,7 @@ app.post('/api/send-bulk-notifications', async (req, res) => {
       failureCount: response.failureCount,
       responses: response.responses
     });
-   
+
   } catch (error) {
     console.error('Send bulk notifications error:', error);
     res.status(500).json({
@@ -192,16 +191,16 @@ app.post('/api/send-topic-notification', async (req, res) => {
         message: 'Firebase not configured. Please configure first.'
       });
     }
-   
+
     const { topic, title, body, data = {} } = req.body;
-   
+
     if (!topic || !title || !body) {
       return res.status(400).json({
         success: false,
         message: 'Topic, title, and body are required'
       });
     }
-   
+
     const message = {
       notification: {
         title: title,
@@ -210,15 +209,15 @@ app.post('/api/send-topic-notification', async (req, res) => {
       data: data,
       topic: topic
     };
-   
+
     const response = await admin.messaging().send(message);
-   
+
     res.json({
       success: true,
       message: 'Topic notification sent successfully',
       messageId: response
     });
-   
+
   } catch (error) {
     console.error('Send topic notification error:', error);
     res.status(500).json({
@@ -238,18 +237,18 @@ app.post('/api/subscribe-to-topic', async (req, res) => {
         message: 'Firebase not configured. Please configure first.'
       });
     }
-   
+
     const { tokens, topic } = req.body;
-   
+
     if (!tokens || !Array.isArray(tokens) || !topic) {
       return res.status(400).json({
         success: false,
         message: 'Tokens array and topic are required'
       });
     }
-   
+
     const response = await admin.messaging().subscribeToTopic(tokens, topic);
-   
+
     res.json({
       success: true,
       message: 'Tokens subscribed to topic successfully',
@@ -257,7 +256,7 @@ app.post('/api/subscribe-to-topic', async (req, res) => {
       failureCount: response.failureCount,
       errors: response.errors
     });
-   
+
   } catch (error) {
     console.error('Subscribe to topic error:', error);
     res.status(500).json({
@@ -277,18 +276,18 @@ app.post('/api/unsubscribe-from-topic', async (req, res) => {
         message: 'Firebase not configured. Please configure first.'
       });
     }
-   
+
     const { tokens, topic } = req.body;
-   
+
     if (!tokens || !Array.isArray(tokens) || !topic) {
       return res.status(400).json({
         success: false,
         message: 'Tokens array and topic are required'
       });
     }
-   
+
     const response = await admin.messaging().unsubscribeFromTopic(tokens, topic);
-   
+
     res.json({
       success: true,
       message: 'Tokens unsubscribed from topic successfully',
@@ -296,7 +295,7 @@ app.post('/api/unsubscribe-from-topic', async (req, res) => {
       failureCount: response.failureCount,
       errors: response.errors
     });
-   
+
   } catch (error) {
     console.error('Unsubscribe from topic error:', error);
     res.status(500).json({
@@ -316,16 +315,16 @@ app.post('/api/validate-token', async (req, res) => {
         message: 'Firebase not configured. Please configure first.'
       });
     }
-   
+
     const { token } = req.body;
-   
+
     if (!token) {
       return res.status(400).json({
         success: false,
         message: 'Token is required'
       });
     }
-   
+
     // Try to send a test message to validate token
     const testMessage = {
       data: {
@@ -333,15 +332,15 @@ app.post('/api/validate-token', async (req, res) => {
       },
       token: token
     };
-   
+
     await admin.messaging().send(testMessage);
-   
+
     res.json({
       success: true,
       message: 'Token is valid',
       token: token
     });
-   
+
   } catch (error) {
     console.error('Token validation error:', error);
     res.json({
@@ -390,16 +389,16 @@ app.post('/api/send-template-notification', async (req, res) => {
         message: 'Firebase not configured. Please configure first.'
       });
     }
-   
+
     const { token, templateName, customData = {} } = req.body;
-   
+
     if (!token || !templateName) {
       return res.status(400).json({
         success: false,
         message: 'Token and template name are required'
       });
     }
-   
+
     const template = notificationTemplates[templateName];
     if (!template) {
       return res.status(400).json({
@@ -408,7 +407,7 @@ app.post('/api/send-template-notification', async (req, res) => {
         availableTemplates: Object.keys(notificationTemplates)
       });
     }
-   
+
     const message = {
       notification: {
         title: template.title,
@@ -420,16 +419,16 @@ app.post('/api/send-template-notification', async (req, res) => {
       },
       token: token
     };
-   
+
     const response = await admin.messaging().send(message);
-   
+
     res.json({
       success: true,
       message: 'Template notification sent successfully',
       template: templateName,
       messageId: response
     });
-   
+
   } catch (error) {
     console.error('Send template notification error:', error);
     res.status(500).json({
@@ -459,18 +458,7 @@ app.use((error, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Firebase Notification Server running on port ${PORT}`);
-  console.log(`\nAvailable endpoints:`);
-  console.log(`POST /api/configure-firebase - Configure Firebase`);
-  console.log(`POST /api/send-notification - Send single notification`);
-  console.log(`POST /api/send-bulk-notifications - Send bulk notifications`);
-  console.log(`POST /api/send-topic-notification - Send topic notification`);
-  console.log(`POST /api/subscribe-to-topic - Subscribe to topic`);
-  console.log(`POST /api/unsubscribe-from-topic - Unsubscribe from topic`);
-  console.log(`POST /api/validate-token - Validate device token`);
-  console.log(`POST /api/send-template-notification - Send template notification`);
-  console.log(`GET /api/status - Get configuration status`);
-  console.log(`GET /api/templates - Get available templates`);
+
 });
 
 module.exports = app;

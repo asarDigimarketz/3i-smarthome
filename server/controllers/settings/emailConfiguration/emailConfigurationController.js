@@ -79,13 +79,8 @@ exports.testEmailConfiguration = async (req, res) => {
 
     // Get dynamic email configuration (database first, then environment variables)
     const emailConfig = await getEmailConfig();
-    
-    console.log('🧪 Testing email configuration with:', {
-      host: emailConfig.host,
-      port: emailConfig.port,
-      user: emailConfig.auth.user,
-      from: emailConfig.from
-    });
+
+
 
     try {
       const transporter = nodemailer.createTransport(emailConfig);

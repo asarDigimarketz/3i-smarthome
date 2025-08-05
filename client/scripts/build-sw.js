@@ -29,4 +29,3 @@ Object.entries(replacements).forEach(([placeholder, value]) => {
 
 // Write the processed service worker
 fs.writeFileSync(swPath, swContent);
-console.log('Service worker built successfully with environment variables'); 

@@ -165,8 +165,9 @@ export const EmployeeModal = ({
     if (!formData.address.state.trim()) newErrors.state = "State is required";
     if (!formData.address.country.trim())
       newErrors.country = "Country is required";
-    if (!formData.address.pincode.trim())
+    if (!formData.address.pincode.trim()) {
       newErrors.pincode = "Pincode is required";
+    }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -178,6 +179,12 @@ export const EmployeeModal = ({
     const mobileRegex = /^\d{10}$/;
     if (formData.mobileNo && !mobileRegex.test(formData.mobileNo)) {
       newErrors.mobileNo = "Mobile number must be 10 digits";
+    }
+
+    // Pincode validation (6 digits)
+    const pincodeRegex = /^[1-9][0-9]{5}$/;
+    if (formData.address.pincode && !pincodeRegex.test(formData.address.pincode)) {
+      newErrors.pincode = "Please enter a valid 6-digit Indian pincode";
     }
 
     // Age validation (minimum 18 years)
@@ -318,7 +325,7 @@ export const EmployeeModal = ({
       });
       return;
     }
-    
+
     if (!isEditing && !canCreate("employees")) {
       addToast({
         title: "Access Denied",
@@ -426,9 +433,8 @@ export const EmployeeModal = ({
       if (response.data.success) {
         addToast({
           title: "Success",
-          description: `Employee ${
-            isEditing ? "updated" : "created"
-          } successfully`,
+          description: `Employee ${isEditing ? "updated" : "created"
+            } successfully`,
           color: "success",
         });
         if (isEditing) {
@@ -512,7 +518,7 @@ export const EmployeeModal = ({
       } else {
         throw new Error(
           data.message ||
-            `Failed to ${isEditing ? "update" : "create"} employee`
+          `Failed to ${isEditing ? "update" : "create"} employee`
         );
       }
     } catch (error) {
@@ -850,7 +856,7 @@ export const EmployeeModal = ({
                     variant="bordered"
                     selectedKeys={[formData.status]}
                     onSelectionChange={(keys) => {
-                        const selectedKey = Array.from(keys)[0];
+                      const selectedKey = Array.from(keys)[0];
                       handleInputChange("status", selectedKey);
                     }}
                     classNames={{

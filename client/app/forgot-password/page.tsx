@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { Input } from "@heroui/input"
-import { Button } from "@heroui/button"
-import { addToast } from "@heroui/toast"
-import { CheckCircle, Mail, Shield, Lock } from "lucide-react"
-import Link from "next/link"
-import { getGeneralDetails } from "../../lib/GeneralDetails"
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
+import { addToast } from "@heroui/toast";
+import { CheckCircle, Mail, Shield, Lock } from "lucide-react";
+import Link from "next/link";
+import { getGeneralDetails } from "../../lib/GeneralDetails";
+import Image from "next/image";
 
 const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
   <div className="fixed inset-0 backdrop-blur-xl bg-gradient-to-br from-slate-900/95 via-red-900/90 to-red-800/95 flex flex-col items-center justify-center z-50">
@@ -24,7 +24,12 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
         <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-500 rounded-full animate-pulse flex items-center justify-center">
           {hotelLogo ? (
             <div className="relative w-10 h-10">
-              <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain" />
+              <Image
+                src={hotelLogo || "/placeholder.svg"}
+                alt="Hotel Logo"
+                fill
+                className="object-contain"
+              />
             </div>
           ) : (
             <Mail className="w-8 h-8 text-white" />
@@ -44,27 +49,27 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
       <div className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 rounded-full animate-progress-infinite"></div>
     </div>
   </div>
-)
+);
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [hotelLogo, setHotelLogo] = useState<string | null>(null)
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [hotelLogo, setHotelLogo] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchHotelDetails() {
-      const generalData = await getGeneralDetails()
+      const generalData = await getGeneralDetails();
       if (generalData?.logo) {
-        setHotelLogo(generalData.logo)
+        setHotelLogo(generalData.logo);
       }
     }
-    fetchHotelDetails()
-  }, [])
+    fetchHotelDetails();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
       const response = await fetch("/api/auth/forgot-password", {
@@ -73,32 +78,32 @@ export default function ForgotPassword() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
       if (response.ok) {
-        setIsSubmitted(true)
+        setIsSubmitted(true);
         addToast({
           title: "Success",
           description: "Password reset email sent. Please check your inbox.",
           color: "success",
-        })
+        });
       } else {
         addToast({
           title: "Error",
           description: data.error || "An error occurred. Please try again.",
           color: "danger",
-        })
+        });
       }
     } catch {
       addToast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         color: "danger",
-      })
+      });
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   if (isSubmitted) {
     return (
@@ -116,10 +121,12 @@ export default function ForgotPassword() {
               <div className="mb-8 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-red-400 to-red-500 shadow-lg">
                 <CheckCircle className="h-10 w-10 text-white" />
               </div>
-              <h2 className="mb-4 text-3xl font-bold text-white">Check Your Email</h2>
+              <h2 className="mb-4 text-3xl font-bold text-white">
+                Check Your Email
+              </h2>
               <p className="mb-8 text-gray-300">
-                We&apos;ve sent a password reset link to your email address. Please check your inbox and follow the
-                instructions.
+                We&apos;ve sent a password reset link to your email address.
+                Please check your inbox and follow the instructions.
               </p>
               <Link
                 href="/login"
@@ -134,7 +141,7 @@ export default function ForgotPassword() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -155,14 +162,21 @@ export default function ForgotPassword() {
             {hotelLogo && (
               <div className="mb-8 flex justify-center">
                 <div className="relative w-24 h-24 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-2xl p-4 backdrop-blur-sm border border-white/10">
-                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-2" />
+                  <Image
+                    src={hotelLogo || "/placeholder.svg"}
+                    alt="Hotel Logo"
+                    fill
+                    className="object-contain p-2"
+                  />
                 </div>
               </div>
             )}
             <h1 className="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
-              Hotel Management
+              3i Smart Home
             </h1>
-            <p className="text-xl text-gray-300 mb-8">Password Recovery Made Simple</p>
+            <p className="text-xl text-gray-300 mb-8">
+              Password Recovery Made Simple
+            </p>
           </div>
 
           <div className="space-y-6">
@@ -197,8 +211,12 @@ export default function ForgotPassword() {
                     {feature.icon}
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">{feature.title}</h3>
-                    <p className="text-gray-300 text-sm">{feature.description}</p>
+                    <h3 className="text-lg font-semibold text-white mb-1">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-300 text-sm">
+                      {feature.description}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -215,20 +233,31 @@ export default function ForgotPassword() {
             {hotelLogo && (
               <div className="mb-8 flex justify-center lg:hidden">
                 <div className="relative w-20 h-20 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
-                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-1" />
+                  <Image
+                    src={hotelLogo || "/placeholder.svg"}
+                    alt="Hotel Logo"
+                    fill
+                    className="object-contain p-1"
+                  />
                 </div>
               </div>
             )}
 
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Forgot Password?</h2>
-              <p className="text-gray-300">Enter your email to receive a password reset link</p>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Forgot Password?
+              </h2>
+              <p className="text-gray-300">
+                Enter your email to receive a password reset link
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Input */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200">Email Address</label>
+                <label className="text-sm font-medium text-gray-200">
+                  Email Address
+                </label>
                 <div className="relative">
                   <Input
                     placeholder="Enter your email"
@@ -241,7 +270,8 @@ export default function ForgotPassword() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     classNames={{
-                      inputWrapper: "bg-transparent border-red-400/40 focus:border-red-500 h-[50px]",
+                      inputWrapper:
+                        "bg-transparent border-red-400/40 focus:border-red-500 h-[50px] text-white placeholder:text-red-100",
                       input: "text-white placeholder:text-red-100",
                     }}
                     className="mb-4 text-white placeholder:text-red-100"
@@ -269,7 +299,7 @@ export default function ForgotPassword() {
               </Button>
 
               <div className="mt-8 text-center">
-                <p className="text-gray-400 text-sm mb-4">
+                <p className="text-white text-sm mb-4">
                   Remember your password?{" "}
                   <Link
                     href="/login"
@@ -278,12 +308,14 @@ export default function ForgotPassword() {
                     Back to Login
                   </Link>
                 </p>
-                <p className="text-gray-400 text-xs">Secure password recovery system</p>
+                <p className="text-white text-xs">
+                  Secure password recovery system
+                </p>
               </div>
             </form>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

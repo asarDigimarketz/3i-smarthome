@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
@@ -18,6 +19,7 @@ import {
   TableCell,
 } from "@heroui/table";
 import { DateRangePicker } from "@heroui/date-picker";
+import { Pagination } from "@heroui/pagination";
 import { addToast } from "@heroui/toast";
 import apiClient from "../../lib/axios";
 
@@ -36,18 +38,21 @@ import DashboardHeader from "../header/DashboardHeader";
 import { usePermissions } from "../../lib/utils";
 
 const Customers = () => {
-  const { 
-    canCreate, 
-     
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const {
+    canCreate,
     canView,
-    getUserPermissions 
+    getUserPermissions
   } = usePermissions();
 
   // State for customers data
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [pagination, setPagination] = useState({
-    currentPage: 1,
+    currentPage: parseInt(searchParams.get('page')) || 1,
     totalPages: 1,
     totalCustomers: 0,
     limit: 10,
@@ -56,58 +61,49 @@ const Customers = () => {
   // Get permissions using the hook - memoize to prevent re-renders
   const userPermissions = getUserPermissions("customers");
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [serviceFilter, setServiceFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "");
+  const [serviceFilter, setServiceFilter] = useState(searchParams.get('service') || "all");
   const [dateRange, setDateRange] = useState(null);
 
-  // Memoize the fetchCustomers function to prevent unnecessary re-renders
-  const fetchCustomers = useCallback(async () => {
+  // Fetch customers function - Remove dependencies that cause re-renders
+  const fetchCustomers = useCallback(async (page = 1, search = searchQuery, service = serviceFilter, dateRangeParam = dateRange) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        page: pagination.currentPage.toString(),
-        limit: pagination.limit.toString(),
-        search: searchQuery,
-        service: serviceFilter,
+        page: page.toString(),
+        limit: "10",
+        search: search,
+        service: service,
       });
 
       // Add date range parameters if date range is selected
-      if (dateRange && dateRange.start && dateRange.end) {
+      if (dateRangeParam && dateRangeParam.start && dateRangeParam.end) {
         try {
-          // Convert DateRangePicker format to Date objects
-          // DateRangePicker returns { year, month, day } format
           const startDate = new Date(
-            dateRange.start.year,
-            dateRange.start.month - 1, // Month is 0-indexed in Date constructor
-            dateRange.start.day
+            dateRangeParam.start.year,
+            dateRangeParam.start.month - 1,
+            dateRangeParam.start.day
           );
-          
+
           const endDate = new Date(
-            dateRange.end.year,
-            dateRange.end.month - 1, // Month is 0-indexed in Date constructor
-            dateRange.end.day
+            dateRangeParam.end.year,
+            dateRangeParam.end.month - 1,
+            dateRangeParam.end.day
           );
-          
-          // Set start time to beginning of day (00:00:00)
+
           startDate.setHours(0, 0, 0, 0);
-          
-          // Set end time to end of day (23:59:59.999) for same day filtering
           endDate.setHours(23, 59, 59, 999);
-          
-          
-          
+
           params.append('startDate', startDate.toISOString());
           params.append('endDate', endDate.toISOString());
         } catch (dateError) {
           console.error('Error converting date range:', dateError);
-          // Continue without date filtering if date conversion fails
         }
       }
 
       const response = await apiClient.get(`/api/customers?${params}`);
 
       if (response.data.success) {
-        // Ensure customers is always an array
         const customersData = Array.isArray(response.data.data.customers)
           ? response.data.data.customers
           : [];
@@ -115,7 +111,7 @@ const Customers = () => {
         setCustomers(customersData);
         setPagination(
           response.data.data.pagination || {
-            currentPage: 1,
+            currentPage: page,
             totalPages: 1,
             totalCustomers: 0,
             limit: 10,
@@ -124,7 +120,6 @@ const Customers = () => {
       }
     } catch (error) {
       console.error("Error fetching customers:", error);
-      // Set empty array on error to prevent table issues
       setCustomers([]);
       addToast({
         title: "Error",
@@ -134,17 +129,92 @@ const Customers = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.currentPage, pagination.limit, searchQuery, serviceFilter, dateRange]);
+  }, []); // Remove all dependencies to prevent re-creation
 
-  // Fetch customers when component mounts or when filters change
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  // Update URL when pagination or filters change
+  const updateURL = useCallback((page, search, service, pushState = false) => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set('page', page.toString());
+    if (search) params.set('search', search);
+    if (service && service !== 'all') params.set('service', service);
 
-  // Reset pagination when filters change
+    const newURL = params.toString() ? `?${params.toString()}` : '';
+    const fullURL = `/dashboard/customers${newURL}`;
+
+    if (pushState) {
+      router.push(fullURL, { scroll: false });
+    } else {
+      router.replace(fullURL, { scroll: false });
+    }
+  }, [router]);
+
+  // Handle browser back/forward navigation
   useEffect(() => {
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const page = parseInt(urlParams.get('page')) || 1;
+      const search = urlParams.get('search') || '';
+      const service = urlParams.get('service') || 'all';
+
+
+      // Update state immediately
+      setSearchQuery(search);
+      setServiceFilter(service);
+      setPagination(prev => ({ ...prev, currentPage: page }));
+
+      // Fetch data with the URL parameters
+      fetchCustomers(page, search, service, dateRange);
+    };
+
+    // Add the event listener
+    window.addEventListener('popstate', handlePopState);
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []); // Only run once on mount
+
+  // Initial fetch when component mounts - use URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialPage = parseInt(urlParams.get('page')) || 1;
+    const initialSearch = urlParams.get('search') || '';
+    const initialService = urlParams.get('service') || 'all';
+
+
+    // Set initial state from URL
+    if (initialSearch !== searchQuery) setSearchQuery(initialSearch);
+    if (initialService !== serviceFilter) setServiceFilter(initialService);
+    if (initialPage !== pagination.currentPage) {
+      setPagination(prev => ({ ...prev, currentPage: initialPage }));
+    }
+
+    fetchCustomers(initialPage, initialSearch, initialService, dateRange);
+
+    // Mark initial load as complete after a brief delay
+    setTimeout(() => setIsInitialLoad(false), 100);
+  }, []); // Only run on mount
+
+  // Handle filter changes (but not during initial load)  
+  useEffect(() => {
+    if (isInitialLoad) {
+      return; // Skip filter effects during initial load
+    }
+
+    const timeoutId = setTimeout(() => {
+      // Reset to page 1 and fetch with new filters
+      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      updateURL(1, searchQuery, serviceFilter);
+      fetchCustomers(1, searchQuery, serviceFilter, dateRange);
+    }, 300); // Debounce search
+
+    return () => clearTimeout(timeoutId);
   }, [searchQuery, serviceFilter, dateRange]);
+
+  // Handle pagination changes
+  const handlePageChange = (page) => {
+    setPagination(prev => ({ ...prev, currentPage: page }));
+    updateURL(page, searchQuery, serviceFilter, true);
+    fetchCustomers(page, searchQuery, serviceFilter, dateRange);
+  };
 
   const getServiceIcon = (service) => {
     switch (service) {
@@ -171,10 +241,34 @@ const Customers = () => {
       return;
     }
   };
-  
+
   const handleDateRangeChange = (range) => {
     setDateRange(range);
   };
+
+  // Handle row click with proper event handling
+  const handleRowClick = (customer, event) => {
+    // Prevent navigation if clicked element is pagination or has data-no-navigate attribute
+    if (event.target.closest('[data-no-navigate]') ||
+      event.target.closest('.pagination') ||
+      event.target.closest('button')) {
+      return;
+    }
+
+    if (userPermissions.hasViewPermission || userPermissions.hasEditPermission) {
+      // Preserve current URL state when navigating to customer details
+      const currentParams = new URLSearchParams();
+      if (pagination.currentPage > 1) currentParams.set('page', pagination.currentPage.toString());
+      if (searchQuery) currentParams.set('search', searchQuery);
+      if (serviceFilter && serviceFilter !== 'all') currentParams.set('service', serviceFilter);
+
+      const returnUrl = currentParams.toString() ? `?${currentParams.toString()}` : '';
+      router.push(`/dashboard/customers/${customer._id}?returnUrl=${encodeURIComponent('/dashboard/customers' + returnUrl)}`);
+    }
+  };
+
+  // Handle pagination change
+
 
   return (
     <div className="space-y-6">
@@ -184,18 +278,16 @@ const Customers = () => {
           description="View and manage your customers"
         />
 
-        
-          <Link href="/dashboard/customers/add-customer">
-            <Button
-              color="primary"
-              startContent={<Plus />}
-              onPress={handleAddCustomer}
-              disabled={!canCreate("customers")}
-            >
-              Add Customer
-            </Button>
-          </Link>
-        
+        <Link href="/dashboard/customers/add-customer">
+          <Button
+            color="primary"
+            startContent={<Plus />}
+            onPress={handleAddCustomer}
+            disabled={!canCreate("customers")}
+          >
+            Add Customer
+          </Button>
+        </Link>
       </div>
 
       {/* Filters and Search */}
@@ -274,124 +366,129 @@ const Customers = () => {
         </div>
       </div>
 
-    
-        <Card className="bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
-          <CardBody className="p-0">
-            <Table
-              aria-label="Customers table"
-              removeWrapper
-              classNames={{
-                base: "w-full bg-white shadow-sm rounded-lg overflow-hidden",
-                wrapper: "overflow-x-auto",
-                table: "w-full",
-                thead: "[&>tr]:first:shadow-none ",
-                th: [
-                  "font-medium",
-                  "text-sm",
-                  "py-4",
-                  "px-6",
-                  "first:pl-6",
-                  "last:pr-6",
-                  "transition-colors",
-                  "duration-200",
-                  "text-[#C92125]",
-                  "bg-[#BF3F421A]",
-                  "!rounded-none", // Force remove any border radius
-                ],
-                tr: [
-                  "group",
-                  "border-b",
-                  "border-gray-200",
-                  "transition-colors",
-                  "hover:opacity-90",
-                ],
-                td: [
-                  "px-6",
-                  "py-4",
-                  "first:pl-6",
-                  "last:pr-6",
-                  "border-b-0",
-                  "text-sm",
-                  "bg-[#F4F4F454]",
-                ],
-              }}
+      {/* Components with box shadow - matching proposal pattern */}
+      <div className="space-y-6 bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
+        <div className="p-6 overflow-x-auto">
+          <Table
+            aria-label="Customers table"
+            removeWrapper
+            classNames={{
+              base: "w-full bg-white shadow-sm rounded-lg overflow-hidden",
+              wrapper: "overflow-x-auto",
+              table: "w-full",
+              thead: "[&>tr]:first:shadow-none ",
+              th: [
+                "font-medium",
+                "text-sm",
+                "py-4",
+                "px-6",
+                "first:pl-6",
+                "last:pr-6",
+                "transition-colors",
+                "duration-200",
+                "text-[#C92125]",
+                "bg-[#BF3F421A]",
+                "!rounded-none", // Force remove any border radius
+              ],
+              tr: [
+                "group",
+                "border-b",
+                "border-gray-200",
+                "transition-colors",
+                "hover:opacity-90",
+              ],
+              td: [
+                "px-6",
+                "py-4",
+                "first:pl-6",
+                "last:pr-6",
+                "border-b-0",
+                "text-sm",
+                "bg-[#F4F4F454]",
+              ],
+            }}
+          >
+            <TableHeader>
+              <TableColumn>Customer Name</TableColumn>
+              <TableColumn>Contact</TableColumn>
+              <TableColumn>Location</TableColumn>
+              <TableColumn>Services</TableColumn>
+              <TableColumn>Amount</TableColumn>
+            </TableHeader>
+            <TableBody
+              emptyContent={
+                loading ? "Loading customers..." : "No customers found"
+              }
             >
-              <TableHeader>
-                <TableColumn>Customer Name</TableColumn>
-                <TableColumn>Contact</TableColumn>
-                <TableColumn>Location</TableColumn>
-                <TableColumn>Services</TableColumn>
-                <TableColumn>Amount</TableColumn>
-              </TableHeader>
-              <TableBody
-                emptyContent={
-                  loading ? "Loading customers..." : "No customers found"
-                }
-              >
-                {customers.map((customer) => {
-                  const customerKey =
-                    customer._id || customer.id || Math.random().toString();
+              {customers.map((customer) => {
+                const customerKey =
+                  customer._id || customer.id || Math.random().toString();
 
-                  return (
-                    <TableRow
-                      key={customerKey}
-                      className={
-                        userPermissions.hasViewPermission ||
+                return (
+                  <TableRow
+                    key={customerKey}
+                    className={
+                      userPermissions.hasViewPermission ||
                         userPermissions.hasEditPermission
-                          ? "cursor-pointer hover:bg-gray-50"
-                          : ""
-                      }
-                      onClick={() => {
-                        if (
-                          userPermissions.hasViewPermission ||
-                          userPermissions.hasEditPermission
-                        ) {
-                          window.location.href = `/dashboard/customers/${customer._id}`;
-                        }
-                      }}
-                    >
-                      <TableCell>
-                        <div className="font-medium">
-                          {customer.customerName || "N/A"}
-                        </div>
-                      </TableCell>
-                      <TableCell>{customer.contactNumber || "N/A"}</TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {customer.fullAddress ||
-                          (customer.address
-                            ? `${customer.address.city || ""}, ${
-                                customer.address.state || ""
-                              }`
-                            : "N/A")}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {customer.services &&
+                        ? "cursor-pointer hover:bg-gray-50"
+                        : ""
+                    }
+                    onClick={(event) => handleRowClick(customer, event)}
+                  >
+                    <TableCell>
+                      <div className="font-medium">
+                        {customer.customerName || "N/A"}
+                      </div>
+                    </TableCell>
+                    <TableCell>{customer.contactNumber || "N/A"}</TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {customer.fullAddress ||
+                        (customer.address
+                          ? `${customer.address.city || ""}, ${customer.address.state || ""
+                          }`
+                          : "N/A")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {customer.services &&
                           Array.isArray(customer.services) ? (
-                            customer.services.map((service, index) => (
-                              <div key={`${customerKey}-service-${index}`}>
-                                {getServiceIcon(service)}
-                              </div>
-                            ))
-                          ) : (
-                            <span className="text-gray-400">No services</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {customer.formattedTotalSpent ||
-                          `₹${(customer.totalSpent || 0).toLocaleString(
-                            "en-IN"
-                          )}`}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardBody>
-        </Card>
-      
+                          customer.services.map((service, index) => (
+                            <div key={`${customerKey}-service-${index}`}>
+                              {getServiceIcon(service)}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-gray-400">No services</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {customer.formattedTotalSpent ||
+                        `₹${(customer.totalSpent || 0).toLocaleString(
+                          "en-IN"
+                        )}`}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination moved outside table and marked to prevent navigation */}
+        <div className="flex justify-end mt-6" data-no-navigate>
+          <Pagination
+            total={pagination.totalPages}
+            initialPage={1}
+            page={pagination.currentPage}
+            onChange={handlePageChange}
+            showControls
+            className="pagination"
+            data-no-navigate
+            key={`pagination-${pagination.currentPage}`}
+          />
+        </div>
+      </div>
     </div>
   );
 };

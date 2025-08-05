@@ -12,13 +12,12 @@ class FirebaseNotificationHelper {
         // Delete existing app if already initialized
         admin.apps.forEach(app => app.delete());
       }
-     
+
       this.app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: projectId
       });
-     
-      console.log('Firebase initialized successfully');
+
       return true;
     } catch (error) {
       console.error('Firebase initialization error:', error);
@@ -111,7 +110,7 @@ class FirebaseNotificationHelper {
         },
         token
       };
-     
+
       await admin.messaging().send(testMessage);
       return { valid: true };
     } catch (error) {

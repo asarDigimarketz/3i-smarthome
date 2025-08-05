@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Card, CardBody } from "@heroui/card";
 import { Divider } from "@heroui/divider";
 import { Avatar } from "@heroui/avatar";
@@ -19,7 +19,11 @@ const EmployeeDetail = () => {
   const { canEdit } = usePermissions();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const employeeId = params?.employeeId;
+
+  // Get return URL from search params or default to employees page
+  const returnUrl = searchParams.get('returnUrl') || '/dashboard/employees';
 
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,54 +52,51 @@ const EmployeeDetail = () => {
       if (emp && emp._id) {
         const projectsRes = await apiClient.get(`/api/projects?assignedEmployees=${emp._id}`);
         if (projectsRes.data.success && Array.isArray(projectsRes.data.data)) {
-            // Only include projects where assignedEmployees includes this employee
-            projects = projectsRes.data.data
-              .filter(
-                (proj) =>
-                  Array.isArray(proj.assignedEmployees) &&
-                  proj.assignedEmployees.some((e) => e._id === emp._id)
+          // Only include projects where assignedEmployees includes this employee
+          projects = projectsRes.data.data
+            .filter(
+              (proj) =>
+                Array.isArray(proj.assignedEmployees) &&
+                proj.assignedEmployees.some((e) => e._id === emp._id)
+            )
+            .map((proj) => {
+              // Determine status for stats
+              const status = proj.projectStatus || "";
+              if (
+                ["complete", "completed", "done"].includes(
+                  status.toLowerCase()
+                )
               )
-              .map((proj) => {
-                // Determine status for stats
-                const status = proj.projectStatus || "";
-                if (
-                  ["complete", "completed", "done"].includes(
-                    status.toLowerCase()
-                  )
+                completed++;
+              else if (
+                ["inprogress", "in-progress", "ongoing"].includes(
+                  status.toLowerCase()
                 )
-                  completed++;
-                else if (
-                  ["inprogress", "in-progress", "ongoing"].includes(
-                    status.toLowerCase()
-                  )
-                )
-                  ongoing++;
-                return {
-                  id: proj._id || proj.id,
-                  customer:
-                    proj.customerName || emp.firstName + " " + emp.lastName,
-                  status: proj.projectStatus || "N/A",
-                  service: proj.services || "N/A",
-                  amount: proj.projectAmount
-                    ? `₹${proj.projectAmount.toLocaleString("en-IN")}`
-                    : "N/A",
-                  date: proj.projectDate
-                    ? new Date(proj.projectDate).toLocaleDateString("en-GB")
-                    : "N/A",
-                  address:
-                    proj.fullAddress ||
-                    `${proj.address?.addressLine || ""} , ${
-                      proj.address?.city || ""
-                    } , ${proj.address?.district || ""} - ${
-                      proj.address?.pincode || ""
-                    }`,
-                  progress: `${proj.completedTasks || 0}/${
-                    proj.totalTasks || 0
+              )
+                ongoing++;
+              return {
+                id: proj._id || proj.id,
+                customer:
+                  proj.customerName || emp.firstName + " " + emp.lastName,
+                status: proj.projectStatus || "N/A",
+                service: proj.services || "N/A",
+                amount: proj.projectAmount
+                  ? `₹${proj.projectAmount.toLocaleString("en-IN")}`
+                  : "N/A",
+                date: proj.projectDate
+                  ? new Date(proj.projectDate).toLocaleDateString("en-GB")
+                  : "N/A",
+                address:
+                  proj.fullAddress ||
+                  `${proj.address?.addressLine || ""} , ${proj.address?.city || ""
+                  } , ${proj.address?.district || ""} - ${proj.address?.pincode || ""
                   }`,
-                  color: getServiceColor(proj.services),
-                  assignedEmployees: proj.assignedEmployees || [],
-                };
-              });
+                progress: `${proj.completedTasks || 0}/${proj.totalTasks || 0
+                  }`,
+                color: getServiceColor(proj.services),
+                assignedEmployees: proj.assignedEmployees || [],
+              };
+            });
         }
       }
 
@@ -118,9 +119,7 @@ const EmployeeDetail = () => {
         note: emp.notes || "No notes available",
         avatar:
           emp.avatar ||
-          `https://img.heroui.chat/image/avatar?w=200&h=200&u=${Math.floor(
-            Math.random() * 10
-          )}`,
+          ``,
         attachments: emp.documents || [],
         status: emp.status,
         stats: {
@@ -147,6 +146,7 @@ const EmployeeDetail = () => {
   useEffect(() => {
     fetchEmployeeData();
   }, [employeeId]);
+
   const getServiceColor = (service) => {
     switch (service) {
       case "Home Cinema":
@@ -227,7 +227,7 @@ const EmployeeDetail = () => {
           </p>
           <Button
             as={Link}
-            href="/dashboard/employees"
+            href={returnUrl}
             color="primary"
             startContent={<ArrowLeft />}
           >
@@ -249,7 +249,7 @@ const EmployeeDetail = () => {
         <div className="flex gap-2">
           <Button
             as={Link}
-            href="/dashboard/employees"
+            href={returnUrl}
             variant="flat"
             startContent={<ArrowLeft />}
           >
@@ -284,11 +284,10 @@ const EmployeeDetail = () => {
                   </h2>
                   <p className="text-default-500">{employeeData.role}</p>
                   <div
-                    className={`mt-2 px-3 py-1 rounded-full text-sm font-medium ${
-                      employeeData.status === "active"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
+                    className={`mt-2 px-3 py-1 rounded-full text-sm font-medium ${employeeData.status === "active"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                      }`}
                   >
                     {employeeData.status === "active" ? "Active" : "Inactive"}
                   </div>
@@ -311,7 +310,7 @@ const EmployeeDetail = () => {
                       <p className="text-default-500">Department</p>
                       <p className="font-medium">
                         {typeof employeeData.department === "object" &&
-                        employeeData.department !== null
+                          employeeData.department !== null
                           ? employeeData.department.name
                           : employeeData.department || "N/A"}
                       </p>
@@ -364,11 +363,11 @@ const EmployeeDetail = () => {
                               style={{ minWidth: 0, maxWidth: 220 }}
                             >
                               {attachment.mimetype &&
-                              attachment.mimetype.startsWith("image") ? (
+                                attachment.mimetype.startsWith("image") ? (
                                 <a
                                   href={
                                     attachment.url &&
-                                    attachment.url.startsWith("http")
+                                      attachment.url.startsWith("http")
                                       ? attachment.url
                                       : `/${attachment.url}`
                                   }
@@ -380,7 +379,7 @@ const EmployeeDetail = () => {
                                   <img
                                     src={
                                       attachment.url &&
-                                      attachment.url.startsWith("http")
+                                        attachment.url.startsWith("http")
                                         ? attachment.url
                                         : `/${attachment.url}`
                                     }
@@ -401,7 +400,7 @@ const EmployeeDetail = () => {
                                 <a
                                   href={
                                     attachment.url &&
-                                    attachment.url.startsWith("http")
+                                      attachment.url.startsWith("http")
                                       ? attachment.url
                                       : `/${attachment.url}`
                                   }

@@ -142,12 +142,7 @@ export function ProjectCards({
         if (setTotalPages && response.data.pagination) {
           const paginationData = response.data.pagination;
 
-          console.log('Pagination Debug:', {
-            statusFilter,
-            page,
-            apiPagination: paginationData,
-            projectsCount: transformedProjects.length
-          });
+
 
           // Check if API returned valid pagination data
           if (paginationData.total && paginationData.total > 0) {
@@ -221,10 +216,10 @@ export function ProjectCards({
         );
     }
     return [
-      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user1",
-      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user2",
-      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user1",
-      "https://img.heroui.chat/image/avatar?w=40&h=40&u=user2",
+      "",
+      "",
+      "",
+      "",
     ];
   };
 

@@ -1,24 +1,43 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { addToast } from "@heroui/toast"
-import Link from "next/link"
-import { Eye, EyeOff, Lock, Mail, User, CheckCircle, Shield, Wifi } from "lucide-react"
-import { Input } from "@heroui/input"
-import { Button } from "@heroui/button"
-import { validatePassword } from "../../utils/passwordValidation"
-import { getGeneralDetails } from "@/lib/GeneralDetails"
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import { addToast } from "@heroui/toast";
+import Link from "next/link";
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  User,
+  CheckCircle,
+  Shield,
+  Wifi,
+} from "lucide-react";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
+import { validatePassword } from "../../utils/passwordValidation";
+import { getGeneralDetails } from "@/lib/GeneralDetails";
+import Image from "next/image";
 
 // Add this helper component
 const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
   <div className="flex items-center gap-1.5">
-    <div className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${met ? "bg-green-400" : "bg-red-400"}`} />
-    <span className={`transition-colors duration-200 ${met ? "text-green-400" : "text-red-400"}`}>{text}</span>
+    <div
+      className={`h-1.5 w-1.5 rounded-full transition-colors duration-200 ${
+        met ? "bg-green-400" : "bg-red-400"
+      }`}
+    />
+    <span
+      className={`transition-colors duration-200 ${
+        met ? "text-green-400" : "text-red-400"
+      }`}
+    >
+      {text}
+    </span>
   </div>
-)
+);
 
 const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
   <div className="fixed inset-0 backdrop-blur-xl bg-gradient-to-br from-slate-900/95 via-red-900/90 to-red-800/95 flex flex-col items-center justify-center z-50">
@@ -33,7 +52,12 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
         <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-500 rounded-full animate-pulse flex items-center justify-center">
           {hotelLogo ? (
             <div className="relative w-10 h-10">
-              <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain" />
+              <Image
+                src={hotelLogo || "/placeholder.svg"}
+                alt="Hotel Logo"
+                fill
+                className="object-contain"
+              />
             </div>
           ) : (
             <User className="w-8 h-8 text-white" />
@@ -46,54 +70,54 @@ const LoadingOverlay = ({ hotelLogo }: { hotelLogo: string | null }) => (
       Creating Your Account
     </h3>
     <p className="text-gray-300 text-center max-w-md animate-fade-in-delay text-lg">
-      Setting up your hotel management dashboard...
+      Setting up your project management dashboard...
     </p>
 
     <div className="w-80 h-2 bg-slate-800/50 rounded-full mt-8 overflow-hidden backdrop-blur-sm">
       <div className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 rounded-full animate-progress-infinite"></div>
     </div>
   </div>
-)
+);
 
 export default function Register() {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [registered, setRegistered] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
-  const [hotelLogo, setHotelLogo] = useState<string | null>(null)
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [registered, setRegistered] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [hotelLogo, setHotelLogo] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchHotelDetails() {
-      const generalData = await getGeneralDetails()
+      const generalData = await getGeneralDetails();
       if (generalData?.logo) {
-        setHotelLogo(generalData.logo)
+        setHotelLogo(generalData.logo);
       }
     }
-    fetchHotelDetails()
-  }, [])
+    fetchHotelDetails();
+  }, []);
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value
-    setPassword(newPassword)
-    const { errors } = validatePassword(newPassword)
-    setPasswordErrors(errors)
-  }
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    const { errors } = validatePassword(newPassword);
+    setPasswordErrors(errors);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     // Validate password before submission
-    const { isValid } = validatePassword(password)
+    const { isValid } = validatePassword(password);
     if (!isValid) {
       addToast({
         title: "Invalid Password",
         description: "Please ensure your password meets all requirements",
         color: "danger",
-      })
-      return
+      });
+      return;
     }
 
     if (!name || !email || !password) {
@@ -101,12 +125,12 @@ export default function Register() {
         title: "Error",
         description: "Please fill in all fields",
         color: "danger",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      setLoading(true)
+      setLoading(true);
       const response = await fetch("/api/register", {
         method: "POST",
         headers: {
@@ -117,37 +141,38 @@ export default function Register() {
           email,
           password,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        setRegistered(true)
+        setRegistered(true);
         addToast({
           title: "Registration Successful",
           description:
             "A verification email has been sent to your registered email address. Please verify your email to complete the registration process.",
           color: "success",
-        })
+        });
       } else {
         addToast({
           title: "Registration Error",
-          description: data.error || "An unexpected error occurred during registration",
+          description:
+            data.error || "An unexpected error occurred during registration",
           color: "danger",
-        })
-        console.error("Registration error:", data)
+        });
+        console.error("Registration error:", data);
       }
     } catch (error) {
       addToast({
         title: "Error",
         description: "An unexpected error occurred",
         color: "danger",
-      })
-      console.error("Registration error:", error)
+      });
+      console.error("Registration error:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (registered) {
     return (
@@ -165,10 +190,15 @@ export default function Register() {
               <div className="mb-8 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg">
                 <CheckCircle className="h-10 w-10 text-white" />
               </div>
-              <h2 className="mb-4 text-3xl font-bold text-white">Registration Successful</h2>
-              <p className="mb-6 text-gray-300">Please check your email to verify your account.</p>
+              <h2 className="mb-4 text-3xl font-bold text-white">
+                Registration Successful
+              </h2>
+              <p className="mb-6 text-gray-300">
+                Please check your email to verify your account.
+              </p>
               <p className="mb-8 text-gray-300">
-                A verification email has been sent to <strong className="text-red-400">{email}</strong>
+                A verification email has been sent to{" "}
+                <strong className="text-red-400">{email}</strong>
               </p>
               <Link
                 href="/login"
@@ -183,7 +213,7 @@ export default function Register() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -204,14 +234,21 @@ export default function Register() {
             {hotelLogo && (
               <div className="mb-8 flex justify-center">
                 <div className="relative w-24 h-24 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-2xl p-4 backdrop-blur-sm border border-white/10">
-                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-2" />
+                  <Image
+                    src={hotelLogo || "/placeholder.svg"}
+                    alt="Hotel Logo"
+                    fill
+                    className="object-contain p-2"
+                  />
                 </div>
               </div>
             )}
             <h1 className="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
-              Hotel Management
+              3i Smart Home
             </h1>
-            <p className="text-xl text-gray-300 mb-8">Get Started with Your Management System</p>
+            <p className="text-xl text-gray-300 mb-8">
+              Get Started with Your Project Management System
+            </p>
           </div>
 
           <div className="space-y-6">
@@ -219,7 +256,7 @@ export default function Register() {
               {
                 icon: <User className="w-6 h-6" />,
                 title: "Create Account",
-                description: "Set up your management dashboard",
+                description: "Set up your project management dashboard",
                 gradient: "from-red-500 to-red-600",
               },
               {
@@ -231,7 +268,7 @@ export default function Register() {
               {
                 icon: <Wifi className="w-6 h-6" />,
                 title: "Start Managing",
-                description: "Access your complete hotel management suite",
+                description: "Access your complete Project Management System",
                 gradient: "from-red-700 to-red-800",
               },
             ].map((feature, index) => (
@@ -246,8 +283,12 @@ export default function Register() {
                     {feature.icon}
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">{feature.title}</h3>
-                    <p className="text-gray-300 text-sm">{feature.description}</p>
+                    <h3 className="text-lg font-semibold text-white mb-1">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-300 text-sm">
+                      {feature.description}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -264,20 +305,29 @@ export default function Register() {
             {hotelLogo && (
               <div className="mb-8 flex justify-center lg:hidden">
                 <div className="relative w-20 h-20 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
-                  <Image src={hotelLogo || "/placeholder.svg"} alt="Hotel Logo" fill className="object-contain p-1" />
+                  <Image
+                    src={hotelLogo || "/placeholder.svg"}
+                    alt="Hotel Logo"
+                    fill
+                    className="object-contain p-1"
+                  />
                 </div>
               </div>
             )}
 
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Create Account</h2>
-              <p className="text-gray-300">Join our hotel management platform</p>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Create Account
+              </h2>
+              <p className="text-gray-300">Project management platform</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Name Input */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200">Full Name</label>
+                <label className="text-sm font-medium text-gray-200">
+                  Full Name
+                </label>
                 <div className="relative">
                   <Input
                     placeholder="Enter your full name"
@@ -290,7 +340,8 @@ export default function Register() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     classNames={{
-                      inputWrapper: "bg-transparent border-red-400/40 focus:border-red-500 h-[50px]",
+                      inputWrapper:
+                        "bg-transparent border-red-400/40 focus:border-red-500 h-[50px]",
                       input: "text-white placeholder:text-red-100",
                     }}
                     className="mb-4 text-white placeholder:text-red-100"
@@ -300,7 +351,9 @@ export default function Register() {
 
               {/* Email Input */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200">Email Address</label>
+                <label className="text-sm font-medium text-gray-200">
+                  Email Address
+                </label>
                 <div className="relative">
                   <Input
                     placeholder="Enter your email"
@@ -313,7 +366,8 @@ export default function Register() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     classNames={{
-                      inputWrapper: "bg-transparent border-red-400/40 focus:border-red-500 h-[50px]",
+                      inputWrapper:
+                        "bg-transparent border-red-400/40 focus:border-red-500 h-[50px]",
                       input: "text-white placeholder:text-red-100",
                     }}
                     className="mb-4 text-white placeholder:text-red-100"
@@ -323,7 +377,9 @@ export default function Register() {
 
               {/* Password Input */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200">Password</label>
+                <label className="text-sm font-medium text-gray-200">
+                  Password
+                </label>
                 <div className="relative">
                   <Input
                     placeholder="Create a password"
@@ -338,7 +394,11 @@ export default function Register() {
                         onClick={() => setShowPassword(!showPassword)}
                         className="text-red-400 hover:text-white focus:outline-none focus:text-white transition-colors p-1 rounded-full hover:bg-red-400/20"
                       >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
                       </button>
                     }
                     isRequired
@@ -346,7 +406,9 @@ export default function Register() {
                     onChange={handlePasswordChange}
                     classNames={{
                       inputWrapper: `bg-transparent ${
-                        passwordErrors.length > 0 ? "border-red-500/40" : "border-red-400/40"
+                        passwordErrors.length > 0
+                          ? "border-red-500/40"
+                          : "border-red-400/40"
                       } focus:border-red-500 h-[50px]`,
                       input: "text-white placeholder:text-red-100",
                     }}
@@ -359,11 +421,26 @@ export default function Register() {
                   {password && (
                     <div className="text-xs space-y-1.5">
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                        <RequirementItem met={password.length >= 8} text="8+ characters" />
-                        <RequirementItem met={/[A-Z]/.test(password)} text="Uppercase letter" />
-                        <RequirementItem met={/[a-z]/.test(password)} text="Lowercase letter" />
-                        <RequirementItem met={/\d/.test(password)} text="Number" />
-                        <RequirementItem met={/[@$!%*?&]/.test(password)} text="Special character" />
+                        <RequirementItem
+                          met={password.length >= 8}
+                          text="8+ characters"
+                        />
+                        <RequirementItem
+                          met={/[A-Z]/.test(password)}
+                          text="Uppercase letter"
+                        />
+                        <RequirementItem
+                          met={/[a-z]/.test(password)}
+                          text="Lowercase letter"
+                        />
+                        <RequirementItem
+                          met={/\d/.test(password)}
+                          text="Number"
+                        />
+                        <RequirementItem
+                          met={/[@$!%*?&]/.test(password)}
+                          text="Special character"
+                        />
                       </div>
                     </div>
                   )}
@@ -390,7 +467,7 @@ export default function Register() {
               </Button>
 
               <div className="mt-8 text-center">
-                <p className="text-gray-400 text-sm mb-4">
+                <p className="text-white text-sm mb-4">
                   Already have an account?{" "}
                   <Link
                     href="/login"
@@ -399,12 +476,14 @@ export default function Register() {
                     Sign in
                   </Link>
                 </p>
-                <p className="text-gray-400 text-xs">Secured by advanced encryption and verification</p>
+                <p className="text-white text-xs">
+                  Secured by advanced encryption and verification
+                </p>
               </div>
             </form>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

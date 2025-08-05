@@ -3,11 +3,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import connectDb from "../utils/config/connectDB";
-import User from "@/utils/model/nextauth/user.model";
+import UserModel from "@/utils/model/nextauth/user.model";
 import UserEmployeeSchema from "@/utils/model/UserEmployeeSchema";
 import roleSchema from "@/utils/model/rolesAndPermission/roleSchema";
 import General from "@/utils/model/general/general";
-import mongoose from "mongoose";
+import mongoose, { Model, Document } from "mongoose";
 import crypto from "crypto";
 
 interface Permission {
@@ -20,13 +20,31 @@ interface Permission {
   };
   url?: string;
 }
-interface User extends DefaultUser {
-  id: string;
+// User document interface for proper typing
+interface UserDocument extends Document {
+  _id: string;
   name: string;
   email: string;
+  password: string;
+  isVerified: boolean;
   role?: string;
-  permissions?: Permission[];
-  isEmployee?: boolean;
+  googleId?: string;
+  picture?: string;
+  locale?: string;
+}
+
+// Employee document interface for proper typing
+interface EmployeeDocument extends Document {
+  _id: string;
+  email: string;
+  password: string;
+  role: {
+    role: string;
+  };
+  permissions: Permission[];
+  googleId?: string;
+  picture?: string;
+  locale?: string;
 }
 
 declare module "next-auth" {
@@ -49,16 +67,24 @@ declare module "next-auth" {
 }
 
 async function getModels() {
-  await connectDb();
+  try {
+    await connectDb();
 
-  // Register models with proper schemas
-  const UserEmployee =
-    mongoose.models.UserEmployee ||
-    mongoose.model("UserEmployee", UserEmployeeSchema);
-  const Role = mongoose.models.Role || mongoose.model("Role", roleSchema);
-  const UserModel = mongoose.models.User || mongoose.model("User", User.schema);
+    // Get or create models with proper typing
+    const UserEmployee = (mongoose.models.UserEmployee ||
+      mongoose.model(
+        "UserEmployee",
+        UserEmployeeSchema
+      )) as Model<EmployeeDocument>;
+    const Role = (mongoose.models.Role ||
+      mongoose.model("Role", roleSchema)) as Model<Document>;
+    const User = (mongoose.models.User || UserModel) as Model<UserDocument>;
 
-  return { UserEmployee, Role, UserModel };
+    return { UserEmployee, Role, UserModel: User };
+  } catch (error) {
+    console.error("Error getting models:", error);
+    throw new Error("Database connection failed");
+  }
 }
 
 export const authOptions: AuthOptions = {
@@ -75,84 +101,89 @@ export const authOptions: AuthOptions = {
         }
 
         const { email, password } = credentials;
-        await connectDb();
 
-        // Ensure models are registered
-        const UserEmployee =
-          mongoose.models.UserEmployee ||
-          mongoose.model("UserEmployee", UserEmployeeSchema);
+        try {
+          // Get models with proper error handling
+          const { UserEmployee, UserModel } = await getModels();
 
-        // First check if it's a hotel admin
-        const generalData = await General.findOne();
-        const UserModel =
-          mongoose.models.User || mongoose.model("User", User.schema);
+          // First check if it's a hotel admin
+          const generalData = await General.findOne();
+          if (!generalData) {
+            throw new Error("System configuration not found");
+          }
 
-        if (email === generalData?.emailId) {
-          const user = await UserModel.findOne({ email }).select("+password");
+          if (email === generalData.emailId) {
+            const user = await UserModel.findOne({ email }).select("+password");
 
-          if (!user) {
+            if (!user) {
+              throw new Error(
+                "You are not authorized to login. Please contact the system administrator."
+              );
+            }
+
+            if (!user.isVerified) {
+              throw new Error(
+                "Email not verified. Please verify your email before logging in."
+              );
+            }
+
+            const isPasswordMatched = await bcrypt.compare(
+              password,
+              user.password
+            );
+            if (!isPasswordMatched) {
+              throw new Error("Invalid email or password");
+            }
+
+            return {
+              id: user._id.toString(),
+              name: user.name,
+              email: user.email,
+              role: "hotel admin",
+              isEmployee: false,
+            };
+          }
+
+          // If not hotel admin, check if it's an employee
+          const employee = await UserEmployee.findOne({ email })
+            .select("+password")
+            .populate("role");
+
+          if (!employee) {
             throw new Error(
               "You are not authorized to login. Please contact the system administrator."
             );
           }
 
-          if (!user.isVerified) {
-            throw new Error(
-              "Email not verified. Please verify your email before logging in."
-            );
-          }
-
           const isPasswordMatched = await bcrypt.compare(
             password,
-            user.password
+            employee.password
           );
           if (!isPasswordMatched) {
             throw new Error("Invalid email or password");
           }
 
+          // Get display name from email (everything before @)
+          const displayName = email
+            .split("@")[0]
+            .split(".")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+
           return {
-            id: user._id.toString(),
-            name: user.name,
-            email: user.email,
-            role: "hotel admin",
-            isEmployee: false,
+            id: employee._id.toString(),
+            name: displayName, // Using email-based display name
+            email: employee.email,
+            role: employee.role.role,
+            permissions: employee.permissions,
+            isEmployee: true,
           };
-        }
-
-        // If not hotel admin, check if it's an employee
-        const employee = await UserEmployee.findOne({ email })
-          .select("+password")
-          .populate("role");
-
-        if (!employee) {
+        } catch (error) {
+          console.error("Authorization error:", error);
           throw new Error(
-            "You are not authorized to login. Please contact the system administrator."
+            error instanceof Error ? error.message : "Authentication failed"
           );
         }
-
-        const isPasswordMatched = await bcrypt.compare(
-          password,
-          employee.password
-        );
-        if (!isPasswordMatched) {
-          throw new Error("Invalid email or password");
-        }
-
-        // Get display name from email (everything before @)
-        const displayName = email
-          .split("@")[0]
-          .split(".")
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ");
-
-        return {
-          id: employee._id.toString(),
-          name: displayName, // Using email-based display name
-          email: employee.email,
-          role: employee.role.role,
-          permissions: employee.permissions,
-          isEmployee: true,
-        };
       },
     }),
     GoogleProvider({
@@ -175,14 +206,17 @@ export const authOptions: AuthOptions = {
         }
 
         try {
-          // Connect to database first before any database operations
-          await connectDb();
-          
-          const generalData = await General.findOne();
+          // Get models with proper error handling
           const { UserEmployee, Role, UserModel } = await getModels();
 
+          const generalData = await General.findOne();
+          if (!generalData) {
+            console.error("System configuration not found for Google sign-in");
+            return false;
+          }
+
           // Check if it's hotel admin
-          if (email === generalData?.emailId) {
+          if (email === generalData.emailId) {
             let dbUser = await UserModel.findOne({ email });
 
             if (!dbUser) {
@@ -197,7 +231,7 @@ export const authOptions: AuthOptions = {
                 role: "hotel admin",
               });
             } else {
-              dbUser.name = user.name;
+              dbUser.name = user.name || "Unknown User";
               dbUser.googleId = profile.sub;
               dbUser.picture = (profile as { picture?: string }).picture;
               dbUser.locale = (profile as { locale?: string }).locale;

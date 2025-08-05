@@ -4,8 +4,8 @@ import { Card } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Textarea } from "@heroui/input";
-import { Select, SelectItem } from "@heroui/select";
 import { Divider } from "@heroui/divider";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
 import { Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,6 +34,8 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
 
   const [errors, setErrors] = useState({});
   const [duplicateWarnings, setDuplicateWarnings] = useState({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState("");
 
   // Fetch customer data for edit mode
   useEffect(() => {
@@ -187,6 +189,8 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
     }
     if (!formData.contactNumber.trim()) {
       newErrors.contactNumber = "Contact number is required";
+    } else if (!/^\d{10}$/.test(formData.contactNumber.trim())) {
+      newErrors.contactNumber = "Please enter a valid 10-digit Indian mobile number";
     }
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
@@ -257,9 +261,10 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
       const duplicateMessages = Object.values(duplicates).join("\n");
       const confirmMessage = `Warning: Potential duplicates found:\n\n${duplicateMessages}\n\nDo you want to continue anyway?`;
 
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
+      setConfirmMessage(confirmMessage);
+      setShowConfirmModal(true);
+      setLoading(false);
+      return;
     }
 
     setLoading(true);
@@ -325,6 +330,74 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
+    setLoading(true);
+
+    try {
+      // Prepare data for API
+      const submitData = {
+        customerName: formData.customerName,
+        contactNumber: formData.contactNumber,
+        email: formData.email,
+        address: {
+          addressLine: formData.addressLine,
+          city: formData.city,
+          district: formData.district,
+          state: formData.state,
+          country: formData.country,
+          pincode: formData.pincode,
+        },
+        notes: formData.notes,
+      };
+
+      // Make API call
+      const url = isEdit
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api/customers/${customerId}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/customers `;
+
+      const method = isEdit && customerId ? "put" : "post";
+
+      const response = await axios[method](url, submitData, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_KEY,
+        },
+      });
+
+      if (response.data.success) {
+        addToast({
+          title: "Success",
+          description: isEdit
+            ? "Customer updated successfully!"
+            : "Customer created successfully!",
+          color: "success",
+        });
+        if (isEdit) {
+          router.back();
+
+        } else {
+          router.push("/dashboard/customers");
+
+        }
+      }
+    } catch (error) {
+      console.error("Error saving customer:", error);
+      addToast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to save customer",
+        color: "danger",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelSubmit = () => {
+    setShowConfirmModal(false);
+    setLoading(false);
   };
 
   return (
@@ -585,6 +658,44 @@ export function CustomerForm({ isEdit = false, customerId = null }) {
           </div>
         </form>
       </Card>
+
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={showConfirmModal}
+        onOpenChange={setShowConfirmModal}
+        placement="center"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>
+                Confirm Action
+              </ModalHeader>
+              <ModalBody>
+                <p style={{ whiteSpace: 'pre-line' }}>
+                  {confirmMessage}
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  color="default"
+                  variant="light"
+                  onPress={handleCancelSubmit}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  color="primary"
+                  onPress={handleConfirmSubmit}
+                  isLoading={loading}
+                >
+                  {loading ? "Saving..." : "Continue"}
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

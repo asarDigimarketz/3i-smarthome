@@ -225,8 +225,10 @@ customerSchema.statics.getCustomersWithFilters = function (
 customerSchema.statics.getCustomersCount = function (filters = {}) {
   const { search = "", service = "", startDate = "", endDate = "" } = filters;
 
-  let query = { ...filters };
+  // Build query - start with empty object, don't copy filters
+  let query = {};
 
+  // Add search functionality
   if (search) {
     query.$or = [
       { customerName: { $regex: search, $options: "i" } },
@@ -236,6 +238,7 @@ customerSchema.statics.getCustomersCount = function (filters = {}) {
     ];
   }
 
+  // Add service filter
   if (service && service !== "all") {
     query.services = { $in: [service] };
   }

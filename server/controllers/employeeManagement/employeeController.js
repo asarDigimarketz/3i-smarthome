@@ -38,11 +38,9 @@ async function getAllAdminUsers() {
 async function sendEmployeeNotification(userIds, notification) {
   try {
     if (!userIds || userIds.length === 0) {
-      console.log('No users to send employee notification to');
       return;
     }
 
-    console.log('User IDs for employee notification:', userIds);
 
     // Save notifications to database first
     try {
@@ -56,7 +54,6 @@ async function sendEmployeeNotification(userIds, notification) {
         triggeredBy: notification.triggeredBy,
         triggeredByModel: notification.triggeredByModel
       });
-      console.log(`Saved ${savedNotifications.length} employee notifications to database`);
     } catch (dbError) {
       console.error('Error saving employee notifications to database:', dbError);
       // Continue with FCM sending even if database save fails
@@ -69,7 +66,6 @@ async function sendEmployeeNotification(userIds, notification) {
     });
 
     if (tokens.length === 0) {
-      console.log(`No active FCM tokens found for User IDs: ${userIds.join(', ')}`);
       return;
     }
 
@@ -109,10 +105,8 @@ async function sendEmployeeNotification(userIds, notification) {
       }
     }
 
-    console.log(`Employee notification sent: ${successCount} successful, ${failureCount} failed`);
 
     if (failureCount > 0) {
-      console.log(`Removed ${failureCount} failed FCM tokens`);
     }
 
     return {

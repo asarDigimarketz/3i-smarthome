@@ -21,7 +21,7 @@ function parseAssignedTo(data) {
     if (currentData.startsWith('"[') && currentData.endsWith(']"')) {
       currentData = currentData.substring(1, currentData.length - 1);
     }
-     // First, try to parse it as a JSON string
+    // First, try to parse it as a JSON string
     try {
       currentData = JSON.parse(currentData);
     } catch (e) {
@@ -29,7 +29,7 @@ function parseAssignedTo(data) {
       return currentData.split(',').map(id => id.trim()).filter(Boolean);
     }
   }
-  
+
   // Recursively flatten and process the array
   if (Array.isArray(currentData)) {
     return currentData.flat().flatMap(parseAssignedTo);
@@ -43,9 +43,9 @@ async function mapEmployeeToUserEmployeeIds(employeeIds) {
   try {
     const Employee = require('../../models/employeeManagement/employeeSchema');
     const UserEmployee = require('../../models/employeeManagement/UserEmployeeSchema');
-    
+
     const userEmployeeIds = [];
-    
+
     for (const employeeId of employeeIds) {
       // Find the employee by ID
       const employee = await Employee.findById(employeeId);
@@ -54,15 +54,12 @@ async function mapEmployeeToUserEmployeeIds(employeeIds) {
         const userEmployee = await UserEmployee.findOne({ email: employee.email });
         if (userEmployee) {
           userEmployeeIds.push(userEmployee._id.toString());
-          console.log(`Mapped Employee ID ${employeeId} (${employee.email}) to UserEmployee ID ${userEmployee._id}`);
         } else {
-          console.log(`No UserEmployee found for Employee ID ${employeeId} (${employee.email})`);
         }
       } else {
-        console.log(`No Employee found for ID ${employeeId}`);
       }
     }
-    
+
     return userEmployeeIds;
   } catch (error) {
     console.error('Error mapping Employee IDs to UserEmployee IDs:', error);
@@ -115,20 +112,18 @@ async function getProjectAssignees(projectId) {
 async function sendTaskNotification(userIds, notification) {
   try {
     if (!userIds || userIds.length === 0) {
-      console.log('No users to send notification to');
       return;
     }
 
     // console.log('Original Employee IDs for notification:', userIds);
-    
+
     // Map Employee IDs to UserEmployee IDs
     const userEmployeeIds = await mapEmployeeToUserEmployeeIds(userIds);
-    
+
     if (userEmployeeIds.length === 0) {
-      console.log('No UserEmployee IDs found for notification');
       return;
     }
-    
+
     // console.log('Mapped UserEmployee IDs for notification:', userEmployeeIds);
 
     // Save notifications to database first
@@ -145,7 +140,6 @@ async function sendTaskNotification(userIds, notification) {
         triggeredBy: notification.triggeredBy,
         triggeredByModel: notification.triggeredByModel
       });
-      console.log(`Saved ${savedNotifications.length} notifications to database`);
     } catch (dbError) {
       console.error('Error saving notifications to database:', dbError);
       // Continue with FCM sending even if database save fails
@@ -160,7 +154,7 @@ async function sendTaskNotification(userIds, notification) {
     });
 
     if (tokens.length === 0) {
-      console.log(`No active FCM tokens found for UserEmployee IDs: ${userEmployeeIds.join(', ')} (mapped from Employee IDs: ${userIds.join(', ')})`);
+
       return;
     }
 
@@ -193,16 +187,14 @@ async function sendTaskNotification(userIds, notification) {
       } catch (error) {
         console.error(`Failed to send to token ${token}:`, error);
         failureCount++;
-        
+
         // Remove failed token
         await FCMToken.deleteOne({ token });
       }
     }
 
-    console.log(`Notification sent: ${successCount} successful, ${failureCount} failed`);
 
     if (failureCount > 0) {
-      console.log(`Removed ${failureCount} failed FCM tokens`);
     }
 
     return {
@@ -220,11 +212,9 @@ async function sendTaskNotification(userIds, notification) {
 async function sendAdminNotification(adminUserIds, notification) {
   try {
     if (!adminUserIds || adminUserIds.length === 0) {
-      console.log('No admin users to send notification to');
       return;
     }
 
-    console.log('Admin User IDs for notification:', adminUserIds);
 
     // Save notifications to database first (admin users use User model IDs directly)
     try {
@@ -240,7 +230,6 @@ async function sendAdminNotification(adminUserIds, notification) {
         triggeredBy: notification.triggeredBy,
         triggeredByModel: notification.triggeredByModel
       });
-      console.log(`Saved ${savedNotifications.length} admin notifications to database`);
     } catch (dbError) {
       console.error('Error saving admin notifications to database:', dbError);
       // Continue with FCM sending even if database save fails
@@ -255,7 +244,6 @@ async function sendAdminNotification(adminUserIds, notification) {
     });
 
     if (tokens.length === 0) {
-      console.log(`No active FCM tokens found for Admin User IDs: ${adminUserIds.join(', ')}`);
       return;
     }
 
@@ -268,10 +256,10 @@ async function sendAdminNotification(adminUserIds, notification) {
       try {
         // Convert all data values to strings for FCM compatibility
         const fcmData = convertToFCMData({
-            type: notification.type || 'task',
-            taskId: notification.taskId || '',
-            projectId: notification.projectId || '',
-            ...notification.data,
+          type: notification.type || 'task',
+          taskId: notification.taskId || '',
+          projectId: notification.projectId || '',
+          ...notification.data,
         });
 
         const message = {
@@ -288,16 +276,14 @@ async function sendAdminNotification(adminUserIds, notification) {
       } catch (error) {
         console.error(`Failed to send to token ${token}:`, error);
         failureCount++;
-        
+
         // Remove failed token
         await FCMToken.deleteOne({ token });
       }
     }
 
-    console.log(`Admin notification sent: ${successCount} successful, ${failureCount} failed`);
 
     if (failureCount > 0) {
-      console.log(`Removed ${failureCount} failed FCM tokens`);
     }
 
     return {
@@ -416,7 +402,7 @@ const createTask = async (req, res) => {
   try {
     // console.log('🔧 Creating task with body:', req.body);
     // console.log('🔧 User info:', req.user);
-    
+
     const {
       projectId,
       title,
@@ -487,45 +473,44 @@ const createTask = async (req, res) => {
     // Update project task counts
     await updateProjectTaskCounts(projectId);
 
-          // Send comprehensive notifications
-      try {
-        const currentUserId = req.user ? req.user.id : null;
-        console.log('Current user ID:', currentUserId);
-        console.log('Current user object:', req.user);
-        
-        // Get all notification recipients
-        const taskAssignees = taskData.assignedTo || [];
-        const projectAssignees = await getProjectAssignees(projectId);
-        const adminUsers = await getAllAdminUsers();
-        
-        // console.log('Task assignees:', taskAssignees);
-        // console.log('Project assignees:', projectAssignees);
-        // console.log('Admin users:', adminUsers);
-        
-        // Convert all IDs to strings for proper comparison
-        const currentUserIdStr = currentUserId ? currentUserId.toString() : null;
-        const taskAssigneesStr = taskAssignees.map(id => id.toString());
-        const projectAssigneesStr = projectAssignees.map(id => id.toString());
-        const adminUsersStr = adminUsers.map(id => id.toString());
-        
-        // Check if current user is admin (check both admin list and user role)
-        const isCurrentUserAdmin = adminUsersStr.includes(currentUserIdStr) || 
-          (req.user && (req.user.isAdmin || ['admin', 'hotel admin', 'super admin'].includes(req.user.role)));
-        
-        // Remove current user from all notification lists
-        const taskAssigneeRecipients = taskAssigneesStr.filter(id => id !== currentUserIdStr);
-        
-        // Admin recipients logic: 
-        // - If current user is admin: exclude admin from notifications
-        // - If current user is not admin: include admin in notifications
-        const adminRecipients = isCurrentUserAdmin 
-          ? [] // Admin won't get notifications when they create/update
-          : adminUsersStr.filter(id => id !== currentUserIdStr); // Non-admin users will notify admins
-        
-        // console.log('Task assignee recipients (excluding current user):', taskAssigneeRecipients);
-        // console.log('Admin recipients (excluding current user):', adminRecipients);
-        // console.log('Is current user admin?', isCurrentUserAdmin);
-      
+    // Send comprehensive notifications
+    try {
+      const currentUserId = req.user ? req.user.id : null;
+
+
+      // Get all notification recipients
+      const taskAssignees = taskData.assignedTo || [];
+      const projectAssignees = await getProjectAssignees(projectId);
+      const adminUsers = await getAllAdminUsers();
+
+      // console.log('Task assignees:', taskAssignees);
+      // console.log('Project assignees:', projectAssignees);
+      // console.log('Admin users:', adminUsers);
+
+      // Convert all IDs to strings for proper comparison
+      const currentUserIdStr = currentUserId ? currentUserId.toString() : null;
+      const taskAssigneesStr = taskAssignees.map(id => id.toString());
+      const projectAssigneesStr = projectAssignees.map(id => id.toString());
+      const adminUsersStr = adminUsers.map(id => id.toString());
+
+      // Check if current user is admin (check both admin list and user role)
+      const isCurrentUserAdmin = adminUsersStr.includes(currentUserIdStr) ||
+        (req.user && (req.user.isAdmin || ['admin', 'hotel admin', 'super admin'].includes(req.user.role)));
+
+      // Remove current user from all notification lists
+      const taskAssigneeRecipients = taskAssigneesStr.filter(id => id !== currentUserIdStr);
+
+      // Admin recipients logic: 
+      // - If current user is admin: exclude admin from notifications
+      // - If current user is not admin: include admin in notifications
+      const adminRecipients = isCurrentUserAdmin
+        ? [] // Admin won't get notifications when they create/update
+        : adminUsersStr.filter(id => id !== currentUserIdStr); // Non-admin users will notify admins
+
+      // console.log('Task assignee recipients (excluding current user):', taskAssigneeRecipients);
+      // console.log('Admin recipients (excluding current user):', adminRecipients);
+      // console.log('Is current user admin?', isCurrentUserAdmin);
+
       // Send task assignment notification to task assignees (excluding current user)
       if (taskAssigneeRecipients.length > 0) {
         await sendTaskNotification(taskAssigneeRecipients, {
@@ -549,9 +534,8 @@ const createTask = async (req, res) => {
             }
           },
         });
-        console.log(`Task assignment notification sent to ${taskAssigneeRecipients.length} task assignees`);
       }
-      
+
       // Send admin notification to admin users (excluding current user)
       if (adminRecipients.length > 0) {
         await sendAdminNotification(adminRecipients, {
@@ -576,17 +560,16 @@ const createTask = async (req, res) => {
             }
           },
         });
-        console.log(`Admin notification sent to ${adminRecipients.length} admin users`);
       }
-      
-      } catch (notificationError) {
+
+    } catch (notificationError) {
       console.error('Error sending task creation notifications:', notificationError);
-        console.error('Notification error details:', {
-          message: notificationError.message,
-          stack: notificationError.stack,
-          name: notificationError.name
-        });
-        // Don't fail the task creation if notification fails
+      console.error('Notification error details:', {
+        message: notificationError.message,
+        stack: notificationError.stack,
+        name: notificationError.name
+      });
+      // Don't fail the task creation if notification fails
     }
 
     res.status(201).json({
@@ -628,7 +611,7 @@ const updateTask = async (req, res) => {
     // console.log('🔧 Updating task with body:', req.body);
     // console.log('🔧 User info:', req.user);
     // console.log('🔧 Task ID:', req.params.id);
-    
+
     const { title, comment, startDate, endDate, status, assignedTo } = req.body;
 
     // Find task
@@ -808,75 +791,71 @@ const updateTask = async (req, res) => {
     // Send comprehensive notifications based on what changed
     try {
       const currentUserId = req.user ? req.user.id || req.user._id : null;
-      console.log('Current user ID:', currentUserId);
-      console.log('Current user object:', req.user);
-      
+
+
       // Get all notification recipients
       const taskAssignees = newAssignees || [];
       const projectAssignees = await getProjectAssignees(task.projectId);
       const adminUsers = await getAllAdminUsers();
-      
-      console.log('Task assignees:', taskAssignees);
-      console.log('Project assignees:', projectAssignees);
-      console.log('Admin users:', adminUsers);
-      
+
+
+
       // Convert all IDs to strings for proper comparison
       const currentUserIdStr = currentUserId ? currentUserId.toString() : null;
       const taskAssigneesStr = taskAssignees.map(id => id.toString());
       const projectAssigneesStr = projectAssignees.map(id => id.toString());
       const adminUsersStr = adminUsers.map(id => id.toString());
-      
-        // Check if current user is admin (check both admin list and user role)
-        const isCurrentUserAdmin = adminUsersStr.includes(currentUserIdStr) || 
-          (req.user && (req.user.isAdmin || ['admin', 'hotel admin', 'super admin'].includes(req.user.role)));
-      
+
+      // Check if current user is admin (check both admin list and user role)
+      const isCurrentUserAdmin = adminUsersStr.includes(currentUserIdStr) ||
+        (req.user && (req.user.isAdmin || ['admin', 'hotel admin', 'super admin'].includes(req.user.role)));
+
       // Remove current user from all notification lists
       const taskAssigneeRecipients = taskAssigneesStr.filter(id => id !== currentUserIdStr);
-      const projectRecipients = projectAssigneesStr.filter(id => 
+      const projectRecipients = projectAssigneesStr.filter(id =>
         id !== currentUserIdStr && !taskAssigneesStr.includes(id)
       );
-      
+
       // Admin recipients logic: 
       // - If current user is admin: exclude admin from notifications
       // - If current user is not admin: include admin in notifications
-      const adminRecipients = isCurrentUserAdmin 
+      const adminRecipients = isCurrentUserAdmin
         ? [] // Admin won't get notifications when they create/update
         : adminUsersStr.filter(id => id !== currentUserIdStr); // Non-admin users will notify admins
-      
+
       // console.log('Task assignee recipients (excluding current user):', taskAssigneeRecipients);
       // console.log('Project recipients (excluding current user):', projectRecipients);
       // console.log('Admin recipients (excluding current user):', adminRecipients);
       // console.log('Is current user admin?', isCurrentUserAdmin);
-        
-        // Set triggeredBy and triggeredByModel for creator tracking
-        const triggeredBy = currentUserId;
-        const triggeredByModel = isCurrentUserAdmin ? 'User' : 'UserEmployee';
-      
+
+      // Set triggeredBy and triggeredByModel for creator tracking
+      const triggeredBy = currentUserId;
+      const triggeredByModel = isCurrentUserAdmin ? 'User' : 'UserEmployee';
+
       // 1. Task completion notification
       if (statusChangedToCompleted) {
         // Send to task assignees (excluding current user)
         if (taskAssigneeRecipients.length > 0) {
           await sendTaskNotification(taskAssigneeRecipients, {
-          title: 'Task Completed',
+            title: 'Task Completed',
             body: `Task "${task.title}" has been marked as completed by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
-          type: 'task_completed',
-          taskId: task._id.toString(),
-          projectId: task.projectId.toString(),
+            type: 'task_completed',
+            taskId: task._id.toString(),
+            projectId: task.projectId.toString(),
             triggeredBy: triggeredBy,
             triggeredByModel: triggeredByModel,
-          data: {
-            taskTitle: task.title,
+            data: {
+              taskTitle: task.title,
               projectName: project ? project.customerName : 'Unknown Project',
-            completedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+              completedBy: req.user ? req.user.name || req.user.email : 'Unknown',
               changes: {
                 status: 'completed',
                 previousStatus: originalTask.status
               }
-          },
-        });
-          console.log(`Task completion notification sent to ${taskAssigneeRecipients.length} task assignees`);
+            },
+          });
         }
-        
+
         // Send to project assignees (excluding current user and task assignees)
         if (projectRecipients.length > 0) {
           await sendTaskNotification(projectRecipients, {
@@ -885,17 +864,16 @@ const updateTask = async (req, res) => {
             type: 'task_completed_project',
             taskId: task._id.toString(),
             projectId: task.projectId.toString(),
-              triggeredBy: triggeredBy,
-              triggeredByModel: triggeredByModel,
+            triggeredBy: triggeredBy,
+            triggeredByModel: triggeredByModel,
             data: {
               taskTitle: task.title,
               projectName: project ? project.customerName : 'Unknown Project',
               completedBy: req.user ? req.user.name || req.user.email : 'Unknown',
             },
           });
-          console.log(`Task completion notification sent to ${projectRecipients.length} project assignees`);
         }
-        
+
         // Send to admin users (excluding current user)
         if (adminRecipients.length > 0) {
           await sendAdminNotification(adminRecipients, {
@@ -904,15 +882,14 @@ const updateTask = async (req, res) => {
             type: 'task_completed_admin',
             taskId: task._id.toString(),
             projectId: task.projectId.toString(),
-              triggeredBy: triggeredBy,
-              triggeredByModel: triggeredByModel,
+            triggeredBy: triggeredBy,
+            triggeredByModel: triggeredByModel,
             data: {
               taskTitle: task.title,
               projectName: project ? project.customerName : 'Unknown Project',
               completedBy: req.user ? req.user.name || req.user.email : 'Unknown',
             },
           });
-          console.log(`Task completion notification sent to ${adminRecipients.length} admin users`);
         }
       }
 
@@ -922,25 +899,24 @@ const updateTask = async (req, res) => {
         if (taskAssigneeRecipients.length > 0) {
           await sendTaskNotification(taskAssigneeRecipients, {
             title: 'Task Reassigned',
-              body: `You have been assigned to task: "${task.title}" by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+            body: `You have been assigned to task: "${task.title}" by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
             type: 'task_reassigned',
             taskId: task._id.toString(),
             projectId: task.projectId.toString(),
-              triggeredBy: triggeredBy,
-              triggeredByModel: triggeredByModel,
+            triggeredBy: triggeredBy,
+            triggeredByModel: triggeredByModel,
             data: {
               taskTitle: task.title,
               projectName: project ? project.customerName : 'Unknown Project',
               assignedBy: req.user ? req.user.name || req.user.email : 'Unknown',
-                changes: {
-                  assignedTo: newAssignees,
-                  previousAssignees: originalTask.assignedTo || []
-                }
+              changes: {
+                assignedTo: newAssignees,
+                previousAssignees: originalTask.assignedTo || []
+              }
             },
           });
-          console.log(`Task reassignment notification sent to ${taskAssigneeRecipients.length} task assignees`);
         }
-        
+
         // Send to admin users (excluding current user)
         if (adminRecipients.length > 0) {
           await sendAdminNotification(adminRecipients, {
@@ -949,8 +925,8 @@ const updateTask = async (req, res) => {
             type: 'task_reassigned_admin',
             taskId: task._id.toString(),
             projectId: task.projectId.toString(),
-              triggeredBy: triggeredBy,
-              triggeredByModel: triggeredByModel,
+            triggeredBy: triggeredBy,
+            triggeredByModel: triggeredByModel,
             data: {
               taskTitle: task.title,
               projectName: project ? project.customerName : 'Unknown Project',
@@ -958,7 +934,6 @@ const updateTask = async (req, res) => {
               assignedTo: taskAssignees.join(', '),
             },
           });
-          console.log(`Task reassignment notification sent to ${adminRecipients.length} admin users`);
         }
       }
 
@@ -966,50 +941,49 @@ const updateTask = async (req, res) => {
       if (!statusChangedToCompleted && !assigneesChanged && (title || comment)) {
         // Send to task assignees (excluding current user)
         if (taskAssigneeRecipients.length > 0) {
-            // Determine what was changed
-            const changes = [];
-            if (title && title !== originalTask.title) changes.push('title');
-            if (comment !== undefined && comment !== originalTask.comment) changes.push('comment');
-            if (status && status !== originalTask.status) changes.push('status');
-            if (startDate && new Date(startDate).getTime() !== new Date(originalTask.startDate).getTime()) changes.push('start date');
-            if (endDate !== undefined && endDate !== originalTask.endDate) changes.push('end date');
-            
-            const changesText = changes.length > 0 ? changes.join(', ') : 'details';
-            
+          // Determine what was changed
+          const changes = [];
+          if (title && title !== originalTask.title) changes.push('title');
+          if (comment !== undefined && comment !== originalTask.comment) changes.push('comment');
+          if (status && status !== originalTask.status) changes.push('status');
+          if (startDate && new Date(startDate).getTime() !== new Date(originalTask.startDate).getTime()) changes.push('start date');
+          if (endDate !== undefined && endDate !== originalTask.endDate) changes.push('end date');
+
+          const changesText = changes.length > 0 ? changes.join(', ') : 'details';
+
           await sendTaskNotification(taskAssigneeRecipients, {
             title: 'Task Updated',
-              body: `Task "${task.title}" ${changesText} has been updated by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+            body: `Task "${task.title}" ${changesText} has been updated by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
             type: 'task_updated',
             taskId: task._id.toString(),
             projectId: task.projectId.toString(),
-              triggeredBy: triggeredBy,
-              triggeredByModel: triggeredByModel,
+            triggeredBy: triggeredBy,
+            triggeredByModel: triggeredByModel,
             data: {
               taskTitle: task.title,
               projectName: project ? project.customerName : 'Unknown Project',
               updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
-                changes: {
-                  fields: changes,
-                  previousData: {
-                    title: originalTask.title,
-                    comment: originalTask.comment,
-                    status: originalTask.status,
-                    startDate: originalTask.startDate,
-                    endDate: originalTask.endDate
-                  },
-                  newData: {
-                    title: title || originalTask.title,
-                    comment: comment !== undefined ? comment : originalTask.comment,
-                    status: status || originalTask.status,
-                    startDate: startDate || originalTask.startDate,
-                    endDate: endDate !== undefined ? endDate : originalTask.endDate
-                  }
+              changes: {
+                fields: changes,
+                previousData: {
+                  title: originalTask.title,
+                  comment: originalTask.comment,
+                  status: originalTask.status,
+                  startDate: originalTask.startDate,
+                  endDate: originalTask.endDate
+                },
+                newData: {
+                  title: title || originalTask.title,
+                  comment: comment !== undefined ? comment : originalTask.comment,
+                  status: status || originalTask.status,
+                  startDate: startDate || originalTask.startDate,
+                  endDate: endDate !== undefined ? endDate : originalTask.endDate
                 }
+              }
             },
           });
-          console.log(`Task update notification sent to ${taskAssigneeRecipients.length} task assignees`);
         }
-        
+
         // Send to project assignees (excluding current user and task assignees)
         if (projectRecipients.length > 0) {
           await sendTaskNotification(projectRecipients, {
@@ -1018,17 +992,16 @@ const updateTask = async (req, res) => {
             type: 'task_updated_project',
             taskId: task._id.toString(),
             projectId: task.projectId.toString(),
-              triggeredBy: triggeredBy,
-              triggeredByModel: triggeredByModel,
+            triggeredBy: triggeredBy,
+            triggeredByModel: triggeredByModel,
             data: {
               taskTitle: task.title,
               projectName: project ? project.customerName : 'Unknown Project',
               updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
             },
           });
-          console.log(`Task update notification sent to ${projectRecipients.length} project assignees`);
         }
-        
+
         // Send to admin users (excluding current user)
         if (adminRecipients.length > 0) {
           await sendAdminNotification(adminRecipients, {
@@ -1037,26 +1010,25 @@ const updateTask = async (req, res) => {
             type: 'task_updated_admin',
             taskId: task._id.toString(),
             projectId: task.projectId.toString(),
-              triggeredBy: triggeredBy,
-              triggeredByModel: triggeredByModel,
+            triggeredBy: triggeredBy,
+            triggeredByModel: triggeredByModel,
             data: {
               taskTitle: task.title,
               projectName: project ? project.customerName : 'Unknown Project',
               updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
             },
           });
-          console.log(`Task update notification sent to ${adminRecipients.length} admin users`);
         }
-        }
-      } catch (notificationError) {
-      console.error('Error sending task update notifications:', notificationError);
-        console.error('Notification error details:', {
-          message: notificationError.message,
-          stack: notificationError.stack,
-          name: notificationError.name
-        });
-        // Don't fail the task update if notification fails
       }
+    } catch (notificationError) {
+      console.error('Error sending task update notifications:', notificationError);
+      console.error('Notification error details:', {
+        message: notificationError.message,
+        stack: notificationError.stack,
+        name: notificationError.name
+      });
+      // Don't fail the task update if notification fails
+    }
 
     // If status changed, update project task counts
     if (status) {
@@ -1188,7 +1160,7 @@ const updateProjectTaskCounts = async (projectId) => {
 
     // Get project details for notifications
     const project = await Project.findById(projectId);
-    
+
     // Update project with task counts, progress percentage, and assigned employees
     await Project.findByIdAndUpdate(projectId, {
       totalTasks,
@@ -1197,16 +1169,14 @@ const updateProjectTaskCounts = async (projectId) => {
       assignedEmployees: uniqueAssignedEmployees,
     });
 
-    console.log(
-      `Project ${projectId} updated: ${completedTasks}/${totalTasks} tasks completed (${progressPercentage}%), ${uniqueAssignedEmployees.length} unique employees assigned`
-    );
+
 
     // Send project completion notification if all tasks are completed
     if (totalTasks > 0 && completedTasks === totalTasks && project) {
       try {
         // Get all employees assigned to this project
         const projectEmployees = uniqueAssignedEmployees;
-        
+
         if (projectEmployees.length > 0) {
           await sendTaskNotification(projectEmployees, {
             title: 'Project Completed!',
@@ -1220,7 +1190,6 @@ const updateProjectTaskCounts = async (projectId) => {
               progress: `${progressPercentage}%`,
             },
           });
-          console.log(`Project completion notification sent to ${projectEmployees.length} employees`);
         }
       } catch (notificationError) {
         console.error('Error sending project completion notification:', notificationError);

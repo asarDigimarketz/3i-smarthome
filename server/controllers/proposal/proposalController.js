@@ -41,7 +41,6 @@ async function getAllAdminUsers() {
 async function sendProposalNotification(userIds, notification) {
   try {
     if (!userIds || userIds.length === 0) {
-      console.log('No users to send proposal notification to');
       return;
     }
 
@@ -59,7 +58,6 @@ async function sendProposalNotification(userIds, notification) {
         triggeredBy: notification.triggeredBy,
         triggeredByModel: notification.triggeredByModel
       });
-      console.log(`Saved ${savedNotifications.length} proposal notifications to database`);
     } catch (dbError) {
       console.error('Error saving proposal notifications to database:', dbError);
       // Continue with FCM sending even if database save fails
@@ -72,7 +70,6 @@ async function sendProposalNotification(userIds, notification) {
     });
 
     if (tokens.length === 0) {
-      console.log(`No active FCM tokens found for User IDs: ${userIds.join(', ')}`);
       return;
     }
 
@@ -106,16 +103,14 @@ async function sendProposalNotification(userIds, notification) {
       } catch (error) {
         console.error(`Failed to send to token ${token}:`, error);
         failureCount++;
-        
+
         // Remove failed token
         await FCMToken.deleteOne({ token });
       }
     }
 
-    console.log(`Proposal notification sent: ${successCount} successful, ${failureCount} failed`);
 
     if (failureCount > 0) {
-      console.log(`Removed ${failureCount} failed FCM tokens`);
     }
 
     return {
@@ -227,9 +222,8 @@ const createProposal = async (req, res) => {
         mimetype: file.mimetype,
         size: file.size,
         path: file.path,
-        url: `${
-          process.env.BACKEND_URL || "http://localhost:5000"
-        }/assets/images/proposals/project-attachments/${file.filename}`,
+        url: `${process.env.BACKEND_URL || "http://localhost:5000"
+          }/assets/images/proposals/project-attachments/${file.filename}`,
       }));
     }
     // If attachments sent as JSON (for edit mode), merge with new files
@@ -265,7 +259,7 @@ const createProposal = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 
@@ -397,10 +391,10 @@ const getProposals = async (req, res) => {
       ...proposal,
       attachments: proposal.attachments
         ? proposal.attachments.map((att) => ({
-            ...att,
-            url:
-              att.url || (att.filename ? getFileUrl(att.filename) : undefined),
-          }))
+          ...att,
+          url:
+            att.url || (att.filename ? getFileUrl(att.filename) : undefined),
+        }))
         : [],
     }));
 
@@ -455,11 +449,11 @@ const getProposal = async (req, res) => {
           ...proposal.toObject(),
           attachments: proposal.attachments
             ? proposal.attachments.map((att) => ({
-                ...att,
-                url:
-                  att.url ||
-                  (att.filename ? getFileUrl(att.filename) : undefined),
-              }))
+              ...att,
+              url:
+                att.url ||
+                (att.filename ? getFileUrl(att.filename) : undefined),
+            }))
             : [],
         },
       },
@@ -616,9 +610,8 @@ const updateProposal = async (req, res) => {
         mimetype: file.mimetype,
         size: file.size,
         path: file.path,
-        url: `${
-          process.env.BACKEND_URL || "http://localhost:5000"
-        }/assets/images/proposals/project-attachments/${file.filename}`,
+        url: `${process.env.BACKEND_URL || "http://localhost:5000"
+          }/assets/images/proposals/project-attachments/${file.filename}`,
       }));
       baseAttachments = baseAttachments.concat(newAttachments);
     }
@@ -651,9 +644,9 @@ const updateProposal = async (req, res) => {
       if (updateData.services && updateData.services !== originalProposal.services) changes.push('services');
       if (updateData.status && updateData.status !== originalProposal.status) changes.push('status');
       if (updateData.comment !== undefined && updateData.comment !== originalProposal.comment) changes.push('comment');
-      
+
       const changesText = changes.length > 0 ? changes.join(', ') : 'details';
-      
+
       // Get users with permissions
       const adminUserIds = await getAllAdminUsers();
       const employeesWithPermission = await UserEmployee.find({
@@ -667,7 +660,7 @@ const updateProposal = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 
@@ -900,7 +893,7 @@ const updateProposalField = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 
@@ -1089,7 +1082,7 @@ const deleteProposal = async (req, res) => {
 
       const employeeUserIds = employeesWithPermission.map(emp => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId => 
+      const recipientUserIds = allUserIds.filter(userId =>
         userId.toString() !== (req.user ? req.user.id.toString() : '')
       );
 

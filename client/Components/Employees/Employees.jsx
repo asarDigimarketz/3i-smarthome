@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Dropdown,
   DropdownTrigger,
@@ -20,32 +21,36 @@ import { usePermissions } from "../../lib/utils";
 import apiClient from "../../lib/axios";
 
 const Employees = () => {
-  const { 
-    canCreate, 
-    canEdit, 
-    canDelete, 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const {
+    canCreate,
+    canEdit,
+    canDelete,
     canView,
-    getUserPermissions 
+    getUserPermissions
   } = usePermissions();
 
-  // Get permissions using the hook
+  // Get permissions using the hook - memoize to prevent re-renders
   const userPermissions = getUserPermissions("employees");
 
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [pagination, setPagination] = useState({
-    currentPage: 1,
+    currentPage: parseInt(searchParams.get('page')) || 1,
     totalPages: 1,
     totalEmployees: 0,
     limit: 6,
   });
+
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || "all");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch employees from API with search and pagination
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async (page = 1, search = searchQuery, status = statusFilter) => {
     if (!canView("employees")) {
       setLoading(false);
       return;
@@ -53,21 +58,19 @@ const Employees = () => {
 
     try {
       setLoading(true);
-      
+
       // Build query parameters
       const params = new URLSearchParams();
-      params.append("page", currentPage.toString());
+      params.append("page", page.toString());
       params.append("limit", "6");
-      
-      if (searchQuery.trim()) {
-        params.append("search", searchQuery.trim());
-      }
-      
-      if (statusFilter !== "all") {
-        params.append("status", statusFilter);
-      }
-      
 
+      if (search.trim()) {
+        params.append("search", search.trim());
+      }
+
+      if (status !== "all") {
+        params.append("status", status);
+      }
 
       const response = await apiClient.get(`/api/employeeManagement?${params.toString()}`);
 
@@ -87,14 +90,12 @@ const Employees = () => {
           phone: emp.mobileNo,
           avatar:
             emp.avatar ||
-            `https://img.heroui.chat/image/avatar?w=200&h=200&u=${Math.floor(
-              Math.random() * 10
-            )}`,
+            ``,
           _id: emp._id,
           originalData: emp,
         }));
         setEmployees(transformedEmployees);
-        
+
         // Update pagination info
         if (data.pagination) {
           setPagination(data.pagination);
@@ -104,6 +105,7 @@ const Employees = () => {
       }
     } catch (error) {
       console.error("Error fetching employees:", error);
+      setEmployees([]);
       addToast({
         title: "Error",
         description: "Failed to load employees. Please try again.",
@@ -112,35 +114,99 @@ const Employees = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Remove all dependencies to prevent re-creation
 
-  // Fetch employees when filters change
-  useEffect(() => {
-    if (userPermissions.hasViewPermission) {
-      fetchEmployees();
+  // Update URL when pagination or filters change
+  const updateURL = useCallback((page, search, status, pushState = false) => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set('page', page.toString());
+    if (search) params.set('search', search);
+    if (status && status !== 'all') params.set('status', status);
+
+    const newURL = params.toString() ? `?${params.toString()}` : '';
+    const fullURL = `/dashboard/employees${newURL}`;
+
+    if (pushState) {
+      router.push(fullURL, { scroll: false });
+    } else {
+      router.replace(fullURL, { scroll: false });
     }
-  }, [userPermissions.hasViewPermission, currentPage, searchQuery, statusFilter,]);
+  }, [router]);
 
-  // Debounced search effect
+  // Handle browser back/forward navigation
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        fetchEmployees();
-      }
-    }, 500);
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const page = parseInt(urlParams.get('page')) || 1;
+      const search = urlParams.get('search') || '';
+      const status = urlParams.get('status') || 'all';
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
-  // No need for client-side filtering as backend handles it
-  const paginatedEmployees = employees;
+      // Update state immediately
+      setSearchQuery(search);
+      setStatusFilter(status);
+      setPagination(prev => ({ ...prev, currentPage: page }));
+
+      // Fetch data with the URL parameters
+      fetchEmployees(page, search, status);
+    };
+
+    // Add the event listener
+    window.addEventListener('popstate', handlePopState);
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []); // Only run once on mount
+
+  // Initial fetch when component mounts - use URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialPage = parseInt(urlParams.get('page')) || 1;
+    const initialSearch = urlParams.get('search') || '';
+    const initialStatus = urlParams.get('status') || 'all';
+
+
+    // Set initial state from URL
+    if (initialSearch !== searchQuery) setSearchQuery(initialSearch);
+    if (initialStatus !== statusFilter) setStatusFilter(initialStatus);
+    if (initialPage !== pagination.currentPage) {
+      setPagination(prev => ({ ...prev, currentPage: initialPage }));
+    }
+
+    if (userPermissions.hasViewPermission) {
+      fetchEmployees(initialPage, initialSearch, initialStatus);
+    }
+
+    // Mark initial load as complete after a brief delay
+    setTimeout(() => setIsInitialLoad(false), 100);
+  }, [userPermissions.hasViewPermission]); // Only run on mount and when permissions change
+
+  // Handle filter changes (but not during initial load)
+  useEffect(() => {
+    if (isInitialLoad) {
+      return; // Skip filter effects during initial load
+    }
+
+    const timeoutId = setTimeout(() => {
+      // Reset to page 1 and fetch with new filters
+      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      updateURL(1, searchQuery, statusFilter);
+      fetchEmployees(1, searchQuery, statusFilter);
+    }, 500); // Debounce search
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, statusFilter]);
+
+  // Handle pagination changes
+  const handlePageChange = (page) => {
+    setPagination(prev => ({ ...prev, currentPage: page }));
+    updateURL(page, searchQuery, statusFilter, true);
+    fetchEmployees(page, searchQuery, statusFilter);
+  };
 
   const handleModalClose = (shouldRefresh = false) => {
     setIsModalOpen(false);
     if (shouldRefresh) {
-      fetchEmployees();
+      fetchEmployees(pagination.currentPage, searchQuery, statusFilter);
     }
   };
 
@@ -218,31 +284,30 @@ const Employees = () => {
             </DropdownMenu>
           </Dropdown>
         </div>
-       
-          <Button
-            color="primary"
-            radius="sm"
-            className="w-full sm:w-auto"
-            size="lg"
-            startContent={<Plus />}
-            onPress={handleAddEmployee}
-            disabled={!canCreate("employees")}
-          >
-            Add Employee
-          </Button>
-      
+
+        <Button
+          color="primary"
+          radius="sm"
+          className="w-full sm:w-auto"
+          size="lg"
+          startContent={<Plus />}
+          onPress={handleAddEmployee}
+          disabled={!canCreate("employees")}
+        >
+          Add Employee
+        </Button>
       </div>
 
       {/* Employee Cards */}
-      <Card className="bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+      <Card className="bg-white rounded-xl shadow-lg p-6 md:min-h-[600px] flex flex-col">
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 ">
           {loading ? (
             // Show loading skeletons
             Array.from({ length: 6 }).map((_, index) => (
               <EmployeeSkeleton key={index} />
             ))
-          ) : paginatedEmployees.length > 0 ? (
-            paginatedEmployees.map((employee) => (
+          ) : employees.length > 0 ? (
+            employees.map((employee) => (
               <EmployeeCard
                 key={`${employee.id}-${employee.name}`}
                 id={employee.id}
@@ -254,7 +319,8 @@ const Employees = () => {
                 phone={employee.phone}
                 avatar={employee.avatar}
                 userPermissions={userPermissions}
-                onEmployeeUpdate={fetchEmployees}
+                onEmployeeUpdate={() => fetchEmployees(pagination.currentPage, searchQuery, statusFilter)}
+                returnUrl={`/dashboard/employees${window.location.search}`}
               />
             ))
           ) : (
@@ -268,13 +334,12 @@ const Employees = () => {
                   No employees found
                 </h3>
                 <p className="text-gray-500 mb-4">
-                  {searchQuery || statusFilter !== "all" 
+                  {searchQuery || statusFilter !== "all"
                     ? "No employees match your current filters."
                     : "Get started by adding your first employee."}
                 </p>
                 {!searchQuery &&
                   statusFilter === "all" &&
-              
                   userPermissions.hasAddPermission && (
                     <Button
                       color="primary"
@@ -288,19 +353,25 @@ const Employees = () => {
             </div>
           )}
         </div>
+
+        {/* Pagination - Fixed at bottom of card */}
+        {!loading && pagination.totalPages > 1 && (
+          <div className="flex justify-center pt-4 mt-auto" data-no-navigate>
+            <Pagination
+              total={pagination.totalPages}
+              initialPage={1}
+              page={pagination.currentPage}
+              onChange={handlePageChange}
+              showControls
+              siblings={0}
+              boundaries={1}
+              dotsJump={3}
+              className="pagination"
+              data-no-navigate
+            />
+          </div>
+        )}
       </Card>
-      {/* Pagination */}
-      {!loading && pagination.totalPages > 1 && (
-        <div className="flex justify-center">
-          <Pagination
-            total={pagination.totalPages}
-            page={currentPage}
-            onChange={setCurrentPage}
-            color="primary"
-            showControls
-          />
-        </div>
-      )}
 
       {userPermissions.hasAddPermission && (
         <EmployeeModal
