@@ -2,11 +2,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { Image, Text, View, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { ProgressBar } from 'react-native-paper';
-import axios from 'axios';
 import { API_CONFIG } from '../../../config';
-import auth from '../../utils/auth';
 import { CircleCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import apiClient from '../../utils/apiClient';
+import { getPageActions } from '../../utils/permissions';
+import { useAuth } from '../../utils/AuthContext';
 
 const fallbackAvatar = 'https://img.heroui.chat/image/avatar?w=200&h=200&u=1';
 const getAvatarUrl = (avatar) => {
@@ -29,18 +30,35 @@ const getAvatarUrl = (avatar) => {
 };
 
 const statusOptions = [
-  { label: 'New', value: 'new'},
-  { label: 'In Progress', value: 'in-progress'},
-  { label: 'Completed', value: 'completed'},
-  { label: 'Done', value: 'done'},
-  { label: 'Cancelled', value: 'cancelled'},
+  { label: 'New', value: 'New'},
+  { label: 'In Progress', value: 'InProgress'},
+  { label: 'Done', value: 'Done'},
+  { label: 'Completed', value: 'Completed'},
+  { label: 'Cancelled', value: 'Cancelled'},
 ];
 
 const getStatusDisplay = (status) => {
+  // Map server status to display status (matching client logic)
+  const statusMap = {
+    'new': 'New',
+    'in-progress': 'InProgress', 
+    'completed': 'Completed',
+    'done': 'Done',
+    'cancelled': 'Cancelled',
+    // Also handle mobile format
+    'New': 'New',
+    'InProgress': 'InProgress',
+    'Completed': 'Completed', 
+    'Done': 'Done',
+    'Cancelled': 'Cancelled'
+  };
+  
+  const displayStatus = statusMap[status] || 'New';
+  
   const found = statusOptions.find(
-    (opt) => opt.value === (status?.toLowerCase?.() || status)
+    (opt) => opt.value === displayStatus
   );
-  return found || statusOptions[1]; // default to In Progress
+  return found || statusOptions[0]; // default to New
 };
 
 const getProgressPercent = (progress, completedTasks, totalTasks) => {
@@ -106,49 +124,63 @@ const getTaskSummary = (project) => {
 
   const ProjectCard = ({ project, customer }) => {
   const router = useRouter();
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const { user } = useAuth();
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState(project.status);
-
+  
+  // Map server status to display status
+  const statusMap = {
+    'new': 'New',
+    'in-progress': 'InProgress', 
+    'completed': 'Completed',
+    'done': 'Done',
+    'cancelled': 'Cancelled'
+  };
+  
+  const [currentStatus, setCurrentStatus] = useState(statusMap[project.status] || project.status);
+  const actions = getPageActions(user, '/dashboard/projects');
   // Get task summary data
   const taskSummary = getTaskSummary(project);
+
+  // Get status display
+  const statusDisplay = getStatusDisplay(currentStatus || project.status);
 
   const handleStatusChange = async (newStatus) => {
     setStatusLoading(true);
     try {
-      // PATCH request to update status (adjust endpoint as needed)
-      const res = await auth.fetchWithAuth(
-        `${API_CONFIG.API_URL}/api/projects/${project.id || project._id}/field`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ field: 'projectStatus', value: newStatus })
-        }
-      );
+      // Convert mobile status to server status
+      const serverStatusMap = {
+        'New': 'new',
+        'InProgress': 'in-progress',
+        'Done': 'done',
+        'Completed': 'completed',
+        'Cancelled': 'cancelled'
+      };
       
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
+      const serverStatus = serverStatusMap[newStatus] || newStatus;
+      
+      // PATCH request to update status (adjust endpoint as needed)
+      const res = await apiClient.patch(
+        `/api/projects/${project.id || project._id}/field`,
+        { field: 'projectStatus', value: serverStatus }
+      );
 
-      const data = await res.json();
+      const data = res.data;
+ 
       
       if (data.success) {
         setCurrentStatus(newStatus);
-        Alert.alert('Success', 'Project status updated successfully');
+        setShowStatusDropdown(false);
       } else {
-        Alert.alert('Error', 'Failed to update project status');
+        Alert.alert('Error', data.error || 'Failed to update status');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error updating project status:', error);
       Alert.alert('Error', 'Failed to update project status');
     } finally {
       setStatusLoading(false);
-      setShowStatusDropdown(false);
     }
   };
-
-  const statusDisplay = getStatusDisplay(currentStatus);
 
   const getServiceGradient = (service) => {
     switch (service) {
@@ -169,7 +201,11 @@ const getTaskSummary = (project) => {
     <TouchableOpacity
       onPress={() => router.push({
         pathname: '/(tabs)/tasks',
-        params: { projectId: project.id, projectName: project.service }
+        params: { 
+          projectId: project.id, 
+          projectName: project.service,
+          refresh: Date.now() // Add timestamp to force refresh
+        }
       })}
       activeOpacity={0.85}
       className="rounded-xl shadow-sm mb-4 overflow-hidden"
@@ -181,13 +217,13 @@ const getTaskSummary = (project) => {
         className="p-6"
       >
         {/* Status and Service Section */}
-        <View className="flex-row justify-between items-start mb-6">
-          {/* Service on the left (70%) */}
+        <View className="flex-row justify-between items-center mb-6">
+          {/* Service on the left (60%) */}
           <View style={{ width: '60%' }} className="items-start">
             <Text className="text-sm text-white/70 mb-1">Service</Text>
             <Text className="text-lg font-bold text-white">{project.service}</Text>
           </View>
-          {/* Status on the right (30%) */}
+          {/* Status on the right (40%) */}
           <View style={{ width: '40%' }} className="items-end relative">
             <TouchableOpacity
               className="px-4 py-2 rounded-lg flex-row items-center justify-center border border-white/10 text-white bg-opacity-80 bg-white/20"
@@ -196,7 +232,7 @@ const getTaskSummary = (project) => {
                 e.stopPropagation && e.stopPropagation();
                 setShowStatusDropdown((prev) => !prev);
               }}
-              disabled={statusLoading}
+              disabled={statusLoading || !actions.edit}
             >
               <Text className="text-sm font-semibold text-white">
                 {statusLoading ? 'Updating...' : statusDisplay.label}
@@ -209,12 +245,12 @@ const getTaskSummary = (project) => {
                     key={opt.value}
                     className="px-4 py-3 border-b border-gray-100 active:bg-gray-50 flex-row items-center"
                     onPress={() => handleStatusChange(opt.value)}
-                    disabled={statusLoading}
+                    disabled={statusLoading || !actions.edit  }
                   >
                     <Text className="text-sm font-medium flex-1 text-gray-600 gap-1">
                       {opt.label}
                     </Text>
-                    {currentStatus?.toLowerCase() === opt.value && (
+                    {(currentStatus === opt.value || statusMap[project.status] === opt.value) && (
                       <CircleCheck size={20} className='text-gray-600' />
                     )}
                   </TouchableOpacity>
@@ -222,6 +258,7 @@ const getTaskSummary = (project) => {
               </View>
             )}
           </View>
+          
         </View>
         {/* Customer Info Section */}
         <View className="flex-row justify-between">

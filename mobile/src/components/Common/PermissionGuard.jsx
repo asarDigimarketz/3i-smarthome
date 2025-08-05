@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../utils/AuthContext';
 import { hasPermission } from '../../utils/permissions';
 
@@ -11,7 +12,15 @@ const PermissionGuard = ({
   showAccessDenied = true,
   showLoading = true
 }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // Redirect to splash if not authenticated
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace('/splash');
+    }
+  }, [loading, isAuthenticated, router]);
 
   // Show loading indicator while auth is loading
   if (loading && showLoading) {
@@ -21,6 +30,11 @@ const PermissionGuard = ({
         <Text className="text-gray-600 mt-2">Loading permissions...</Text>
       </View>
     );
+  }
+
+  // If not authenticated, redirect to splash (no loading message)
+  if (!isAuthenticated) {
+    return null; // Return null to prevent any UI from showing
   }
 
   // If no user, show access denied

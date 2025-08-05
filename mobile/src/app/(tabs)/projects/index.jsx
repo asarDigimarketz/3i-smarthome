@@ -2,7 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChevronDown,
   Plus,
-  RefreshCw
+  RefreshCw,
+  CheckCircle
 } from 'lucide-react-native';
 
 import { useAuth } from '../../../utils/AuthContext';
@@ -23,46 +24,47 @@ import FilterTabs from '../../../components/Common/FilterTabs';
 import ProjectCard from '../../../components/Common/ProjectCard';
 import React, { useState, useEffect } from 'react';
 import { API_CONFIG } from '../../../../config';
-import auth from '../../../utils/auth';
+import apiClient from '../../../utils/apiClient';
 
 const Projects = () => {
   const { selectedService } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
-  
+  const actions = getPageActions(user, '/dashboard/projects');
   // State management
   const [selectedFilter, setSelectedFilter] = useState(selectedService || 'All');
-  const [selectedStatus, setSelectedStatus] = useState('Status');
+    const [selectedStatuses, setSelectedStatuses] = useState(new Set(['New', 'InProgress', 'Done'])); // Default: all except "Completed" and "Cancelled"
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const actions = {
-    create: user.permissions.includes('create_project') || user.isAdmin,
-    // ...
-  };
+
 
   // API Configuration
   const API_BASE_URL = API_CONFIG.API_URL;
   const API_KEY = API_CONFIG.API_KEY;
 
   const statusOptions = [
-    'Status',
+    'All Status',
     'New',
     'InProgress',
     'Done',
-    'Complete',
+    'completed',
     'Cancelled'
   ];
 
   const getStatusColor = (status) => {
     const colors = {
+      'All Status': 'text-gray-600',
       'New': 'text-blue-600',
       'InProgress': 'text-yellow-600',
       'Done': 'text-green-600',
-      'Complete': 'text-purple-600',
+      'completed': 'text-purple-600',
       'Cancelled': 'text-red-600',
       'Status': 'text-gray-600'
     };
@@ -74,7 +76,7 @@ const Projects = () => {
     const statusMap = {
       'New': 'new',
       'InProgress': 'in-progress',
-      'Complete': 'completed',
+      'completed': 'completed',
       'Done': 'done',
       'Cancelled': 'cancelled'
     };
@@ -86,7 +88,7 @@ const Projects = () => {
     const statusMap = {
       'new': 'New',
       'in-progress': 'InProgress',
-      'completed': 'Complete',
+      'completed': 'completed',
       'done': 'Done',
       'cancelled': 'Cancelled'
     };
@@ -107,7 +109,7 @@ const Projects = () => {
         address: typeof apiProject.address === 'object'
           ? `${apiProject.address.addressLine || ''}, ${apiProject.address.city || ''}, ${apiProject.address.district || ''}, ${apiProject.address.state || ''}, ${apiProject.address.country || ''} - ${apiProject.address.pincode || ''}`.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '').trim()
           : apiProject.address || 'No address provided',
-        service: apiProject.services || 'Unknown',
+        service: apiProject.service || apiProject.services || 'Unknown',
         amount: `₹${apiProject.projectAmount?.toLocaleString('en-IN') || '0'}`,
         date: apiProject.projectDate 
           ? new Date(apiProject.projectDate).toLocaleDateString('en-IN') 
@@ -125,19 +127,23 @@ const Projects = () => {
         updatedAt: apiProject.updatedAt || new Date().toISOString(),
       };
     } catch (error) {
-      console.error('🚨 Error transforming project data:', error);
-      console.error('🚨 Project data that caused error:', apiProject);
+      console.error('Error transforming project data:', error);
+      console.error('Project data that caused error:', apiProject);
       return null;
     }
   };
 
   // Fetch projects from API
-  const fetchProjects = async (refresh = false) => {
+  const fetchProjects = async (refresh = false, loadMore = false) => {
     try {
       if (refresh) {
         setRefreshing(true);
+        setCurrentPage(1);
+      } else if (loadMore) {
+        setLoadingMore(true);
       } else {
         setLoading(true);
+        setCurrentPage(1);
       }
       setError(null);
 
@@ -146,55 +152,115 @@ const Projects = () => {
       
       // Add service filter if not 'All'
       if (selectedFilter && selectedFilter !== 'All') {
-        params.append('services', selectedFilter);
+        params.append('service', selectedFilter); // Correct parameter name
       }
       
       // Add status filter if not 'Status'
-      if (selectedStatus && selectedStatus !== 'Status') {
-        params.append('projectStatus', mapMobileToServerStatus(selectedStatus));
+      if (selectedStatuses.size > 0) {
+        // Check if "All Status" is selected
+        if (selectedStatuses.has('All Status')) {
+          // Don't add any status filter - show all
+        } else {
+          const serverStatuses = Array.from(selectedStatuses).map(mapMobileToServerStatus);
+          params.append('status', serverStatuses.join(','));
+        }
       }
 
-      const url = `${API_BASE_URL}/api/projects${params.toString() ? `?${params.toString()}` : ''}`;
+      // Add pagination parameters for all filters
+      const nextPage = loadMore ? currentPage + 1 : 1;
+      params.append('page', nextPage.toString());
+      params.append('limit', '6'); // Default limit of 6 per page
       
-      console.log('📤 Fetching projects from:', url);
-      console.log('🔑 API Key:', API_KEY ? 'Set' : 'Not Set');
+      const url = `/api/projects${params.toString() ? `?${params.toString()}` : ''}`;
+      
+      
 
-      const response = await auth.fetchWithAuth(url, {
-        method: 'GET',
-      });
+      const response = await apiClient.get(url);
 
-      console.log('📥 Response Status:', response.status);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
      
 
       if (data && data.success) {
         // Handle different possible response structures
-        const projectsArray = data.projects || data.data || [];
+        const projectsArray = data.data || data.projects || [];
+        
+       
         
         if (Array.isArray(projectsArray)) {
           const transformedProjects = projectsArray
             .map(transformProjectData)
             .filter(project => project !== null); // Filter out any null transformations
-          console.log('✅ Projects fetched successfully:', transformedProjects.length, 'items');
-          setProjects(transformedProjects);
+          
+          if (loadMore) {
+            // Append new projects to existing ones (for all filters with pagination)
+            setProjects(prev => [...prev, ...transformedProjects]);
+            setCurrentPage(nextPage);
+          } else {
+            // Replace projects with new ones
+            setProjects(transformedProjects);
+            setCurrentPage(1);
+          }
+          
+          // Check if there are more pages (for all filters)
+          const pagination = data.pagination;
+          if (pagination) {
+            // For the first page, check if we got a full page of results
+            const isFirstPage = pagination.current === 1;
+            const gotFullPage = transformedProjects.length === 6;
+            
+            // If we got a full page on the first page, there might be more
+            const hasMoreFromPageSize = isFirstPage && gotFullPage;
+            
+            // Use pagination.hasNext if available, otherwise use page size logic
+            const shouldHaveMore = pagination.hasNext !== undefined ? pagination.hasNext : hasMoreFromPageSize;
+            
+            setHasMore(shouldHaveMore);
+          
+         
+            
+            // Additional check using total count from pagination
+            const totalProjects = pagination.count;
+            const currentTotal = loadMore ? projects.length + transformedProjects.length : transformedProjects.length;
+            const shouldHaveMoreFromTotal = currentTotal < totalProjects;
+           
+            
+            // Use the more accurate determination - prioritize total count over pagination.hasNext
+            if (totalProjects > 0) {
+              const finalHasMore = shouldHaveMoreFromTotal;
+              setHasMore(finalHasMore);
+            } else {
+              // If no total count, use the page size logic
+              setHasMore(shouldHaveMore);
+            }
+            
+            // Fallback: If we got exactly 6 projects on first page, always show Load More
+            if (isFirstPage && gotFullPage && !loadMore) {
+           
+              setHasMore(true);
+            }
+          } else {
+            // If no pagination info, check if we got a full page of results
+            const hasMoreResults = transformedProjects.length === 6;
+            setHasMore(hasMoreResults);
+           
+          }
         } else {
           console.warn('⚠️ Projects data is not an array:', projectsArray);
-          setProjects([]);
+          if (!loadMore) {
+            setProjects([]);
+          }
         }
       } else {
-        console.error('❌ API returned success: false');
+        console.error('API returned success: false');
+        console.error('API response:', data);
         setError(data.message || 'Failed to fetch projects');
-        if (!refresh) {
+        if (!refresh && !loadMore) {
           Alert.alert('Error', data.message || 'Failed to fetch projects');
         }
       }
     } catch (error) {
-      console.error('🚨 Error fetching projects:', error);
+      console.error('Error fetching projects:', error);
       
       let errorMessage = 'An unexpected error occurred';
       if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
@@ -209,13 +275,13 @@ const Projects = () => {
       
       setError(errorMessage);
       
-      if (!refresh) {
+      if (!refresh && !loadMore) {
         Alert.alert('Error', errorMessage);
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
-      console.log('🏁 Fetch operation completed');
+      setLoadingMore(false);
     }
   };
 
@@ -227,9 +293,16 @@ const Projects = () => {
   // Refetch when filters change
   useEffect(() => {
     if (!loading) {
-      fetchProjects();
+      // Reset pagination state immediately
+      setCurrentPage(1);
+      setHasMore(true);
+      setProjects([]); // Clear existing projects before fetching new ones
+      // Fetch projects after state reset
+      setTimeout(() => {
+        fetchProjects();
+      }, 0);
     }
-  }, [selectedFilter, selectedStatus]);
+  }, [selectedFilter, selectedStatuses]);
 
   // Update useEffect to set the filter when selectedService changes
   useEffect(() => {
@@ -238,16 +311,23 @@ const Projects = () => {
     }
   }, [selectedService]);
 
+
+
+  // Load more projects function
+  const loadMoreProjects = () => {
+    
+    if (!loadingMore && hasMore) {
+      
+      fetchProjects(false, true);
+    } else {
+      
+    }
+  };
+
+  // Enhanced project filtering - Now handled by API
   const getFilteredProjects = () => {
-    return projects.filter(project => {
-      // Filter by service type
-      const serviceFilter = selectedFilter === 'All' || project.service === selectedFilter;
-      
-      // Filter by status
-      const statusFilter = selectedStatus === 'Status' || project.status === selectedStatus;
-      
-      return serviceFilter && statusFilter;
-    });
+    // Return all projects since filtering is now done by API
+    return projects;
   };
 
   const onRefresh = () => {
@@ -263,6 +343,7 @@ const Projects = () => {
           <TouchableOpacity 
             className="bg-red-600 h-10 px-3 rounded-lg flex-row items-center ml-2"
             onPress={() => router.push('/(tabs)/projects/AddProjects')}
+            disabled={!actions.add}
           >
             <Plus size={18} color="white" strokeWidth={2} />
             <Text className="text-white ml-1 font-medium text-sm">Add New</Text>
@@ -286,6 +367,7 @@ const Projects = () => {
           <TouchableOpacity 
             className="bg-red-600 h-10 px-3 rounded-lg flex-row items-center ml-2"
             onPress={() => router.push('/(tabs)/projects/AddProjects')}
+            disabled={!actions.add}
           >
             <Plus size={18} color="white" strokeWidth={2} />
             <Text className="text-white ml-1 font-medium text-sm">Add New</Text>
@@ -319,6 +401,8 @@ const Projects = () => {
 
   const filteredProjects = getFilteredProjects();
 
+   
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <ScrollView 
@@ -327,6 +411,18 @@ const Projects = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
+          
+         
+          
+          if (isCloseToBottom && !loadingMore && hasMore) {
+            
+            loadMoreProjects();
+          }
+        }}
+        scrollEventThrottle={100}
       >
         {/* Header */}
         <View className="flex-row justify-between items-center px-5 py-4 bg-white">
@@ -334,50 +430,78 @@ const Projects = () => {
           <View className="flex-row items-center space-x-4">
             
             {/* Status Filter Button */}
-            <View className="relative">
+            <View className="relative mr-1">
               <TouchableOpacity
                 onPress={() => setShowStatusDropdown(!showStatusDropdown)}
-                className="flex-row items-center bg-gray-100 rounded-lg h-10 px-3 min-w-[60]"
+                className="flex-row items-center justify-between bg-gray-100 rounded-lg h-10 px-3 min-w-32"
               >
-                <Text className={`${getStatusColor(selectedStatus)} text-sm font-medium`}>
-                  {selectedStatus}
+                <Text className={`${getStatusColor(selectedStatuses.size === 0 ? 'All Status' : Array.from(selectedStatuses)[0])} text-sm font-medium`}>
+                  {selectedStatuses.size === 0 ? 'All Status' : 
+                   selectedStatuses.has('All Status') ? 'All Status' :
+                   selectedStatuses.size === 1 ? Array.from(selectedStatuses)[0] :
+                   `${selectedStatuses.size} Statuses`}
                 </Text>
-                <ChevronDown size={16} color="#6B7280" className="ml-1" />
+                <ChevronDown size={16} color="#6B7280" />
               </TouchableOpacity>
             </View>
 
             {/* Add New Button */}
-            {actions.create && (
+            
             <TouchableOpacity 
               className="bg-red-600 h-10 px-3 rounded-lg flex-row items-center ml-2"
               onPress={() => router.push('/(tabs)/projects/AddProjects')}
+              disabled={!actions.add}
             >
               <Plus size={18} color="white" strokeWidth={2} />
               <Text className="text-white ml-1 font-medium text-sm">Add New</Text>
             </TouchableOpacity>
-            )}
-          </View>
+          
+          </View>   
         </View>
 
         {/* Status Dropdown */}
         {showStatusDropdown && (
-          <View className="absolute top-14 right-24 bg-white rounded-lg shadow-xl z-10 w-32">
-            {statusOptions.map((status) => (
-              <TouchableOpacity
-                key={status}
-                className="px-3 py-2 border-b border-gray-100 active:bg-gray-50"
-                onPress={() => {
-                  setSelectedStatus(status);
-                  setShowStatusDropdown(false);
-                }}
-              >
-                <Text className={`text-sm ${
-                  status === selectedStatus ? getStatusColor(status) + ' font-medium' : 'text-gray-600'
-                }`}>
-                  {status}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View className="absolute top-14 right-[130px] bg-white rounded-lg shadow-xl z-10 w-32">
+            {statusOptions.map((status) => {
+              const isSelected = selectedStatuses.has(status);
+              return (
+                <TouchableOpacity
+                  key={status}
+                                          className={`px-3 py-2 active:bg-gray-50 flex-row items-center justify-between ${
+                          status === statusOptions[statusOptions.length - 1] ? '' : 'border-b border-gray-100'
+                        }`}
+                  onPress={() => {
+                    const newSelectedStatuses = new Set(selectedStatuses);
+                    if (status === 'All Status') {
+                      // When "All Status" is selected, select all statuses
+                      setSelectedStatuses(new Set(['All Status', 'New', 'InProgress', 'Done', 'completed', 'Cancelled']));
+                    } else if (newSelectedStatuses.has(status)) {
+                      newSelectedStatuses.delete(status);
+                      // If "All Status" is selected and we're deselecting a specific status, remove "All Status"
+                      if (newSelectedStatuses.has('All Status')) {
+                        newSelectedStatuses.delete('All Status');
+                      }
+                      setSelectedStatuses(newSelectedStatuses);
+                    } else {
+                      newSelectedStatuses.add(status);
+                      // If we're selecting a specific status, remove "All Status"
+                      if (newSelectedStatuses.has('All Status')) {
+                        newSelectedStatuses.delete('All Status');
+                      }
+                      setSelectedStatuses(newSelectedStatuses);
+                    }
+                    setShowStatusDropdown(false);
+                  }}
+                >
+                  <Text className="text-sm text-gray-600 font-medium">
+                    {status}
+                  </Text>
+                  {isSelected && (
+                    <CheckCircle size={16} color="#10B981" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 
@@ -390,22 +514,49 @@ const Projects = () => {
         {/* Project Cards */}
         <View className="p-5">
           {filteredProjects.length > 0 ? (
-            filteredProjects.map((project) => (
-              <View key={project.id} style={{ marginBottom: 16 }}>
-                <ProjectCard
-                  project={project}
-                  customer={{
-                    name: project.customerName,
-                    address: project.address
-                  }}
-                />
-              </View>
-            ))
+            <>
+              {filteredProjects.map((project) => (
+                <View key={project.id} style={{ marginBottom: 16 }}>
+                  <ProjectCard
+                    project={project}
+                    customer={{
+                      name: project.customerName,
+                      address: project.address
+                    }}
+                  />
+                </View>
+              ))}
+              
+              {/* Load More Indicator */}
+              {loadingMore && (
+                <View className="flex-row justify-center items-center py-4">
+                  <ActivityIndicator size="small" color="#DC2626" />
+                  <Text className="text-gray-500 ml-2">Loading more projects...</Text>
+                </View>
+              )}
+              
+              {/* Load More Button */}
+              {!loadingMore && hasMore && (
+                <TouchableOpacity 
+                  className="bg-red-600 rounded-lg py-3 px-4 flex-row justify-center items-center mt-4"
+                  onPress={loadMoreProjects}
+                >
+                  <Text className="text-white font-medium">Load More Projects</Text>
+                </TouchableOpacity>
+              )}
+              
+              {/* No More Projects */}
+              {!hasMore && filteredProjects.length > 0 && (
+                <View className="flex-row justify-center items-center py-4">
+                  <Text className="text-gray-500 text-sm">No more projects to load</Text>
+                </View>
+              )}
+            </>
           ) : (
             <View className="flex-1 justify-center items-center py-20">
               <Text className="text-gray-500 text-lg">No projects found</Text>
               <Text className="text-gray-400 text-sm mt-2">
-                {selectedFilter !== 'All' || selectedStatus !== 'Status' 
+                {selectedFilter !== 'All' || selectedStatuses.size > 0 
                   ? 'Try adjusting your filters' 
                   : 'Create your first project'}
               </Text>

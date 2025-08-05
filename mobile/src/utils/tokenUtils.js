@@ -36,7 +36,7 @@ export const getValidToken = async () => {
   try {
     const token = await AsyncStorage.getItem('token');
     if (isTokenExpired(token)) {
-      console.log('Token is expired, clearing stored data');
+      // Silent token expiration handling
       await AsyncStorage.multiRemove(['token', 'userInfo', 'userType']);
       return null;
     }
@@ -50,7 +50,7 @@ export const getValidToken = async () => {
 // Handle expired token
 export const handleExpiredToken = async () => {
   try {
-    console.log('Token expired, logging out user');
+    // Silent logout without console logs
     await AsyncStorage.multiRemove(['token', 'userInfo', 'userType']);
     return true;
   } catch (error) {

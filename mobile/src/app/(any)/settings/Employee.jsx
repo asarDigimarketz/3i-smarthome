@@ -5,6 +5,7 @@ import { Text, TouchableOpacity, useWindowDimensions, View, ScrollView, Alert } 
 import { DataTable } from 'react-native-paper';
 import { TextInput } from 'react-native-paper';
 import { createRole, updateRole, deleteRole } from '../../../utils/roles';
+import apiClient from '../../../utils/apiClient';
 
 const PERMISSION_ACTIONS = [
   { name: 'view', icon: Eye },
@@ -20,7 +21,6 @@ const PERMISSIONS = [
   { id: 4, name: 'Task', page: 'Tasks' },
   { id: 5, name: 'Customer', page: 'Customers' },
   { id: 6, name: 'Employee', page: 'Employees' },
-  { id: 7, name: 'Notification', page: 'Notifications' },
 ];
 
 export default function Employee() {
@@ -38,13 +38,16 @@ export default function Employee() {
   const fetchRoles = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.32:5000'}/api/rolesAndPermission`, {
-        headers: { 'x-api-key': process.env.EXPO_PUBLIC_API_KEY || 'a05f3614632a268ef4766209e8fb5bfef639572f819c559a79237626fef1d9d6' },
-      });
-      const data = await res.json();
-      setRoles(data.roles || []);
+      const res = await apiClient.get('/api/rolesAndPermission');
+      const data = res.data;
+      // Filter out invalid role objects
+      const validRoles = (data.roles || []).filter(role => 
+        role && typeof role === 'object' && role._id && role.role
+      );
+      setRoles(validRoles);
     } catch (e) {
       Alert.alert('Error', 'Failed to fetch roles');
+      setRoles([]);
     } finally {
       setLoading(false);
     }
@@ -103,7 +106,11 @@ export default function Employee() {
 
   // Handle Edit
   const handleEdit = (role) => {
-    setSelectedRole(role.role);
+    if (!role || typeof role !== 'object') {
+      console.error('Invalid role object:', role);
+      return;
+    }
+    setSelectedRole(role.role || '');
     setEditRoleId(role._id);
     setIsEditing(true);
     // Map backend permissions to checked state
@@ -156,7 +163,7 @@ export default function Employee() {
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <ArrowLeft size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">Setting - Employee</Text>
+        <Text className="text-xl font-bold text-gray-900">Roles & Permissions</Text>
       </View>
       <ScrollView className="flex-1 p-4">
         {/* Role Input */}
@@ -268,35 +275,46 @@ export default function Employee() {
         </View>
         {/* Roles List */}
         <Text className="text-lg font-bold text-gray-900 mt-8 mb-2">Existing Roles</Text>
-        {roles.map((role) => (
-          <View
-            key={role._id}
-            className="w-[95%] self-center bg-gray-50 shadow-xl rounded-xl mb-4 p-4"
-          >
-            <View>
-              <Text className="font-bold text-[#c92125]">{role.role}</Text>
-              <Text className="text-[#555] text-xs mb-3">
-                {role.permissions
-                  .map(
-                    (p) =>
-                      `${p.page}: ${Object.entries(p.actions)
-                        .filter(([, v]) => v)
-                        .map(([k]) => k)
-                        .join(', ')}`
-                  )
-                  .join(' | ')}
-              </Text>
-              <View className="flex-row justify-start space-x-4 mt-4 gap-4">
-                <TouchableOpacity onPress={() => handleEdit(role)}>
-                  <PenSquare size={20} color="#4ade80" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(role._id)}>
-                  <Trash2 size={20} color="#c92125" />
-                </TouchableOpacity>
+        {roles.map((role) => {
+          // Safety check to ensure role is a valid object
+          if (!role || typeof role !== 'object') {
+            console.error('Invalid role object:', role);
+            return null;
+          }
+          
+          return (
+            <View
+              key={role._id || Math.random()}
+              className="w-[95%] self-center bg-gray-50 shadow-xl rounded-xl mb-4 p-4"
+            >
+              <View>
+                <Text className="font-bold text-[#c92125]">{role.role || 'Unknown Role'}</Text>
+                <Text className="text-[#555] text-xs mb-3">
+                  {Array.isArray(role.permissions) 
+                    ? role.permissions
+                        .map(
+                          (p) =>
+                            `${p.page}: ${Object.entries(p.actions || {})
+                              .filter(([, v]) => v)
+                              .map(([k]) => k)
+                              .join(', ')}`
+                        )
+                        .join(' | ')
+                    : 'No permissions'
+                  }
+                </Text>
+                <View className="flex-row justify-start space-x-4 mt-4 gap-4">
+                  <TouchableOpacity onPress={() => handleEdit(role)}>
+                    <PenSquare size={20} color="#4ade80" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(role._id)}>
+                    <Trash2 size={20} color="#c92125" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
     </View>
   );

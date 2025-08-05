@@ -5,7 +5,7 @@ import { Text, TouchableOpacity, View, ActivityIndicator } from "react-native"
 import { useState, useEffect } from "react"
 import { API_CONFIG } from '../../../config'
 import auth from '../../utils/auth'
-import axios from 'axios'
+import apiClient from '../../utils/apiClient'
 
 const ActivityItem = ({ notification }) => {
   // Get icon based on notification type
@@ -113,16 +113,7 @@ export const ActivitiesSection = () => {
       setLoading(true);
       setError(null);
       
-      const token = await auth.getToken();
-      const response = await axios.get(
-        `${API_CONFIG.API_URL}/api/notifications?limit=3&sort=-createdAt`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'x-api-key': API_CONFIG.API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get('/api/notifications?limit=3&sort=-createdAt');
 
       const data = response.data;
       if (data.success && data.data && data.data.notifications) {

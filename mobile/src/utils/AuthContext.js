@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = await AsyncStorage.getItem('token');
         if (token && isTokenExpired(token)) {
-          console.log('🕐 Token expired during app usage, logging out automatically');
+          // Silent token expiration handling
           await handleLogout();
         }
       } catch (error) {
@@ -103,6 +103,10 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setUserType(null);
       setIsAuthenticated(false);
+      
+      // Redirect to splash after logout
+      const { router } = await import('expo-router');
+      router.replace('/splash');
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -179,25 +183,19 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        console.log('🔍 Debug: No token found');
         return false;
       }
       
       const isExpired = isTokenExpired(token);
-      console.log('🔍 Debug: Token expiration check:', {
-        hasToken: !!token,
-        isExpired,
-        tokenPreview: token.substring(0, 50) + '...'
-      });
       
       if (isExpired) {
-        console.log('🔍 Debug: Token is expired, logging out');
+        // Silent logout for expired tokens
         await handleLogout();
       }
       
       return !isExpired;
     } catch (error) {
-      console.error('🔍 Debug: Error checking token:', error);
+      console.error('Error in debug token check:', error);
       return false;
     }
   };

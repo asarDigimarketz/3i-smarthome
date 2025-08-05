@@ -4,6 +4,7 @@ import { Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import React, { useEffect, useState } from 'react';
 import { API_CONFIG } from '../../../config';
 import auth from "../../utils/auth";
+import apiClient from "../../utils/apiClient";
 
 const SERVICE_CARDS = [
   {
@@ -12,14 +13,14 @@ const SERVICE_CARDS = [
     colors: ["#613eff", "#9cbbff"]
   },
   {
-    title: "Security System",
-    service: "Security System",
-    colors: ["#014c95", "#36b9f6"]
-  },
-  {
     title: "Home Automation",
     service: "Home Automation",
     colors: ["#026b87", "#5deaff"]
+  },
+  {
+    title: "Security System",
+    service: "Security System",
+    colors: ["#014c95", "#36b9f6"]
   },
   {
     title: "Outdoor Audio Solution",
@@ -61,13 +62,8 @@ export const DashboardSection = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const response = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/projects/stats`, {
-          method: 'GET',
-          headers: {
-            'x-api-key': API_CONFIG.API_KEY,
-          },
-        });
-        const data = await response.json();
+        const response = await apiClient.get('/api/projects/stats');
+        const data = response.data;
         if (data && data.success && data.data && data.data.serviceBreakdown) {
           setServiceStats(data.data.serviceBreakdown);
         } else {

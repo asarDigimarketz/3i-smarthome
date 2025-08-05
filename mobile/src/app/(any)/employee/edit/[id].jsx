@@ -9,7 +9,7 @@ import { Image, Text, TouchableOpacity, useWindowDimensions, View, Alert, Linkin
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view"
 import { TextInput } from 'react-native-paper'
 import { API_CONFIG } from '../../../../../config';
-import auth from '../../../../utils/auth';
+import apiClient from '../../../../utils/apiClient';
 
 // Avatar helper function to handle server images
 const fallbackAvatar = 'https://img.heroui.chat/image/avatar?w=200&h=200&u=1';
@@ -65,7 +65,6 @@ const EditEmployee = () => {
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [documents, setDocuments] = useState([])
   const [roles, setRoles] = useState([]);
-  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [errors, setErrors] = useState({});
@@ -74,14 +73,6 @@ const EditEmployee = () => {
   const [originalAvatar, setOriginalAvatar] = useState(null);
   const [existingDocuments, setExistingDocuments] = useState([]);
   
-  // Departments as in EmployeeModal.jsx
-  const departments = [
-    { name: "Installation", createdAt: new Date() },
-    { name: "Service", createdAt: new Date() },
-    { name: "Sales", createdAt: new Date() },
-    { name: "Support", createdAt: new Date() },
-  ]
-
   const statusOptions = [
     { value: "active", color: "text-green-600", bg: "bg-green-50" },
     { value: "inactive", color: "text-red-600", bg: "bg-red-50" },
@@ -93,16 +84,8 @@ const EditEmployee = () => {
       if (!id) return;
       try {
         setFetchingData(true);
-        const response = await auth.fetchWithAuth(
-          `${API_CONFIG.API_URL}/api/employeeManagement/${id}`,
-          {
-            method: 'GET',
-          }
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
+        const response = await apiClient.get(`/api/employeeManagement/${id}`);
+        const data = response.data;
         if (data.success && data.employee) {
           const emp = data.employee;
           setFormData({
@@ -114,7 +97,7 @@ const EditEmployee = () => {
             dateOfBirth: emp.dateOfBirth ? emp.dateOfBirth.split("T")[0] : "",
             dateOfHiring: emp.dateOfHiring ? emp.dateOfHiring.split("T")[0] : "",
             role: emp.role?._id || "",
-            department: emp.department?.name || "",
+            department: emp.department || "",
             status: emp.status || "active",
             notes: emp.notes || "",
             address: {
@@ -190,7 +173,7 @@ const EditEmployee = () => {
         setAvatarPreview(file.uri) // Set to new image URI
       }
     } catch (err) {
-      console.log("Avatar picker error:", err)
+      console.error('Avatar picker error:', err);
       Alert.alert("Error", "Failed to pick image. Please try again.")
     }
   }
@@ -207,7 +190,7 @@ const EditEmployee = () => {
         setDocuments(prev => [...prev, ...result.assets])
       }
     } catch (err) {
-      console.log("Document picker error:", err)
+      console.error('Document picker error:', err);
     }
   }
 
@@ -226,35 +209,47 @@ const EditEmployee = () => {
     }
   }
 
-  // Get document URL for server files
-  const getDocumentUrl = (docPath) => {
-    if (!docPath) return null;
+  // Helper function to get document URL
+  const getDocumentUrl = (docUrl) => {
+    if (!docUrl) return null;
     
-    if (docPath.startsWith('http')) {
+    // Handle document objects
+    if (typeof docUrl === 'object' && docUrl.url) {
+      docUrl = docUrl.url;
+    }
+    
+    // Ensure docUrl is a string before calling startsWith
+    if (typeof docUrl !== 'string') {
+      console.warn('getDocumentUrl: docUrl is not a string:', docUrl);
+      return null;
+    }
+    
+    // If it's already a full URL, check if it's localhost and replace
+    if (docUrl.startsWith('http')) {
       try {
-        const url = new URL(docPath);
+        const url = new URL(docUrl);
         if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-          // Replace localhost with API_CONFIG.API_URL and ensure /public is included
-          const pathWithPublic = url.pathname.includes('/public') ? url.pathname : `/public${url.pathname}`;
-          return `${API_CONFIG.API_URL}${pathWithPublic}`;
+          // Replace localhost with API_CONFIG.API_URL
+          const replacedUrl = docUrl.replace(`${url.protocol}//${url.hostname}:${url.port || '5000'}`, API_CONFIG.API_URL);
+          return replacedUrl;
         }
-        return docPath;
-      } catch {
-        return docPath;
+        return docUrl;
+      } catch (error) {
+        console.warn('Error parsing URL:', error);
+        return docUrl;
       }
     }
     
-    if (docPath.startsWith('/assets')) {
-      // Add /public prefix if not present
-      return `${API_CONFIG.API_URL}/public${docPath}`;
+    // If it starts with /, construct full URL
+    if (docUrl.startsWith('/')) {
+      const fullUrl = `${API_CONFIG.API_URL}${docUrl}`;
+      return fullUrl;
     }
     
-    if (docPath.startsWith('/')) {
-      return `${API_CONFIG.API_URL}${docPath}`;
-    }
-    
-    return docPath;
-  }
+    // Otherwise, construct URL with the filename
+    const constructedUrl = `${API_CONFIG.API_URL}/assets/images/employees/documents/${docUrl}`;
+    return constructedUrl;
+  };
 
   // View document functionality
   const viewDocument = async (doc, isExisting = false) => {
@@ -373,20 +368,21 @@ const EditEmployee = () => {
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const res = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/rolesAndPermission`, {
-          method: 'GET',
-        });
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const data = await res.json();
+        const res = await apiClient.get(`/api/rolesAndPermission`);
+        const data = res.data;
         if (data.success) {
-          setRoles(data.roles);
+          // Filter out invalid role objects
+          const validRoles = (data.roles || []).filter(role => 
+            role && typeof role === 'object' && role._id && role.role
+          );
+          setRoles(validRoles);
         } else {
           console.error("Failed to fetch roles:", data.message);
+          setRoles([]);
         }
       } catch (error) {
         console.error("Error fetching roles:", error);
+        setRoles([]);
       }
     };
     fetchRoles();
@@ -422,10 +418,11 @@ const EditEmployee = () => {
           role: selectedRole.role,
           createdAt: selectedRole.createdAt,
         }));
-      }
-      const selectedDepartment = departments.find((d) => d.name === formData.department);
-      if (selectedDepartment) {
-        formDataToSend.append("department", JSON.stringify(selectedDepartment));
+        }
+      
+      // Department data - send as simple string since it's now an input field
+      if (formData.department) {
+        formDataToSend.append("department", formData.department);
       }
       if (avatar && avatar.uri) {
         formDataToSend.append("avatar", {
@@ -433,6 +430,9 @@ const EditEmployee = () => {
           type: avatar.mimeType || 'image/jpeg',
           name: avatar.name || 'profile.jpg',
         });
+      } else if (avatarPreview && !avatar) {
+        // If no new avatar is selected but we have an existing one, send the existing avatar URL
+        formDataToSend.append("existingAvatar", avatarPreview);
       }
 
       // Document files - only new documents
@@ -444,33 +444,72 @@ const EditEmployee = () => {
         });
       });
 
-      // Send existing documents list (for server to keep track)
-      formDataToSend.append("existingDocuments", JSON.stringify(existingDocuments));
-      const employeeRes = await auth.fetchWithAuth(
-        `${API_CONFIG.API_URL}/api/employeeManagement/${id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          body: formDataToSend,
-        }
-      );
-      if (!employeeRes.ok) {
-        throw new Error(`HTTP error! status: ${employeeRes.status}`);
+      // Existing documents
+      if (existingDocuments.length > 0) {
+        formDataToSend.append(
+          "existingDocuments",
+          JSON.stringify(existingDocuments)
+        );
       }
-      const data = await employeeRes.json();
+
+      // Update employee with retry logic
+      let employeeRes;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          employeeRes = await apiClient.put(`/api/employeeManagement/${id}`, formDataToSend, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            timeout: 60000,
+          });
+          break; // Success, exit retry loop
+        } catch (error) {
+          retryCount++;
+          console.error(`Attempt ${retryCount} failed:`, error.message);
+          
+          if (retryCount >= maxRetries) {
+            throw error; // Re-throw the error after all retries
+          }
+          
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+
+      const data = employeeRes.data;
       if (!data.success) {
         throw new Error(data.message || 'Failed to update employee');
       }
       Alert.alert("Success", "Employee updated successfully");
-      router.back();
+      router.push('/(any)/employee');
     } catch (error) {
       console.error("Error updating employee:", error);
-      Alert.alert(
-        "Error", 
-        error.response?.data?.message || error.message || "Failed to update employee"
-      );
+      
+      // Handle different types of errors
+      if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
+        Alert.alert(
+          "Network Error", 
+          "Unable to connect to the server. Please check your internet connection and try again."
+        );
+      } else if (error.response?.status === 400) {
+        Alert.alert(
+          "Validation Error", 
+          error.response?.data?.message || "Please check the form data and try again."
+        );
+      } else if (error.response?.status === 500) {
+        Alert.alert(
+          "Server Error", 
+          "Server error occurred. Please try again later."
+        );
+      } else {
+        Alert.alert(
+          "Error", 
+          error.response?.data?.message || error.message || "Failed to update employee"
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -582,6 +621,7 @@ const EditEmployee = () => {
                 mode="outlined"
                 label="Email"
                 value={formData.email}
+                editable={false}
                 onChangeText={(text) => handleInputChange("email", text)}
                 keyboardType="email-address"
                 outlineColor="#E5E7EB"
@@ -669,37 +709,19 @@ const EditEmployee = () => {
           </View>
 
           <View className="space-y-4">
-            {/* Department Dropdown */}
+            {/* Department Input Field */}
             <View className="relative mb-4">
-              <TouchableOpacity
-                onPress={() => setShowDepartmentDropdown(!showDepartmentDropdown)}
-                className="flex-row items-center justify-between bg-gray-100 rounded-lg h-12 px-4 w-full"
-              >
-                <Text className={`$ {
-                  formData.department ? 'text-gray-800' : 'text-gray-500'
-                } text-base font-medium`}>
-                  {formData.department || 'Select Department'}
-                </Text>
-                <ChevronDown size={16} color="#6B7280" />
-              </TouchableOpacity>
-              {showDepartmentDropdown && (
-                <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
-                  {departments.map((dept) => (
-                    <TouchableOpacity
-                      key={dept.name}
-                      className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
-                      onPress={() => {
-                        handleInputChange('department', dept.name);
-                        setShowDepartmentDropdown(false);
-                      }}
-                    >
-                      <Text className="text-lg font-medium">
-                        {dept.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+              <TextInput
+                mode="outlined"
+                label="Department"
+                value={formData.department}
+                onChangeText={(text) => handleInputChange('department', text)}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#DC2626"
+                placeholder="Enter department name"
+                error={!!errors.department}
+                helperText={errors.department}
+              />
             </View>
 
             {/* Role Dropdown */}
@@ -717,20 +739,28 @@ const EditEmployee = () => {
               </TouchableOpacity>
               {showRoleDropdown && (
                 <View className="absolute top-14 left-0 bg-white rounded-lg shadow-xl z-10 w-full">
-                  {roles.map((role) => (
-                    <TouchableOpacity
-                      key={role._id}
-                      className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
-                      onPress={() => {
-                        handleInputChange('role', role._id);
-                        setShowRoleDropdown(false);
-                      }}
-                    >
-                      <Text className="text-lg font-medium">
-                        {role.role}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {roles.map((role) => {
+                    // Safety check to ensure role is a valid object
+                    if (!role || typeof role !== 'object') {
+                      console.error('Invalid role object:', role);
+                      return null;
+                    }
+                    
+                    return (
+                      <TouchableOpacity
+                        key={role._id || Math.random()}
+                        className="px-4 py-3 border-b border-gray-100 active:bg-gray-50"
+                        onPress={() => {
+                          handleInputChange('role', role._id);
+                          setShowRoleDropdown(false);
+                        }}
+                      >
+                        <Text className="text-lg font-medium">
+                          {role.role || 'Unknown Role'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -892,41 +922,60 @@ const EditEmployee = () => {
             {existingDocuments.length > 0 && (
               <View className="mb-4">
                 <Text className="text-sm font-medium text-gray-600 mb-2">Existing Documents</Text>
-                {existingDocuments.map((doc, index) => {
-                  // Extract filename from URL for display
-                  const filename = typeof doc === 'string' 
-                    ? doc.split('/').pop() || `Document ${index + 1}`
-                    : (doc.originalName || doc.name || `Document ${index + 1}`);
-                  
-                  return (
-                    <TouchableOpacity
-                      key={`existing-${index}`}
-                      className="flex-row items-center justify-between p-3 bg-blue-50 rounded-lg mb-2 border border-blue-200"
-                      onPress={() => viewDocument(doc, true)}
-                    >
-                      <View className="flex-row items-center flex-1">
-                        <FileText size={20} color="#3B82F6" />
-                        <View className="ml-3 flex-1">
-                          <Text className="text-gray-800 font-medium" numberOfLines={1}>
-                            {filename}
-                          </Text>
-                          <Text className="text-blue-600 text-xs">
-                            Tap to open • Server document
-                          </Text>
+                <View className="space-y-2">
+                  {existingDocuments.map((doc, index) => {
+                    try {
+                      const docUrl = getDocumentUrl(doc);
+                      const filename = doc?.originalName || `Document ${index + 1}`;
+                      
+                      if (!docUrl) {
+                        console.warn('Document URL is null for document:', doc);
+                        return null;
+                      }
+                      
+                      return (
+                        <View key={index} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <TouchableOpacity
+                            onPress={() => {
+                              if (docUrl) {
+                                Linking.openURL(docUrl).catch((error) => {
+                                  console.error('Error opening document:', error);
+                                  Alert.alert(
+                                    'Document Not Available',
+                                    'This document may not exist or may have been moved.',
+                                    [{ text: 'OK' }]
+                                  );
+                                });
+                              }
+                            }}
+                            className="flex-1 flex-row items-center"
+                          >
+                            <View className="w-8 h-8 bg-blue-100 rounded-lg items-center justify-center mr-3">
+                              <Text className="text-blue-600 text-xs font-bold">📄</Text>
+                            </View>
+                            <View className="flex-1">
+                              <Text className="text-sm font-medium text-gray-900">
+                                {filename}
+                              </Text>
+                              <Text className="text-xs text-gray-500">
+                                Tap to view
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => removeExistingDocument(index)}
+                            className="p-2 bg-red-100 rounded-lg"
+                          >
+                            <Text className="text-red-600 text-xs">Remove</Text>
+                          </TouchableOpacity>
                         </View>
-                      </View>
-                      <TouchableOpacity
-                        className="p-2"
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          removeExistingDocument(index);
-                        }}
-                      >
-                        <X size={20} color="#DC2626" />
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  );
-                })}
+                      );
+                    } catch (error) {
+                      console.error('Error rendering document:', error, doc);
+                      return null;
+                    }
+                  })}
+                </View>
               </View>
             )}
 
@@ -994,7 +1043,7 @@ const EditEmployee = () => {
           <View className="flex-row justify-center space-x-6 mt-8 gap-4">
             <TouchableOpacity
               className="bg-gray-100 px-8 py-3 rounded-lg"
-              onPress={() => router.back()}
+              onPress={() => router.push(`/(any)/employee/${id}`)}
             >
               <Text className="text-gray-600 font-medium">Cancel</Text>
             </TouchableOpacity>

@@ -7,7 +7,7 @@ import { TextInput as PaperTextInput } from 'react-native-paper';
 import { API_CONFIG } from '../../../config';
 import * as ImagePicker from 'expo-image-picker';
 import auth from '../../utils/auth';
-import axios from 'axios';
+import apiClient from '../../utils/apiClient';
 
 const EditTaskForm = ({
   editingTask,
@@ -35,6 +35,17 @@ const EditTaskForm = ({
   const [existingAttachments, setExistingAttachments] = useState(
     editingTask.attachements?.filter(att => att.mimetype?.startsWith('image')) || []
   );
+
+  // Add general attachment support
+  const [generalAttachments, setGeneralAttachments] = useState([]);
+  const [removedGeneralAttachments, setRemovedGeneralAttachments] = useState([]);
+
+  // Initialize existing general attachments
+  React.useEffect(() => {
+    if (editingTask.attachements && Array.isArray(editingTask.attachements)) {
+      setExistingAttachments(editingTask.attachements);
+    }
+  }, [editingTask.attachements]);
 
   // --- FIXED: Support multiple assignees like AddTaskForm ---
   // Initialize assignedTo as array if it's not already
@@ -241,25 +252,39 @@ const EditTaskForm = ({
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*'], // Allowed file types
-        copyToCacheDirectory: true
+        type: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/*'
+        ],
+        multiple: true
       });
 
       if (result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        setEditingTask(prev => ({
-          ...prev,
-          attachment: {
-            name: asset.name,
-            uri: asset.uri,
-            type: asset.mimeType,
-            size: asset.size
-          }
-        }));
+        setGeneralAttachments(prev => [...prev, ...result.assets]);
       }
-    } catch (error) {
-      console.error('Error picking document:', error);
+    } catch (err) {
+      console.log('Document picker error:', err);
     }
+  };
+
+  const removeGeneralAttachment = (index) => {
+    setGeneralAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingGeneralAttachment = (index) => {
+    if (!editingTask.attachements || !editingTask.attachements[index]) return;
+    setRemovedGeneralAttachments(prev => [...prev, editingTask.attachements[index]]);
+    setEditingTask(prev => {
+      const newAttachments = Array.isArray(prev.attachements)
+        ? prev.attachements.filter((_, i) => i !== index)
+        : [];
+      return {
+        ...prev,
+        attachements: newAttachments,
+      };
+    });
   };
 
   const handleDateChange = (event, selectedDate) => {
@@ -268,6 +293,14 @@ const EditTaskForm = ({
         ...prev,
         [activeDateField]: selectedDate
       }));
+      
+      // If start date is changed, ensure end date is after start date
+      if (activeDateField === 'startDate') {
+        setEditingTask(prev => ({
+          ...prev,
+          endDate: selectedDate > prev.endDate ? selectedDate : prev.endDate
+        }));
+      }
     }
     setShowDatePicker(false);
     setActiveDateField(null);
@@ -276,6 +309,11 @@ const EditTaskForm = ({
   const openDatePicker = (field) => {
     setActiveDateField(field);
     setShowDatePicker(true);
+  };
+
+  // Get minimum date for end date picker
+  const getMinDateForEndDate = () => {
+    return editingTask.startDate || new Date();
   };
 
   const handleSubmit = async () => {
@@ -294,6 +332,12 @@ const EditTaskForm = ({
     }
     if (!editingTask.startDate) {
       Alert.alert('Validation Error', 'Start date is required');
+      return;
+    }
+
+    // Validate end date is after start date
+    if (editingTask.endDate && editingTask.endDate <= editingTask.startDate) {
+      Alert.alert('Validation Error', 'End date must be after start date');
       return;
     }
 
@@ -361,29 +405,32 @@ const EditTaskForm = ({
         });
       }
 
-      // Attach new document (PDF/Image) as attachements array
-      if (editingTask.attachment) {
-        formData.append('attachements', {
-          uri: editingTask.attachment.uri,
-          name: editingTask.attachment.name,
-          type: editingTask.attachment.type,
+      // Attach new general attachments
+      if (generalAttachments && generalAttachments.length > 0) {
+        generalAttachments.forEach((attachment, idx) => {
+          formData.append('attachements', {
+            uri: attachment.uri,
+            name: attachment.name || `attachment_${idx}`,
+            type: attachment.mimeType || 'application/octet-stream',
+          });
         });
       }
 
-      
-
-      const token = await auth.getToken();
-      const response = await axios.put(
-        `${API_CONFIG.API_URL}/api/tasks/${editingTask.id}`,
-        formData,
-        {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-          'x-api-key': API_CONFIG.API_KEY,
-            'Content-Type': 'multipart/form-data',
-          },
+      // Add removed general attachments for cleanup
+      if (removedGeneralAttachments.length > 0) {
+        const removedUrls = removedGeneralAttachments
+          .map(att => att.url)
+          .filter(Boolean);
+        if (removedUrls.length > 0) {
+          formData.append('removedGeneralAttachments', JSON.stringify(removedUrls));
         }
-      );
+      }
+
+      const response = await apiClient.put(`/api/tasks/${editingTask.id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       const data = response.data;
 
@@ -725,6 +772,34 @@ const EditTaskForm = ({
             ))}
           </ScrollView>
         )}
+
+        {/* General Attachments */}
+        {generalAttachments.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+            {generalAttachments.map((asset, index) => (
+              <View key={`general-attachment-${index}`} className="relative mr-2">
+                <Image 
+                  source={{ uri: asset.uri }} 
+                  className="w-16 h-16 rounded-lg" 
+                />
+                <TouchableOpacity
+                  onPress={() => removeGeneralAttachment(index)}
+                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"
+                >
+                  <X size={12} color="white" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        <TouchableOpacity
+          onPress={pickDocument}
+          className="flex-row items-center justify-center bg-purple-50 border-2 border-dashed border-purple-300 rounded-lg py-4"
+        >
+          <FileText size={20} color="#8B5CF6" />
+          <Text className="text-purple-600 ml-2 font-medium">Add General Attachments</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Action Buttons */}
@@ -764,6 +839,7 @@ const EditTaskForm = ({
           mode="date"
           display="default"
           onChange={handleDateChange}
+          minimumDate={activeDateField === 'endDate' ? getMinDateForEndDate() : new Date()} // Disable past dates and ensure end date is after start date
         />
       )}
     </View>

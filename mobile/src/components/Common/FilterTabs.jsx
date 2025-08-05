@@ -4,8 +4,8 @@ import { TouchableOpacity, View } from 'react-native';
 const filterIcons = [
   { name: 'All', icon: List },
   { name: 'Home Cinema', icon: Tv2 },
-  { name: 'Security System', icon: Cctv },
   { name: 'Home Automation', icon: HouseWifi },
+  { name: 'Security System', icon: Cctv },
   { name: 'Outdoor Audio Solution', icon: Speaker }
 ];
 

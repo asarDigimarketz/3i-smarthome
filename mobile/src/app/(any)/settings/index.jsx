@@ -6,8 +6,8 @@ import { useState, useEffect } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, Alert, ActivityIndicator } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { TextInput as PaperTextInput } from 'react-native-paper';
-import axios from 'axios';
 import { API_CONFIG } from '../../../../config';
+import apiClient from '../../../utils/apiClient';
 
 export default function GeneralSettings() {
   const router = useRouter();
@@ -52,16 +52,9 @@ export default function GeneralSettings() {
       setLoading(true);
       setError(null);
       
-      console.log('📤 Fetching general data from:', `${API_CONFIG.API_URL}/api/settings/general`);
+      console.log('📤 Fetching general data from:', `/api/settings/general`);
       
-      const response = await axios.get(
-        `${API_CONFIG.API_URL}/api/settings/general`,
-        {
-          headers: {
-            'x-api-key': API_CONFIG.API_KEY,
-          },
-        }
-      );
+      const response = await apiClient.get('/api/settings/general');
 
     
 
@@ -210,18 +203,13 @@ export default function GeneralSettings() {
         console.log('📎 Adding logo file to FormData');
       }
 
-      console.log('📤 Sending update request to:', `${API_CONFIG.API_URL}/api/settings/general`);
+      console.log('📤 Sending update request to:', `/api/settings/general`);
 
-      const response = await axios.put(
-        `${API_CONFIG.API_URL}/api/settings/general`,
-        formDataToSend,
-        {
-          headers: {
-            'x-api-key': API_CONFIG.API_KEY,
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      const response = await apiClient.put('/api/settings/general', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       console.log('📥 Update Response:', response.data);
 

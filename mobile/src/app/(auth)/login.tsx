@@ -139,11 +139,11 @@ export default function Login() {
               }
             }, 1000);
           } else {
-            // No accessible routes, redirect to employee layout
-            console.log('⚠️ No accessible routes, redirecting to employee page');
+            // No accessible routes, redirect to login
+            console.log('⚠️ No accessible routes, redirecting to login');
             setTimeout(() => {
               try {
-                router.replace('/(any)/employee' as any);
+                router.replace('/(auth)/login' as any);
               } catch (error) {
                 console.error('Navigation error:', error);
                 // Fallback to splash screen which will handle navigation

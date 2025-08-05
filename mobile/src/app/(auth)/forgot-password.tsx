@@ -3,9 +3,43 @@ import { View, Text, TouchableOpacity, Alert, ScrollView, KeyboardAvoidingView, 
 import { TextInput } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Mail, KeyRound, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, KeyRound, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { cn } from '../../utils/cn';
+
+// Password validation function similar to client
+const validatePassword = (password: string) => {
+  const errors: string[] = [];
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  if (!/\d/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  if (!/[@$!%*?&]/.test(password)) {
+    errors.push('Password must contain at least one special character (@$!%*?&)');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+// Requirement item component
+const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
+  <View className="flex-row items-center gap-1.5">
+    <View className={`h-1.5 w-1.5 rounded-full ${met ? "bg-green-400" : "bg-red-400"}`} />
+    <Text className={`text-xs ${met ? "text-green-400" : "text-red-400"}`}>{text}</Text>
+  </View>
+);
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');
@@ -17,6 +51,13 @@ const ForgotPasswordScreen = () => {
   const [tempToken, setTempToken] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+
+  const handlePasswordChange = (password: string) => {
+    setNewPassword(password);
+    const { errors } = validatePassword(password);
+    setPasswordErrors(errors);
+  };
 
   const handleSendOTP = async () => {
     if (!email.trim()) {
@@ -103,13 +144,14 @@ const ForgotPasswordScreen = () => {
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+    const { isValid } = validatePassword(newPassword);
+    if (!isValid) {
+      Alert.alert('Invalid Password', 'Please ensure your password meets all requirements');
       return;
     }
 
-    if (newPassword.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
@@ -267,7 +309,7 @@ const ForgotPasswordScreen = () => {
           mode="outlined"
           label="Enter new password"
           value={newPassword}
-          onChangeText={setNewPassword}
+          onChangeText={handlePasswordChange}
           secureTextEntry={!showNewPassword}
           left={<TextInput.Icon icon={() => <Lock size={20} color="#000" />} />}
           right={
@@ -280,6 +322,18 @@ const ForgotPasswordScreen = () => {
           activeOutlineColor="#DC2626"
           style={{ backgroundColor: 'white' }}
         />
+        {newPassword && (
+          <View className="mt-2">
+            <Text className="text-xs text-gray-600 mb-2">Password Requirements:</Text>
+            <View className="space-y-1">
+              <RequirementItem met={newPassword.length >= 8} text="8+ characters" />
+              <RequirementItem met={/[A-Z]/.test(newPassword)} text="Uppercase letter" />
+              <RequirementItem met={/[a-z]/.test(newPassword)} text="Lowercase letter" />
+              <RequirementItem met={/\d/.test(newPassword)} text="Number" />
+              <RequirementItem met={/[@$!%*?&]/.test(newPassword)} text="Special character" />
+            </View>
+          </View>
+        )}
       </View>
 
       <View className="mb-6">

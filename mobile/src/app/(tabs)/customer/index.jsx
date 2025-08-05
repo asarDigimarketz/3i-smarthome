@@ -15,10 +15,10 @@ import {
 } from 'react-native';
 import { TextInput as PaperTextInput } from 'react-native-paper';
 import { API_CONFIG } from '../../../../config';
-import auth from '../../../utils/auth';
 import { useAuth } from '../../../utils/AuthContext';
 import { hasPagePermission, getPageActions } from '../../../utils/permissions';
 import PermissionGuard from '../../../components/Common/PermissionGuard';
+import apiClient from '../../../utils/apiClient';
 
 const Customer = () => {
   const { user } = useAuth();
@@ -40,8 +40,7 @@ const Customer = () => {
     state: '',
     country: 'India',
     pincode: '',
-    notes: '',
-    status: 'Active'
+    notes: ''
   });
 
   if (!hasPagePermission(user, '/dashboard/customers', 'view')) {
@@ -63,15 +62,9 @@ const Customer = () => {
         setLoading(true);
       }
 
-      const response = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/customers`, {
-        method: 'GET',
-      });
+      const response = await apiClient.get('/api/customers');
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       if (data.success && data.data && Array.isArray(data.data.customers)) {
         // Transform data to match the component's expected format
@@ -85,7 +78,6 @@ const Customer = () => {
           services: customer.services || [],
           amountSpend: customer.formattedTotalSpent || `₹${customer.totalSpent?.toLocaleString('en-IN') || '0'}`,
           totalProjects: customer.totalProjects || 0,
-          status: customer.status || 'Active',
           createdAt: customer.createdAt,
         }));
 
@@ -169,20 +161,13 @@ const Customer = () => {
         email: newCustomer.email,
         address: address,
         notes: newCustomer.notes,
-        status: newCustomer.status,
       };
 
-      const response = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/customers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(customerData),
-      });
+      const response = await apiClient.post(`/api/customers`, customerData);
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (response.ok && data.success) {
+      if (data.success) {
         Alert.alert('Success', 'Customer added successfully');
         setShowAddForm(false);
         setNewCustomer({
@@ -195,8 +180,7 @@ const Customer = () => {
           state: '',
           country: 'India',
           pincode: '',
-          notes: '',
-          status: 'Active'
+          notes: ''
         });
         // Refresh the customer list
         fetchCustomers();
@@ -280,15 +264,16 @@ const Customer = () => {
       >
         <View className="flex-row justify-between items-center px-5 py-4 bg-white">
           <Text className="text-xl font-bold text-gray-800">Customers</Text>
-          {actions.add && (
+         
             <TouchableOpacity 
               className="flex-row items-center bg-red-600 px-4 py-2 rounded-lg"
               onPress={() => router.push('/(tabs)/customer/AddCustomer')}
+              disabled={!actions.add}
             >
               <Text className="text-white font-semibold mr-1">Add</Text>
               <Plus size={20} color="#FFFFFF" />
             </TouchableOpacity>
-          )}
+          
         </View>
         
         <View className="p-2">
@@ -324,11 +309,11 @@ const Customer = () => {
               key={customer.id}
               className="bg-[#f4f4f4] rounded-xl p-5 shadow-lg mb-5 border border-[#c92125]"
               onPress={() => viewCustomerDetail(customer)}
+              disabled={!actions.view}
             >
               <View className="flex-row justify-between items-start mb-3">
                 <View className="flex-1">
                   <Text className="text-lg font-bold text-gray-800">{customer.name}</Text>
-                  <Text className="text-sm text-gray-600 mt-1">{customer.status}</Text>
                 </View>
                 <TouchableOpacity className="flex-row items-center bg-red-50 px-3 py-1.5 rounded-lg">
                   <Phone size={14} color="#DC2626" />

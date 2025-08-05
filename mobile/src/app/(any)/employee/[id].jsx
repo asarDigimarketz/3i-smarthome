@@ -3,9 +3,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { ArrowLeft, FileText, Mail, Phone } from 'lucide-react-native'
 import { Image, ScrollView, Text, TouchableOpacity, View, Alert, Linking } from 'react-native'
 import { API_CONFIG } from '../../../../config'
-import auth from '../../../utils/auth'
+import apiClient from '../../../utils/apiClient'
 import ProjectCard from '../../../components/Common/ProjectCard'
-
+import { useAuth } from '../../../utils/AuthContext'
+import { getPageActions } from '../../../utils/permissions'
 // Avatar helper
 const fallbackAvatar = 'https://img.heroui.chat/image/avatar?w=200&h=200&u=1';
 const getAvatarUrl = (avatar) => {
@@ -27,34 +28,46 @@ const getAvatarUrl = (avatar) => {
   return avatar;
 };
 
-// Document URL helper
+// Helper function to get document URL
 const getDocumentUrl = (docUrl) => {
   if (!docUrl) return null;
   
+  // Handle document objects
+  if (typeof docUrl === 'object' && docUrl.url) {
+    docUrl = docUrl.url;
+  }
+  
+  // Ensure docUrl is a string before calling startsWith
+  if (typeof docUrl !== 'string') {
+    console.warn('getDocumentUrl: docUrl is not a string:', docUrl);
+    return null;
+  }
+  
+  // If it's already a full URL, check if it's localhost and replace
   if (docUrl.startsWith('http')) {
     try {
       const url = new URL(docUrl);
       if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-        // Replace localhost with API_CONFIG.API_URL and ensure /public is included
-        const pathWithPublic = url.pathname.includes('/public') ? url.pathname : `/public${url.pathname}`;
-        return `${API_CONFIG.API_URL}${pathWithPublic}`;
+        // Replace localhost with API_CONFIG.API_URL
+        const replacedUrl = docUrl.replace(`${url.protocol}//${url.hostname}:${url.port || '5000'}`, API_CONFIG.API_URL);
+        return replacedUrl;
       }
       return docUrl;
-    } catch {
+    } catch (error) {
+      console.warn('Error parsing URL:', error);
       return docUrl;
     }
   }
   
-  if (docUrl.startsWith('/assets')) {
-    // Add /public prefix if not present
-    return `${API_CONFIG.API_URL}/public${docUrl}`;
-  }
-  
+  // If it starts with /, construct full URL
   if (docUrl.startsWith('/')) {
-    return `${API_CONFIG.API_URL}${docUrl}`;
+    const fullUrl = `${API_CONFIG.API_URL}${docUrl}`;
+    return fullUrl;
   }
   
-  return docUrl;
+  // Otherwise, construct URL with the filename
+  const constructedUrl = `${API_CONFIG.API_URL}/assets/images/employees/documents/${docUrl}`;
+  return constructedUrl;
 };
 
 export default function EmployeeDetail() {
@@ -65,7 +78,8 @@ export default function EmployeeDetail() {
   const [projectFilter, setProjectFilter] = useState("all")
   const [page, setPage] = useState(1)
   const pageSize = 10 // Increased for horizontal scrolling
-
+  const { user } = useAuth();
+  const actions = getPageActions(user, '/dashboard/employees');
 
 
   // Fetch employee data and projects
@@ -76,15 +90,9 @@ export default function EmployeeDetail() {
       setLoading(true);
       
       // 1. Fetch employee details
-      const response = await auth.fetchWithAuth(`${API_CONFIG.API_URL}/api/employeeManagement/${id}`, {
-        method: 'GET'
-      });
+      const response = await apiClient.get(`/api/employeeManagement/${id}`);
       
-      if (!response.ok) {
-        throw new Error("Failed to fetch employee data");
-      }
-      
-      const data = await response.json();
+      const data = response.data;
       if (!data.success) throw new Error(data.message || "Failed to fetch employee data");
       
       const emp = data.employee;
@@ -96,50 +104,44 @@ export default function EmployeeDetail() {
       
       if (emp && emp._id) {
         try {
-          const projectsRes = await auth.fetchWithAuth(
-            `${API_CONFIG.API_URL}/api/projects?assignedEmployee=${emp._id}`,
-            {
-              method: 'GET'
-            }
+          const projectsRes = await apiClient.get(
+            `/api/projects?assignedEmployees=${emp._id}`
           );
           
-          if (projectsRes.ok) {
-            const projectsData = await projectsRes.json();
-            if (projectsData.success && Array.isArray(projectsData.data)) {
-              projects = projectsData.data.map((proj) => {
-                // Determine status for stats
-                const status = proj.projectStatus || "";
-                if (["complete", "completed", "done"].includes(status.toLowerCase())) {
-                  completed++;
-                } else if (["inprogress", "in-progress", "ongoing"].includes(status.toLowerCase())) {
-                  ongoing++;
+          const projectsData = projectsRes.data;
+          if (projectsData.success && Array.isArray(projectsData.data)) {
+            projects = projectsData.data.map((proj) => {
+              // Determine status for stats
+              const status = proj.projectStatus || "";
+              if (["complete", "completed", "done"].includes(status.toLowerCase())) {
+                completed++;
+              } else if (["inprogress", "in-progress", "ongoing"].includes(status.toLowerCase())) {
+                ongoing++;
+              }
+              
+              return {
+                id: proj._id || proj.id,
+                service: proj.services || "N/A",
+                status: proj.projectStatus || "N/A",
+                amount: proj.projectAmount
+                  ? `₹${proj.projectAmount.toLocaleString("en-IN")}`
+                  : "N/A",
+                date: proj.projectDate
+                  ? new Date(proj.projectDate).toLocaleDateString("en-GB")
+                  : "N/A",
+                progress: `${proj.completedTasks || 0}/${proj.totalTasks || 0}`,
+                completedTasks: proj.completedTasks || 0,
+                totalTasks: proj.totalTasks || 0,
+                assignedEmployees: proj.assignedEmployees || [],
+                customer: {
+                  name: proj.customerName || `${emp.firstName} ${emp.lastName}`,
+                  address: proj.fullAddress || 
+                    `${proj.address?.addressLine || ""}, ${proj.address?.city || ""}, ${proj.address?.district || ""} - ${proj.address?.pincode || ""}`
                 }
-                
-                return {
-                  id: proj._id || proj.id,
-                  service: proj.services || "N/A",
-                  status: proj.projectStatus || "N/A",
-                  amount: proj.projectAmount
-                    ? `₹${proj.projectAmount.toLocaleString("en-IN")}`
-                    : "N/A",
-                  date: proj.projectDate
-                    ? new Date(proj.projectDate).toLocaleDateString("en-GB")
-                    : "N/A",
-                  progress: `${proj.completedTasks || 0}/${proj.totalTasks || 0}`,
-                  completedTasks: proj.completedTasks || 0,
-                  totalTasks: proj.totalTasks || 0,
-                  assignedEmployees: proj.assignedEmployees || [],
-                  customer: {
-                    name: proj.customerName || `${emp.firstName} ${emp.lastName}`,
-                    address: proj.fullAddress || 
-                      `${proj.address?.addressLine || ""}, ${proj.address?.city || ""}, ${proj.address?.district || ""} - ${proj.address?.pincode || ""}`
-                  }
-                };
-              });
-            }
+              };
+            });
           }
         } catch (projectError) {
-          console.log("Projects fetch failed:", projectError);
           // Continue with empty projects array
         }
       }
@@ -154,7 +156,9 @@ export default function EmployeeDetail() {
         dateOfBirth: emp.dateOfBirth || "",
         dateOfHiring: emp.dateOfHiring || "",
         role: emp.role?._id || emp.role || "",
-        department: emp.department?.name || emp.department || "",
+        department: typeof emp.department === "object" && emp.department !== null
+          ? emp.department.name
+          : emp.department || "",
         status: emp.status || "active",
         notes: emp.notes || "",
         address: {
@@ -169,7 +173,9 @@ export default function EmployeeDetail() {
         phone: emp.mobileNo || "",
         name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim(),
         roleName: emp.role?.role || "N/A",
-        departmentName: emp.department?.name || "N/A",
+        departmentName: typeof emp.department === "object" && emp.department !== null
+          ? emp.department.name
+          : emp.department || "N/A",
         dateOfJoining: emp.dateOfHiring || "",
         note: emp.notes || "",
         documents: emp.documents || [],
@@ -224,6 +230,7 @@ export default function EmployeeDetail() {
         <TouchableOpacity 
           className="bg-red-600 px-6 py-2 rounded-lg"
           onPress={() => router.push({ pathname: `/employee/edit/${employeeData.id}` })}
+          disabled={!actions.edit}
         >
           <Text className="text-white font-medium">Edit</Text>
         </TouchableOpacity>
@@ -332,46 +339,60 @@ export default function EmployeeDetail() {
         </View>
 
         {/* Documents Section */}
-        <View className="px-6 mt-6">
-          <Text className="text-gray-500 text-sm mb-2">Documents</Text>
-          {employeeData.documents && employeeData.documents.length > 0 ? (
+        {employeeData.documents && employeeData.documents.length > 0 && (
+          <View className="bg-white rounded-lg p-4 mb-4">
+            <Text className="text-lg font-semibold text-gray-900 mb-3">
+              Documents ({employeeData.documents.length})
+            </Text>
             <View className="space-y-2">
-              {employeeData.documents.map((docUrl, index) => {
-                // Extract filename from URL
-                const filename = docUrl.split('/').pop() || `Document ${index + 1}`;
-                
-                return (
-                  <TouchableOpacity 
-                    key={index}
-                    className="flex-row items-center bg-blue-50 p-3 rounded-lg border border-blue-200"
-                    onPress={() => {
-                      // Web-like functionality: Open document URL with proper URL construction
-                      const properDocumentUrl = getDocumentUrl(docUrl);
-                      if (properDocumentUrl) {
-                        Linking.openURL(properDocumentUrl).catch(err => {
-                          Alert.alert('Error', 'Could not open document');
-                          console.error('Error opening document:', err);
-                        });
-                      } else {
-                        Alert.alert('Error', 'Document URL not available');
-                      }
-                    }}
-                  >
-                    <FileText size={18} color="#2563EB" />
-                    <View className="flex-1 ml-2">
-                      <Text className="text-sm font-medium text-gray-900">{filename}</Text>
-                      <Text className="text-xs text-gray-500">Tap to view</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
+              {employeeData.documents.map((doc, index) => {
+                try {
+                  const docUrl = getDocumentUrl(doc);
+                  const filename = doc?.originalName || `Document ${index + 1}`;
+                  
+                  if (!docUrl) {
+                    console.warn('Document URL is null for document:', doc);
+                    return null;
+                  }
+                  
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => {
+                        if (docUrl) {
+                          Linking.openURL(docUrl).catch((error) => {
+                            console.error('Error opening document:', error);
+                            Alert.alert(
+                              'Document Not Available',
+                              'This document may not exist or may have been moved. Please contact the administrator.',
+                              [{ text: 'OK' }]
+                            );
+                          });
+                        }
+                      }}
+                      className="flex-row items-center p-3 bg-gray-50 rounded-lg"
+                    >
+                      <View className="w-8 h-8 bg-blue-100 rounded-lg items-center justify-center mr-3">
+                        <Text className="text-blue-600 text-xs font-bold">📄</Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-sm font-medium text-gray-900">
+                          {filename}
+                        </Text>
+                        <Text className="text-xs text-gray-500">
+                          Tap to view
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                } catch (error) {
+                  console.error('Error rendering document:', error, doc);
+                  return null;
+                }
               })}
             </View>
-          ) : (
-            <View className="bg-gray-50 p-4 rounded-lg">
-              <Text className="text-gray-500 text-sm text-center">No documents uploaded</Text>
-            </View>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* Note Section */}
         <View className="px-6 mt-6">
@@ -458,10 +479,7 @@ export default function EmployeeDetail() {
                 }
                 return true;
               }).length > 1 && (
-                <View className="justify-center items-center px-4" style={{ width: 60 }}>
-                  <Text className="text-gray-400 text-xs text-center">Swipe to see more</Text>
-                  <Text className="text-gray-400 text-2xl">→</Text>
-                </View>
+               null
               )}
             </ScrollView>
           ) : (

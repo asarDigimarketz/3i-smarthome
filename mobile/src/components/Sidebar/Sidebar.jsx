@@ -1,13 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Bell, BriefcaseBusiness, ChartColumn, ChevronDown, ChevronRight, FolderKanban, Home, ListChecks, Settings, Users, LogOut } from 'lucide-react-native';
+import { Bell, BriefcaseBusiness, ChartColumn, ChevronDown, ChevronRight, FolderKanban, Home, ListChecks, Settings, Users, LogOut, User } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { Animated, Image, Pressable, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import axios from 'axios';
 import { API_CONFIG } from '../../../config';
 import { useAuth } from '../../utils/AuthContext';
 import { filterMenuItemsByPermissions } from '../../utils/permissions';
+import apiClient from '../../utils/apiClient';
 
 const Sidebar = ({ isVisible, onClose }) => {
   const router = useRouter();
@@ -26,15 +26,7 @@ const Sidebar = ({ isVisible, onClose }) => {
         setLoading(true);
         console.log('🔄 Fetching logo from API for Sidebar...');
         
-        const response = await axios.get(
-          `${API_CONFIG.API_URL}/api/settings/general`,
-          {
-            headers: {
-              'x-api-key': API_CONFIG.API_KEY,
-            },
-            timeout: 10000,
-          }
-        );
+        const response = await apiClient.get('/api/settings/general');
 
         if (response.data.success && response.data.generalData) {
           const generalData = response.data.generalData;
@@ -78,13 +70,22 @@ const Sidebar = ({ isVisible, onClose }) => {
 
   const allSettingsOptions = [
     { id: 'general', label: 'General', route: '/settings', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { id: 'employee-settings', label: 'Employee', route: '/settings/Employee', color: 'text-green-600', bg: 'bg-green-50' },
+    { id: 'employee-settings', label: 'Roles & Permissions', route: '/settings/Employee', color: 'text-green-600', bg: 'bg-green-50' },
     { id: 'email-config', label: 'Email Configuration', route: '/settings/EmailConfigure', color: 'text-purple-600', bg: 'bg-purple-50' },
-    { id: 'notification-config', label: 'Notification', route: '/settings/NotificationConfigure', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+    
   ];
 
-  // Filter menu items based on user permissions
-  const menuItems = filterMenuItemsByPermissions(allMenuItems, user);
+  // Filter menu items based on user permissions, but ensure notifications are always accessible
+  const filteredMenuItems = filterMenuItemsByPermissions(allMenuItems, user);
+  
+  // Add notification item if it's not already included (ensures all employees have access)
+  const notificationItem = allMenuItems.find(item => item.id === 'notification');
+  const hasNotificationAccess = filteredMenuItems.some(item => item.id === 'notification');
+  
+  const menuItems = hasNotificationAccess 
+    ? filteredMenuItems 
+    : [...filteredMenuItems, notificationItem].filter(Boolean);
+
   const settingsOptions = isAdmin
     ? allSettingsOptions
     : [];
@@ -153,7 +154,46 @@ const Sidebar = ({ isVisible, onClose }) => {
           </View>
         </LinearGradient>
 
-        <View className="flex-1 px-6 pt-8">
+        <View className="flex-1 px-6 pt-2">
+          {/* Profile Section */}
+          <View className="mb-2">
+            <LinearGradient
+             colors={['#c92125','#dc2626']}
+             start={{ x: 0, y: 0 }}
+             end={{ x: 0, y: 1 }}
+             style={{
+              borderRadius: 10,
+              padding: 10
+             }}
+            >
+              <View className="flex-row items-center">
+                {/* Avatar */}
+                <View className={`w-12 h-12 rounded-full items-center justify-center mr-3 ${
+                  isAdmin 
+                    ? 'bg-gray-500' 
+                    : 'bg-gray-300'
+                }`}>
+                  <User size={24} color="white" />
+                </View>
+                
+                {/* User Details */}
+                <View className="flex-1">
+                  <Text className="text-white font-semibold text-base" numberOfLines={1}>
+                    {user?.name || 'User'}
+                  </Text>
+                  {/* <Text className="text-gray-600 text-sm" numberOfLines={1}>
+                    {user?.email || 'user@example.com'}
+                  </Text> */}
+                  <View className="flex-row items-center mt-1">
+                    <Text className="text-white text-xs font-medium">
+                      {isAdmin ? 'Admin' : (user?.role || 'Employee')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+
           <View className="flex-1">
             {menuItems.map((item) => (
               <TouchableOpacity
