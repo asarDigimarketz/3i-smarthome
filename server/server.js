@@ -17,12 +17,9 @@ connectDB();
 // Initialize Firebase Admin SDK
 try {
   initializeFirebase();
-  console.log('✅ Firebase Admin SDK initialized in server.js');
 } catch (error) {
-  console.error('❌ Failed to initialize Firebase Admin SDK:', error);
+  console.error("❌ Failed to initialize Firebase Admin SDK:", error);
 }
-
-
 
 // Initialize express app
 const app = express();
@@ -136,17 +133,13 @@ const server = app.listen(PORT, () => {
 
 // Graceful shutdown handling
 process.on("SIGTERM", () => {
-  console.log("SIGTERM received. Shutting down gracefully...");
   server.close(() => {
-    console.log("Process terminated");
     process.exit(0);
   });
 });
 
 process.on("SIGINT", () => {
-  console.log("SIGINT received. Shutting down gracefully...");
   server.close(() => {
-    console.log("Process terminated");
     process.exit(0);
   });
 });
