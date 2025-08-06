@@ -44,7 +44,7 @@ async function sendProposalNotification(userIds, notification) {
       return;
     }
 
-    // console.log('User IDs for proposal notification:', userIds);
+    // console.log('🔔 Proposal notification - User IDs:', userIds.length, 'unique users');
 
     // Save notifications to database first
     try {
@@ -73,12 +73,15 @@ async function sendProposalNotification(userIds, notification) {
       return;
     }
 
-    const tokenList = tokens.map(t => t.token);
+    // Remove duplicate tokens to prevent duplicate notifications
+    const uniqueTokens = [...new Set(tokens.map(t => t.token))];
+    // console.log('🔔 FCM tokens found:', tokens.length, 'total,', uniqueTokens.length, 'unique');
+
     let successCount = 0;
     let failureCount = 0;
 
     // Send to each token individually
-    for (const token of tokenList) {
+    for (const token of uniqueTokens) {
       try {
         // Convert all data values to strings for FCM compatibility
         const fcmData = convertToFCMData({
@@ -251,7 +254,7 @@ const createProposal = async (req, res) => {
       const employeesWithPermission = await UserEmployee.find({
         'permissions': {
           $elemMatch: {
-            'page': { $regex: new RegExp('proposals', 'i') },
+            'page': { $regex: new RegExp('proposal', 'i') },
             'actions.view': true
           }
         }
@@ -652,7 +655,7 @@ const updateProposal = async (req, res) => {
       const employeesWithPermission = await UserEmployee.find({
         'permissions': {
           $elemMatch: {
-            'page': { $regex: new RegExp('proposals', 'i') },
+            'page': { $regex: new RegExp('proposal', 'i') },
             'actions.view': true
           }
         }
@@ -885,7 +888,7 @@ const updateProposalField = async (req, res) => {
       const employeesWithPermission = await UserEmployee.find({
         'permissions': {
           $elemMatch: {
-            'page': { $regex: new RegExp('proposals', 'i') },
+            'page': { $regex: new RegExp('proposal', 'i') },
             'actions.view': true
           }
         }
@@ -1074,7 +1077,7 @@ const deleteProposal = async (req, res) => {
       const employeesWithPermission = await UserEmployee.find({
         'permissions': {
           $elemMatch: {
-            'page': { $regex: new RegExp('proposals', 'i') },
+            'page': { $regex: new RegExp('proposal', 'i') },
             'actions.view': true
           }
         }

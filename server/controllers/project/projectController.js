@@ -237,31 +237,52 @@ const createProject = async (req, res) => {
 
     // Send notifications to users with project permissions
     try {
-      await createProjectNotification({
-        type: 'project_created',
-        title: 'New Project Created',
-        body: `A new project "${customerName}" has been created by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
-        data: {
-          projectId: project._id.toString(),
-          customerName: customerName,
-          projectAmount: parseFloat(projectAmount),
-          services: services,
-          createdBy: req.user ? req.user.name || req.user.email : 'Unknown',
-          projectDetails: {
-            customerName: customerName,
-            contactNumber: contactNumber,
-            email: email,
-            services: services,
-            projectAmount: parseFloat(projectAmount),
-            size: size,
-            projectStatus: projectStatus || 'new'
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployee.find({
+        'permissions': {
+          $elemMatch: {
+            'page': { $regex: new RegExp('projects', 'i') },
+            'actions.view': true
           }
-        },
-        priority: 'medium',
-        projectId: project._id.toString(),
-        triggeredBy: req.user ? req.user.id : null,
-        triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        }
       });
+
+      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(userId =>
+        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: 'project_created',
+          title: 'New Project Created',
+          body: `A new project "${customerName}" has been created by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          data: {
+            projectId: project._id.toString(),
+            customerName: customerName,
+            projectAmount: parseFloat(projectAmount),
+            services: services,
+            createdBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            projectDetails: {
+              customerName: customerName,
+              contactNumber: contactNumber,
+              email: email,
+              services: services,
+              projectAmount: parseFloat(projectAmount),
+              size: size,
+              projectStatus: projectStatus || 'new'
+            }
+          },
+          priority: 'medium',
+          projectId: project._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+        };
+
+        await sendProjectNotification(recipientUserIds, notification);
+      }
     } catch (notificationError) {
       console.error('Error sending project notification:', notificationError);
       // Don't fail the project creation if notification fails

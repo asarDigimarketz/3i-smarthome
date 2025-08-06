@@ -56,8 +56,8 @@ router.post('/mobile-login', async (req, res) => {
             actions: { view: true, add: true, edit: true, delete: true }
           },
           {
-            page: "Proposals",
-            url: "/dashboard/proposals",
+            page: "Proposal",
+            url: "/dashboard/proposal",
             actions: { view: true, add: true, edit: true, delete: true }
           },
           {
@@ -67,7 +67,7 @@ router.post('/mobile-login', async (req, res) => {
           },
           {
             page: "Tasks",
-            url: "/dashboard/tasks",
+            url: "/dashboard/task",
             actions: { view: true, add: true, edit: true, delete: true }
           },
           {
@@ -288,7 +288,7 @@ router.get('/mobile-profile', authenticateToken, async (req, res) => {
           },
           {
             page: "Proposals",
-            url: "/dashboard/proposals",
+            url: "/dashboard/proposal",
             actions: { view: true, add: true, edit: true, delete: true }
           },
           {
@@ -298,7 +298,7 @@ router.get('/mobile-profile', authenticateToken, async (req, res) => {
           },
           {
             page: "Tasks",
-            url: "/dashboard/tasks",
+            url: "/dashboard/task",
             actions: { view: true, add: true, edit: true, delete: true }
           },
           {

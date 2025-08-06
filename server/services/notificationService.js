@@ -170,7 +170,7 @@ const createProposalNotification = async ({
 }) => {
   try {
     // Get users with proposal permissions
-    const usersWithPermission = await getUsersWithPermission('proposals', 'view');
+    const usersWithPermission = await getUsersWithPermission('proposal', 'view');
 
     if (usersWithPermission.length === 0) {
       return [];
