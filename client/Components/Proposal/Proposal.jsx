@@ -18,59 +18,61 @@ function App() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const {
-    canCreate,
-    canEdit,
-    canDelete,
-    canView,
-    getUserPermissions
-  } = usePermissions();
+  const { canCreate, canEdit, canDelete, canView, getUserPermissions } =
+    usePermissions();
 
   // Get permissions using the hook
   const userPermissions = getUserPermissions("proposal");
 
-  const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page')) || 1);
+  const [currentPage, setCurrentPage] = useState(
+    parseInt(searchParams.get("page")) || 1
+  );
   const [dateRange, setDateRange] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [serviceFilter, setServiceFilter] = useState("");
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState(new Set(["Hot", "Cold", "Warm", "Scrap"])); // Default: only specific statuses
+  const [selectedStatuses, setSelectedStatuses] = useState(
+    new Set(["Hot", "Cold", "Warm"])
+  ); // Default: only specific statuses
 
   // Debounce search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   // Update URL when pagination or filters change
-  const updateURL = useCallback((page, pushState = false) => {
-    const params = new URLSearchParams();
-    if (page > 1) params.set('page', page.toString());
-    const newURL = params.toString() ? `?${params.toString()}` : '';
-    const fullURL = `/dashboard/proposal${newURL}`;
+  const updateURL = useCallback(
+    (page, pushState = false) => {
+      const params = new URLSearchParams();
+      if (page > 1) params.set("page", page.toString());
+      const newURL = params.toString() ? `?${params.toString()}` : "";
+      const fullURL = `/dashboard/proposal${newURL}`;
 
-    if (pushState) {
-      router.push(fullURL, { scroll: false });
-    } else {
-      router.replace(fullURL, { scroll: false });
-    }
-  }, [router]);
+      if (pushState) {
+        router.push(fullURL, { scroll: false });
+      } else {
+        router.replace(fullURL, { scroll: false });
+      }
+    },
+    [router]
+  );
 
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const page = parseInt(urlParams.get('page')) || 1;
+      const page = parseInt(urlParams.get("page")) || 1;
       setCurrentPage(page);
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   // Initial fetch when component mounts - use URL params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const initialPage = parseInt(urlParams.get('page')) || 1;
+    const initialPage = parseInt(urlParams.get("page")) || 1;
     if (initialPage !== currentPage) {
       setCurrentPage(initialPage);
     }
@@ -91,7 +93,9 @@ function App() {
     if (statuses === "all") {
       // When "All Status" is selected, show ALL statuses including "Confirmed"
       setStatusFilter("all");
-      setSelectedStatuses(new Set(["All Status", "Hot", "Cold", "Warm", "Scrap", "Confirmed"]));
+      setSelectedStatuses(
+        new Set(["All Status", "Hot", "Cold", "Warm", "Scrap", "Confirmed"])
+      );
     } else if (Array.isArray(statuses)) {
       // Multiple statuses selected
       if (statuses.length === 0) {
@@ -131,8 +135,6 @@ function App() {
     setServiceFilter(service === "All" ? "" : service);
     setCurrentPage(1); // Reset to first page when filter changes
   };
-
-
 
   return (
     <div className="flex bg-gray-50 min-h-screen overflow-x-auto">
@@ -191,7 +193,10 @@ function App() {
                   ) : null
                 }
               />
-              <StatusDropdown onStatusChange={handleStatusChange} selectedStatuses={selectedStatuses} />
+              <StatusDropdown
+                onStatusChange={handleStatusChange}
+                selectedStatuses={selectedStatuses}
+              />
 
               <Link href="/dashboard/proposal/add-proposal">
                 <Button
@@ -204,8 +209,6 @@ function App() {
                   Add New
                 </Button>
               </Link>
-
-
             </div>
           </div>
 

@@ -649,6 +649,12 @@ const updateProject = async (req, res) => {
       new: true,
       runValidators: true,
     });
+    if (updateData.projectAmount && updateData.projectAmount !== originalProject.projectAmount) {
+      const customer = await Customer.findOne({ customerId: project.customerId });
+      if (customer) {
+        await customer.updateStatistics();
+      }
+    }
 
     // Send notifications for project updates
     try {

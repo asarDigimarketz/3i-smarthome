@@ -8,7 +8,7 @@ export default function EditProposalPage() {
   const proposalId = params.id;
 
   return (
-    <PermissionGuard requiredPermission="proposals" requiredAction="update">
+    <PermissionGuard requiredPermission="proposal" requiredAction="update">
       <AddProposalPage isEdit={true} proposalId={proposalId} />
     </PermissionGuard>
   );

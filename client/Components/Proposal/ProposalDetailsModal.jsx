@@ -287,7 +287,7 @@ const ProposalDetailsModal = ({
 
   // Handle edit - navigate to edit page
   const handleEdit = () => {
-    if (!canEdit("proposals")) {
+    if (!canEdit("proposal")) {
       addToast({
         title: "Access Denied",
         description: "You don't have permission to edit proposals",
@@ -296,12 +296,18 @@ const ProposalDetailsModal = ({
       return;
     }
     onClose(); // Close modal first
-    
+
     // Get current URL parameters to preserve pagination state
     const currentParams = new URLSearchParams(window.location.search);
-    const returnUrl = currentParams.toString() ? `?${currentParams.toString()}` : '';
-    
-    router.push(`/dashboard/proposal/edit/${proposalData._id}?returnUrl=${encodeURIComponent('/dashboard/proposal' + returnUrl)}`);
+    const returnUrl = currentParams.toString()
+      ? `?${currentParams.toString()}`
+      : "";
+
+    router.push(
+      `/dashboard/proposal/edit/${
+        proposalData._id
+      }?returnUrl=${encodeURIComponent("/dashboard/proposal" + returnUrl)}`
+    );
   };
 
   // Handle delete button click
