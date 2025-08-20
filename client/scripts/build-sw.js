@@ -1,9 +1,14 @@
 import { readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 // Read environment variables
 import dotenv from "dotenv";
 dotenv.config();
+
+// Get the directory path in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Read the service worker template
 const swPath = join(__dirname, "../public/firebase-messaging-sw.js");
