@@ -6,7 +6,9 @@ const UserEmployeeSchema = require("../../models/employeeManagement/UserEmployee
 const roleSchema = require("../../models/rolesAndPermission/roleSchema");
 const FCMToken = require("../../models/fcmToken");
 const User = require("../../models/user");
-const { createEmployeeNotification } = require("../../services/notificationService");
+const {
+  createEmployeeNotification,
+} = require("../../services/notificationService");
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
 
 // Helper function to convert all values to strings for FCM
@@ -24,12 +26,12 @@ async function getAllAdminUsers() {
     const adminUsers = await User.find({
       $or: [
         { isAdmin: true },
-        { role: { $in: ['admin', 'hotel admin', 'super admin'] } }
-      ]
+        { role: { $in: ["admin", "hotel admin", "super admin"] } },
+      ],
     });
-    return adminUsers.map(user => user._id);
+    return adminUsers.map((user) => user._id);
   } catch (error) {
-    console.error('Error getting admin users:', error);
+    console.error("Error getting admin users:", error);
     return [];
   }
 }
@@ -41,21 +43,23 @@ async function sendEmployeeNotification(userIds, notification) {
       return;
     }
 
-
     // Save notifications to database first
     try {
       const savedNotifications = await createEmployeeNotification({
-        type: notification.type || 'employee',
+        type: notification.type || "employee",
         title: notification.title,
         body: notification.body,
         data: notification.data || {},
-        priority: notification.priority || 'medium',
+        priority: notification.priority || "medium",
         employeeId: notification.employeeId,
         triggeredBy: notification.triggeredBy,
-        triggeredByModel: notification.triggeredByModel
+        triggeredByModel: notification.triggeredByModel,
       });
     } catch (dbError) {
-      console.error('Error saving employee notifications to database:', dbError);
+      console.error(
+        "Error saving employee notifications to database:",
+        dbError
+      );
       // Continue with FCM sending even if database save fails
     }
 
@@ -69,7 +73,7 @@ async function sendEmployeeNotification(userIds, notification) {
       return;
     }
 
-    const tokenList = tokens.map(t => t.token);
+    const tokenList = tokens.map((t) => t.token);
     let successCount = 0;
     let failureCount = 0;
 
@@ -78,8 +82,8 @@ async function sendEmployeeNotification(userIds, notification) {
       try {
         // Convert all data values to strings for FCM compatibility
         const fcmData = convertToFCMData({
-          type: notification.type || 'employee',
-          employeeId: notification.employeeId || '',
+          type: notification.type || "employee",
+          employeeId: notification.employeeId || "",
           ...notification.data,
         });
 
@@ -93,7 +97,7 @@ async function sendEmployeeNotification(userIds, notification) {
         };
 
         // Get Firebase Admin instance
-        const admin = require('firebase-admin');
+        const admin = require("firebase-admin");
         await admin.messaging().send(message);
         successCount++;
       } catch (error) {
@@ -105,20 +109,19 @@ async function sendEmployeeNotification(userIds, notification) {
       }
     }
 
-
     if (failureCount > 0) {
     }
 
     return {
       success: true,
       sent: successCount,
-      failed: failureCount
+      failed: failureCount,
     };
   } catch (error) {
-    console.error('Error sending employee FCM notification:', error);
+    console.error("Error sending employee FCM notification:", error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -293,7 +296,10 @@ exports.getEmployees = async (req, res) => {
     // If no search/filter criteria, update employee IDs first
     if (!search && !department && !status) {
       try {
-        const allEmployees = await Employee.find().sort({ dateOfHiring: 1, _id: 1 });
+        const allEmployees = await Employee.find().sort({
+          dateOfHiring: 1,
+          _id: 1,
+        });
         await updateEmployeeIds(Employee, allEmployees);
       } catch (error) {
         console.error("Error during ID update:", error);
@@ -412,10 +418,9 @@ exports.createEmployee = async (req, res) => {
     if (req.files && req.files.avatar) {
       const avatar = req.files.avatar[0];
       // Use originalname if available, otherwise use filename
-      const avatarFilename = avatar.originalname || avatar.filename || `avatar_${Date.now()}.jpg`;
-      const safeAvatarFilename = avatarFilename
-
-
+      const avatarFilename =
+        avatar.originalname || avatar.filename || `avatar_${Date.now()}.jpg`;
+      const safeAvatarFilename = avatarFilename;
 
       employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${safeAvatarFilename}`;
     }
@@ -424,12 +429,15 @@ exports.createEmployee = async (req, res) => {
     if (req.files && req.files.documents) {
       employeeData.documents = req.files.documents.map((file) => {
         // Generate a proper filename if originalname is not available
-        const filename = file.originalname || file.filename || `document_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pdf`;
+        const filename =
+          file.originalname ||
+          file.filename ||
+          `document_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}.pdf`;
 
         // Ensure the filename is safe and unique
-        const safeFilename = filename
-
-
+        const safeFilename = filename;
 
         return {
           url: `${BACKEND_URL}/assets/images/employees/documents/${safeFilename}`,
@@ -450,32 +458,37 @@ exports.createEmployee = async (req, res) => {
       // Get users with permissions
       const adminUserIds = await getAllAdminUsers();
       const employeesWithPermission = await UserEmployeeSchema.find({
-        'permissions': {
+        permissions: {
           $elemMatch: {
-            'page': { $regex: new RegExp('employees', 'i') },
-            'actions.view': true
-          }
-        }
+            page: { $regex: new RegExp("employees", "i") },
+            "actions.view": true,
+          },
+        },
       });
 
-      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const employeeUserIds = employeesWithPermission.map((emp) => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId =>
-        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      const recipientUserIds = allUserIds.filter(
+        (userId) =>
+          userId.toString() !== (req.user ? req.user.id.toString() : "")
       );
 
       if (recipientUserIds.length > 0) {
         const notification = {
-          type: 'employee_created',
-          title: 'New Employee Added',
-          body: `A new employee "${req.body.firstName} ${req.body.lastName}" has been added by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          type: "employee_created",
+          title: "New Employee Added",
+          body: `A new employee "${req.body.firstName} ${
+            req.body.lastName
+          }" has been added by ${
+            req.user ? req.user.name || req.user.email : "Unknown"
+          }`,
           data: {
             employeeId: employee._id.toString(),
             employeeName: `${req.body.firstName} ${req.body.lastName}`,
             email: req.body.email,
             department: department,
             role: role.role,
-            createdBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            createdBy: req.user ? req.user.name || req.user.email : "Unknown",
             employeeDetails: {
               firstName: req.body.firstName,
               lastName: req.body.lastName,
@@ -483,19 +496,20 @@ exports.createEmployee = async (req, res) => {
               mobileNo: req.body.mobileNo,
               department: department,
               role: role.role,
-              status: req.body.status
-            }
+              status: req.body.status,
+            },
           },
-          priority: 'medium',
+          priority: "medium",
           employeeId: employee._id.toString(),
           triggeredBy: req.user ? req.user.id : null,
-          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+          triggeredByModel:
+            req.user && req.user.isAdmin ? "User" : "UserEmployee",
         };
 
         await sendEmployeeNotification(recipientUserIds, notification);
       }
     } catch (notificationError) {
-      console.error('Error sending employee notification:', notificationError);
+      console.error("Error sending employee notification:", notificationError);
       // Don't fail the employee creation if notification fails
     }
 
@@ -614,10 +628,9 @@ exports.updateEmployee = async (req, res) => {
     if (req.files?.avatar) {
       const avatar = req.files.avatar[0];
       // Use originalname if available, otherwise use filename
-      const avatarFilename = avatar.originalname || avatar.filename || `avatar_${Date.now()}.jpg`;
-      const safeAvatarFilename = avatarFilename
-
-
+      const avatarFilename =
+        avatar.originalname || avatar.filename || `avatar_${Date.now()}.jpg`;
+      const safeAvatarFilename = avatarFilename;
 
       employeeData.avatar = `${BACKEND_URL}/assets/images/employees/avatars/${safeAvatarFilename}`;
     } else if (req.body.existingAvatar) {
@@ -630,25 +643,28 @@ exports.updateEmployee = async (req, res) => {
       try {
         baseDocuments = JSON.parse(req.body.existingDocuments);
       } catch (error) {
-        console.error('❌ Error parsing existing documents:', error);
+        console.error("❌ Error parsing existing documents:", error);
         baseDocuments = [];
       }
     }
     employeeData.documents = Array.isArray(baseDocuments)
       ? baseDocuments.map((doc) =>
-        typeof doc === "object" ? doc : { url: doc }
-      )
+          typeof doc === "object" ? doc : { url: doc }
+        )
       : [];
-
 
     if (req.files && req.files.documents) {
       const newFiles = req.files.documents.map((file) => {
         // Generate a proper filename if originalname is not available
-        const filename = file.originalname || file.filename || `document_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pdf`;
+        const filename =
+          file.originalname ||
+          file.filename ||
+          `document_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}.pdf`;
 
         // Ensure the filename is safe and unique
-        const safeFilename = filename
-
+        const safeFilename = filename;
 
         return {
           url: `${BACKEND_URL}/assets/images/employees/documents/${safeFilename}`,
@@ -722,45 +738,73 @@ exports.updateEmployee = async (req, res) => {
     try {
       // Determine what was changed
       const changes = [];
-      if (employeeData.firstName && employeeData.firstName !== originalEmployee.firstName) changes.push('first name');
-      if (employeeData.lastName && employeeData.lastName !== originalEmployee.lastName) changes.push('last name');
-      if (employeeData.email && employeeData.email !== originalEmployee.email) changes.push('email');
-      if (employeeData.mobileNo && employeeData.mobileNo !== originalEmployee.mobileNo) changes.push('mobile number');
-      if (employeeData.department && JSON.stringify(employeeData.department) !== JSON.stringify(originalEmployee.department)) changes.push('department');
-      if (employeeData.status && employeeData.status !== originalEmployee.status) changes.push('status');
-      if (roleData.role && roleData.role !== originalEmployee.role.role) changes.push('role');
+      if (
+        employeeData.firstName &&
+        employeeData.firstName !== originalEmployee.firstName
+      )
+        changes.push("first name");
+      if (
+        employeeData.lastName &&
+        employeeData.lastName !== originalEmployee.lastName
+      )
+        changes.push("last name");
+      if (employeeData.email && employeeData.email !== originalEmployee.email)
+        changes.push("email");
+      if (
+        employeeData.mobileNo &&
+        employeeData.mobileNo !== originalEmployee.mobileNo
+      )
+        changes.push("mobile number");
+      if (
+        employeeData.department &&
+        JSON.stringify(employeeData.department) !==
+          JSON.stringify(originalEmployee.department)
+      )
+        changes.push("department");
+      if (
+        employeeData.status &&
+        employeeData.status !== originalEmployee.status
+      )
+        changes.push("status");
+      if (roleData.role && roleData.role !== originalEmployee.role.role)
+        changes.push("role");
 
-      const changesText = changes.length > 0 ? changes.join(', ') : 'details';
+      const changesText = changes.length > 0 ? changes.join(", ") : "details";
 
       // Get users with permissions
       const adminUserIds = await getAllAdminUsers();
       const employeesWithPermission = await UserEmployeeSchema.find({
-        'permissions': {
+        permissions: {
           $elemMatch: {
-            'page': { $regex: new RegExp('employees', 'i') },
-            'actions.view': true
-          }
-        }
+            page: { $regex: new RegExp("employees", "i") },
+            "actions.view": true,
+          },
+        },
       });
 
-      const employeeUserIds = employeesWithPermission.map(emp => emp._id);
+      const employeeUserIds = employeesWithPermission.map((emp) => emp._id);
       const allUserIds = [...adminUserIds, ...employeeUserIds];
-      const recipientUserIds = allUserIds.filter(userId =>
-        userId.toString() !== (req.user ? req.user.id.toString() : '')
+      const recipientUserIds = allUserIds.filter(
+        (userId) =>
+          userId.toString() !== (req.user ? req.user.id.toString() : "")
       );
 
       if (recipientUserIds.length > 0) {
         const notification = {
-          type: 'employee_updated',
-          title: 'Employee Updated',
-          body: `Employee "${updatedEmployee.firstName} ${updatedEmployee.lastName}" ${changesText} has been updated by ${req.user ? req.user.name || req.user.email : 'Unknown'}`,
+          type: "employee_updated",
+          title: "Employee Updated",
+          body: `Employee "${updatedEmployee.firstName} ${
+            updatedEmployee.lastName
+          }" ${changesText} has been updated by ${
+            req.user ? req.user.name || req.user.email : "Unknown"
+          }`,
           data: {
             employeeId: updatedEmployee._id.toString(),
             employeeName: `${updatedEmployee.firstName} ${updatedEmployee.lastName}`,
             email: updatedEmployee.email,
             department: updatedEmployee.department,
             role: updatedEmployee.role.role,
-            updatedBy: req.user ? req.user.name || req.user.email : 'Unknown',
+            updatedBy: req.user ? req.user.name || req.user.email : "Unknown",
             changes: {
               fields: changes,
               previousData: {
@@ -770,7 +814,7 @@ exports.updateEmployee = async (req, res) => {
                 mobileNo: originalEmployee.mobileNo,
                 department: originalEmployee.department,
                 status: originalEmployee.status,
-                role: originalEmployee.role.role
+                role: originalEmployee.role.role,
               },
               newData: {
                 firstName: updatedEmployee.firstName,
@@ -779,20 +823,24 @@ exports.updateEmployee = async (req, res) => {
                 mobileNo: updatedEmployee.mobileNo,
                 department: updatedEmployee.department,
                 status: updatedEmployee.status,
-                role: updatedEmployee.role.role
-              }
-            }
+                role: updatedEmployee.role.role,
+              },
+            },
           },
-          priority: 'medium',
+          priority: "medium",
           employeeId: updatedEmployee._id.toString(),
           triggeredBy: req.user ? req.user.id : null,
-          triggeredByModel: req.user && req.user.isAdmin ? 'User' : 'UserEmployee'
+          triggeredByModel:
+            req.user && req.user.isAdmin ? "User" : "UserEmployee",
         };
 
         await sendEmployeeNotification(recipientUserIds, notification);
       }
     } catch (notificationError) {
-      console.error('Error sending employee update notification:', notificationError);
+      console.error(
+        "Error sending employee update notification:",
+        notificationError
+      );
       // Don't fail the employee update if notification fails
     }
 
@@ -806,6 +854,139 @@ exports.updateEmployee = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to update employee",
+      error: error.message,
+    });
+  }
+};
+
+// Delete employee
+exports.deleteEmployee = async (req, res) => {
+  const { employeeId } = req.params;
+
+  if (!employeeId) {
+    return res.status(400).json({
+      success: false,
+      message: "Employee ID is missing",
+    });
+  }
+
+  try {
+    const Employee = employeeSchema;
+    const UserEmployee = UserEmployeeSchema;
+
+    // Find employee before deletion to get their details
+    const employee = await Employee.findOne({ employeeId });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
+
+    // Delete avatar file if it exists
+    if (employee.avatar) {
+      const avatarPath = path.join(
+        process.cwd(),
+        "public",
+        employee.avatar.replace(BACKEND_URL, "")
+      );
+      if (fs.existsSync(avatarPath)) {
+        fs.unlinkSync(avatarPath);
+      }
+    }
+
+    // Delete document files if they exist
+    if (employee.documents && employee.documents.length > 0) {
+      employee.documents.forEach((doc) => {
+        if (doc.url) {
+          const docPath = path.join(
+            process.cwd(),
+            "public",
+            doc.url.replace(BACKEND_URL, "")
+          );
+          if (fs.existsSync(docPath)) {
+            fs.unlinkSync(docPath);
+          }
+        }
+      });
+    }
+
+    // Delete employee from database
+    await Employee.deleteOne({ employeeId });
+
+    // Delete associated user-employee record
+    await UserEmployee.deleteOne({ email: employee.email });
+
+    // Send notification about employee deletion
+    try {
+      // Get users with permissions
+      const adminUserIds = await getAllAdminUsers();
+      const employeesWithPermission = await UserEmployeeSchema.find({
+        permissions: {
+          $elemMatch: {
+            page: { $regex: new RegExp("employees", "i") },
+            "actions.view": true,
+          },
+        },
+      });
+
+      const employeeUserIds = employeesWithPermission.map((emp) => emp._id);
+      const allUserIds = [...adminUserIds, ...employeeUserIds];
+      const recipientUserIds = allUserIds.filter(
+        (userId) =>
+          userId.toString() !== (req.user ? req.user.id.toString() : "")
+      );
+
+      if (recipientUserIds.length > 0) {
+        const notification = {
+          type: "employee_deleted",
+          title: "Employee Deleted",
+          body: `Employee "${employee.firstName} ${
+            employee.lastName
+          }" has been deleted by ${
+            req.user ? req.user.name || req.user.email : "Unknown"
+          }`,
+          data: {
+            employeeId: employee._id.toString(),
+            employeeName: `${employee.firstName} ${employee.lastName}`,
+            email: employee.email,
+            department: employee.department,
+            role: employee.role.role,
+            deletedBy: req.user ? req.user.name || req.user.email : "Unknown",
+            employeeDetails: {
+              firstName: employee.firstName,
+              lastName: employee.lastName,
+              email: employee.email,
+              mobileNo: employee.mobileNo,
+              department: employee.department,
+              role: employee.role.role,
+              status: employee.status,
+            },
+          },
+          priority: "high",
+          employeeId: employee._id.toString(),
+          triggeredBy: req.user ? req.user.id : null,
+          triggeredByModel:
+            req.user && req.user.isAdmin ? "User" : "UserEmployee",
+        };
+
+        await sendEmployeeNotification(recipientUserIds, notification);
+      }
+    } catch (notificationError) {
+      console.error("Error sending delete notification:", notificationError);
+      // Continue with the response even if notification fails
+    }
+
+    res.json({
+      success: true,
+      message: "Employee deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete employee",
       error: error.message,
     });
   }

@@ -41,18 +41,14 @@ const Customers = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const {
-    canCreate,
-    canView,
-    getUserPermissions
-  } = usePermissions();
+  const { canCreate, canView, getUserPermissions } = usePermissions();
 
   // State for customers data
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [pagination, setPagination] = useState({
-    currentPage: parseInt(searchParams.get('page')) || 1,
+    currentPage: parseInt(searchParams.get("page")) || 1,
     totalPages: 1,
     totalCustomers: 0,
     limit: 10,
@@ -61,130 +57,143 @@ const Customers = () => {
   // Get permissions using the hook - memoize to prevent re-renders
   const userPermissions = getUserPermissions("customers");
 
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "");
-  const [serviceFilter, setServiceFilter] = useState(searchParams.get('service') || "all");
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("search") || ""
+  );
+  const [serviceFilter, setServiceFilter] = useState(
+    searchParams.get("service") || "all"
+  );
   const [dateRange, setDateRange] = useState(null);
 
   // Fetch customers function - Remove dependencies that cause re-renders
-  const fetchCustomers = useCallback(async (page = 1, search = searchQuery, service = serviceFilter, dateRangeParam = dateRange) => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: "10",
-        search: search,
-        service: service,
-      });
+  const fetchCustomers = useCallback(
+    async (
+      page = 1,
+      search = searchQuery,
+      service = serviceFilter,
+      dateRangeParam = dateRange
+    ) => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: "10",
+          search: search,
+          service: service,
+        });
 
-      // Add date range parameters if date range is selected
-      if (dateRangeParam && dateRangeParam.start && dateRangeParam.end) {
-        try {
-          const startDate = new Date(
-            dateRangeParam.start.year,
-            dateRangeParam.start.month - 1,
-            dateRangeParam.start.day
-          );
+        // Add date range parameters if date range is selected
+        if (dateRangeParam && dateRangeParam.start && dateRangeParam.end) {
+          try {
+            const startDate = new Date(
+              dateRangeParam.start.year,
+              dateRangeParam.start.month - 1,
+              dateRangeParam.start.day
+            );
 
-          const endDate = new Date(
-            dateRangeParam.end.year,
-            dateRangeParam.end.month - 1,
-            dateRangeParam.end.day
-          );
+            const endDate = new Date(
+              dateRangeParam.end.year,
+              dateRangeParam.end.month - 1,
+              dateRangeParam.end.day
+            );
 
-          startDate.setHours(0, 0, 0, 0);
-          endDate.setHours(23, 59, 59, 999);
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
 
-          params.append('startDate', startDate.toISOString());
-          params.append('endDate', endDate.toISOString());
-        } catch (dateError) {
-          console.error('Error converting date range:', dateError);
-        }
-      }
-
-      const response = await apiClient.get(`/api/customers?${params}`);
-
-      if (response.data.success) {
-        const customersData = Array.isArray(response.data.data.customers)
-          ? response.data.data.customers
-          : [];
-
-        setCustomers(customersData);
-        setPagination(
-          response.data.data.pagination || {
-            currentPage: page,
-            totalPages: 1,
-            totalCustomers: 0,
-            limit: 10,
+            params.append("startDate", startDate.toISOString());
+            params.append("endDate", endDate.toISOString());
+          } catch (dateError) {
+            console.error("Error converting date range:", dateError);
           }
-        );
+        }
+
+        const response = await apiClient.get(`/api/customers?${params}`);
+
+        if (response.data.success) {
+          const customersData = Array.isArray(response.data.data.customers)
+            ? response.data.data.customers
+            : [];
+
+          setCustomers(customersData);
+          setPagination(
+            response.data.data.pagination || {
+              currentPage: page,
+              totalPages: 1,
+              totalCustomers: 0,
+              limit: 10,
+            }
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+        setCustomers([]);
+        addToast({
+          title: "Error",
+          description: "Failed to fetch customers",
+          color: "danger",
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-      setCustomers([]);
-      addToast({
-        title: "Error",
-        description: "Failed to fetch customers",
-        color: "danger",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []); // Remove all dependencies to prevent re-creation
+    },
+    []
+  ); // Remove all dependencies to prevent re-creation
 
   // Update URL when pagination or filters change
-  const updateURL = useCallback((page, search, service, pushState = false) => {
-    const params = new URLSearchParams();
-    if (page > 1) params.set('page', page.toString());
-    if (search) params.set('search', search);
-    if (service && service !== 'all') params.set('service', service);
+  const updateURL = useCallback(
+    (page, search, service, pushState = false) => {
+      const params = new URLSearchParams();
+      if (page > 1) params.set("page", page.toString());
+      if (search) params.set("search", search);
+      if (service && service !== "all") params.set("service", service);
 
-    const newURL = params.toString() ? `?${params.toString()}` : '';
-    const fullURL = `/dashboard/customers${newURL}`;
+      const newURL = params.toString() ? `?${params.toString()}` : "";
+      const fullURL = `/dashboard/customers${newURL}`;
 
-    if (pushState) {
-      router.push(fullURL, { scroll: false });
-    } else {
-      router.replace(fullURL, { scroll: false });
-    }
-  }, [router]);
+      if (pushState) {
+        router.push(fullURL, { scroll: false });
+      } else {
+        router.replace(fullURL, { scroll: false });
+      }
+    },
+    [router]
+  );
 
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const page = parseInt(urlParams.get('page')) || 1;
-      const search = urlParams.get('search') || '';
-      const service = urlParams.get('service') || 'all';
-
+      const page = parseInt(urlParams.get("page")) || 1;
+      const search = urlParams.get("search") || "";
+      const service = urlParams.get("service") || "all";
 
       // Update state immediately
       setSearchQuery(search);
       setServiceFilter(service);
-      setPagination(prev => ({ ...prev, currentPage: page }));
+      setPagination((prev) => ({ ...prev, currentPage: page }));
 
       // Fetch data with the URL parameters
       fetchCustomers(page, search, service, dateRange);
     };
 
     // Add the event listener
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
 
-    return () => window.removeEventListener('popstate', handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []); // Only run once on mount
 
   // Initial fetch when component mounts - use URL params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const initialPage = parseInt(urlParams.get('page')) || 1;
-    const initialSearch = urlParams.get('search') || '';
-    const initialService = urlParams.get('service') || 'all';
-
+    const initialPage = parseInt(urlParams.get("page")) || 1;
+    const initialSearch = urlParams.get("search") || "";
+    const initialService = urlParams.get("service") || "all";
 
     // Set initial state from URL
     if (initialSearch !== searchQuery) setSearchQuery(initialSearch);
     if (initialService !== serviceFilter) setServiceFilter(initialService);
     if (initialPage !== pagination.currentPage) {
-      setPagination(prev => ({ ...prev, currentPage: initialPage }));
+      setPagination((prev) => ({ ...prev, currentPage: initialPage }));
     }
 
     fetchCustomers(initialPage, initialSearch, initialService, dateRange);
@@ -193,7 +202,7 @@ const Customers = () => {
     setTimeout(() => setIsInitialLoad(false), 100);
   }, []); // Only run on mount
 
-  // Handle filter changes (but not during initial load)  
+  // Handle filter changes (but not during initial load)
   useEffect(() => {
     if (isInitialLoad) {
       return; // Skip filter effects during initial load
@@ -201,7 +210,7 @@ const Customers = () => {
 
     const timeoutId = setTimeout(() => {
       // Reset to page 1 and fetch with new filters
-      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      setPagination((prev) => ({ ...prev, currentPage: 1 }));
       updateURL(1, searchQuery, serviceFilter);
       fetchCustomers(1, searchQuery, serviceFilter, dateRange);
     }, 300); // Debounce search
@@ -211,7 +220,7 @@ const Customers = () => {
 
   // Handle pagination changes
   const handlePageChange = (page) => {
-    setPagination(prev => ({ ...prev, currentPage: page }));
+    setPagination((prev) => ({ ...prev, currentPage: page }));
     updateURL(page, searchQuery, serviceFilter, true);
     fetchCustomers(page, searchQuery, serviceFilter, dateRange);
   };
@@ -249,26 +258,38 @@ const Customers = () => {
   // Handle row click with proper event handling
   const handleRowClick = (customer, event) => {
     // Prevent navigation if clicked element is pagination or has data-no-navigate attribute
-    if (event.target.closest('[data-no-navigate]') ||
-      event.target.closest('.pagination') ||
-      event.target.closest('button')) {
+    if (
+      event.target.closest("[data-no-navigate]") ||
+      event.target.closest(".pagination") ||
+      event.target.closest("button")
+    ) {
       return;
     }
 
-    if (userPermissions.hasViewPermission || userPermissions.hasEditPermission) {
+    if (
+      userPermissions.hasViewPermission ||
+      userPermissions.hasEditPermission
+    ) {
       // Preserve current URL state when navigating to customer details
       const currentParams = new URLSearchParams();
-      if (pagination.currentPage > 1) currentParams.set('page', pagination.currentPage.toString());
-      if (searchQuery) currentParams.set('search', searchQuery);
-      if (serviceFilter && serviceFilter !== 'all') currentParams.set('service', serviceFilter);
+      if (pagination.currentPage > 1)
+        currentParams.set("page", pagination.currentPage.toString());
+      if (searchQuery) currentParams.set("search", searchQuery);
+      if (serviceFilter && serviceFilter !== "all")
+        currentParams.set("service", serviceFilter);
 
-      const returnUrl = currentParams.toString() ? `?${currentParams.toString()}` : '';
-      router.push(`/dashboard/customers/${customer._id}?returnUrl=${encodeURIComponent('/dashboard/customers' + returnUrl)}`);
+      const returnUrl = currentParams.toString()
+        ? `?${currentParams.toString()}`
+        : "";
+      router.push(
+        `/dashboard/customers/${customer._id}?returnUrl=${encodeURIComponent(
+          "/dashboard/customers" + returnUrl
+        )}`
+      );
     }
   };
 
   // Handle pagination change
-
 
   return (
     <div className="space-y-6">
@@ -429,7 +450,7 @@ const Customers = () => {
                     key={customerKey}
                     className={
                       userPermissions.hasViewPermission ||
-                        userPermissions.hasEditPermission
+                      userPermissions.hasEditPermission
                         ? "cursor-pointer hover:bg-gray-50"
                         : ""
                     }
@@ -444,14 +465,15 @@ const Customers = () => {
                     <TableCell className="max-w-xs truncate">
                       {customer.fullAddress ||
                         (customer.address
-                          ? `${customer.address.city || ""}, ${customer.address.state || ""
-                          }`
+                          ? `${customer.address.city || ""}, ${
+                              customer.address.state || ""
+                            }`
                           : "N/A")}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         {customer.services &&
-                          Array.isArray(customer.services) ? (
+                        Array.isArray(customer.services) ? (
                           customer.services.map((service, index) => (
                             <div key={`${customerKey}-service-${index}`}>
                               {getServiceIcon(service)}

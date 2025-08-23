@@ -19,23 +19,33 @@ export function ProjectsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const {
-    canCreate,
-    getUserPermissions
-  } = usePermissions();
+  const { canCreate, getUserPermissions } = usePermissions();
 
   // Get permissions using the hook
   const userPermissions = getUserPermissions("projects");
 
   // Initialize states from URL parameters
   const [dateRange, setDateRange] = useState(null);
-  const [serviceFilter, setServiceFilter] = useState(searchParams.get("service") || "All");
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "new,in-progress,done");
-  const [searchValue, setSearchValue] = useState(searchParams.get("search") || "");
+  const [serviceFilter, setServiceFilter] = useState(
+    searchParams.get("service") || "All"
+  );
+  const [statusFilter, setStatusFilter] = useState(
+    searchParams.get("status") || "new,in-progress,done"
+  );
+  const [searchValue, setSearchValue] = useState(
+    searchParams.get("search") || ""
+  );
   const [selectedStatuses, setSelectedStatuses] = useState(() => {
     const statusParam = searchParams.get("status");
     if (statusParam === "all") {
-      return new Set(["All Status", "new", "in-progress", "done", "completed", "cancelled"]);
+      return new Set([
+        "All Status",
+        "new",
+        "in-progress",
+        "done",
+        "completed",
+        "cancelled",
+      ]);
     } else if (statusParam) {
       return new Set(statusParam.split(","));
     }
@@ -48,30 +58,31 @@ export function ProjectsPage() {
   const pageSize = 6; // Show 6 projects per page
 
   // Function to update URL with current state
-  const updateURL = useCallback((newParams) => {
-    const params = new URLSearchParams(searchParams);
+  const updateURL = useCallback(
+    (newParams) => {
+      const params = new URLSearchParams(searchParams);
 
-    // Update or remove parameters
-    Object.entries(newParams).forEach(([key, value]) => {
-      if (value && value !== "" && value !== "All" && value !== "all") {
-        params.set(key, value.toString());
-      } else {
-        params.delete(key);
+      // Update or remove parameters
+      Object.entries(newParams).forEach(([key, value]) => {
+        if (value && value !== "" && value !== "All" && value !== "all") {
+          params.set(key, value.toString());
+        } else {
+          params.delete(key);
+        }
+      });
+
+      // Always ensure page is set if > 1
+      if (newParams.page && newParams.page > 1) {
+        params.set("page", newParams.page.toString());
+      } else if (newParams.page === 1) {
+        params.delete("page");
       }
-    });
 
-    // Always ensure page is set if > 1
-    if (newParams.page && newParams.page > 1) {
-      params.set("page", newParams.page.toString());
-    } else if (newParams.page === 1) {
-      params.delete("page");
-    }
-
-    const newURL = params.toString() ? `?${params.toString()}` : "";
-    router.replace(`/dashboard/projects${newURL}`, { scroll: false });
-  }, [router, searchParams]);
-
-
+      const newURL = params.toString() ? `?${params.toString()}` : "";
+      router.replace(`/dashboard/projects${newURL}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
 
   // Handlers for filters with URL updates
   const handleServiceChange = (service) => {
@@ -85,7 +96,14 @@ export function ProjectsPage() {
 
     if (statuses === "all") {
       newStatusFilter = "all";
-      newSelectedStatuses = new Set(["All Status", "new", "in-progress", "done", "completed", "cancelled"]);
+      newSelectedStatuses = new Set([
+        "All Status",
+        "new",
+        "in-progress",
+        "done",
+        "completed",
+        "cancelled",
+      ]);
     } else if (Array.isArray(statuses)) {
       if (statuses.length === 0) {
         newStatusFilter = "new,in-progress,done";
@@ -128,14 +146,16 @@ export function ProjectsPage() {
   // Handle returning from task page - restore state if needed
   useEffect(() => {
     // Check if we're returning from task page and have stored state
-    const storedReturnTo = sessionStorage.getItem('projectsReturnTo');
-    if (storedReturnTo && storedReturnTo.includes('/dashboard/projects')) {
+    const storedReturnTo = sessionStorage.getItem("projectsReturnTo");
+    if (storedReturnTo && storedReturnTo.includes("/dashboard/projects")) {
       // Clean up the stored state
-      sessionStorage.removeItem('projectsReturnTo');
+      sessionStorage.removeItem("projectsReturnTo");
 
       // If current URL doesn't have parameters but stored state does, restore it
       const currentParams = new URLSearchParams(window.location.search);
-      const storedParams = new URLSearchParams(storedReturnTo.split('?')[1] || '');
+      const storedParams = new URLSearchParams(
+        storedReturnTo.split("?")[1] || ""
+      );
 
       if (!currentParams.toString() && storedParams.toString()) {
         // Restore the state from stored URL
@@ -156,7 +176,7 @@ export function ProjectsPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="w-full md:w-80">
           <Input
-            placeholder="Search by customer, email, phone, address..."
+            placeholder="Search by name, email, phone, address..."
             startContent={<Search className="text-gray-400" />}
             radius="sm"
             variant="bordered"
@@ -204,13 +224,16 @@ export function ProjectsPage() {
             selectedStatuses={selectedStatuses}
           />
 
-
           <Link href="/dashboard/projects/add-project">
-            <Button color="primary" radius="sm" startContent={<Plus />} disabled={!canCreate("projects")}>
+            <Button
+              color="primary"
+              radius="sm"
+              startContent={<Plus />}
+              disabled={!canCreate("projects")}
+            >
               Add New
             </Button>
           </Link>
-
         </div>
       </div>
       <div className="space-y-6 bg-white rounded-xl shadow-lg p-6 md:min-h-[600px]">
@@ -227,7 +250,6 @@ export function ProjectsPage() {
           pageSize={pageSize}
           setTotalPages={setTotalPages}
         />
-
 
         {totalPages > 1 && (
           <div className="flex justify-center mt-6">

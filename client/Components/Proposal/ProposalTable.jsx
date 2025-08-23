@@ -61,8 +61,8 @@ const ProposalTable = ({
           params.append("status", statusFilter);
         }
       } else {
-        // Default behavior: show specific statuses (Hot, Cold, Warm, Scrap)
-        params.append("status", "Hot,Cold,Warm,Scrap");
+        // Default behavior: show specific statuses (Hot, Cold, Warm)
+        params.append("status", "Hot,Cold,Warm");
       }
 
       // Add date range filter

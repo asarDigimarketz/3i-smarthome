@@ -7,30 +7,66 @@ import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Skeleton } from "@heroui/skeleton";
 import { addToast } from "@heroui/toast";
-import { ArrowLeft, Edit, File, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Edit, File, Mail, Phone, Trash } from "lucide-react";
 import ProjectCard from "../Dashboard/ProjectCard.jsx";
 import { useState, useEffect } from "react";
 import { EmployeeModal } from "./EmployeeModal";
+import { DeleteConfirmModal } from "../ui/delete-confirm-modal";
 import { Pagination } from "@heroui/pagination";
 import apiClient from "../../lib/axios";
 import { usePermissions } from "../../lib/utils";
 
 const EmployeeDetail = () => {
-  const { canEdit } = usePermissions();
+  const { canEdit, canDelete } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const employeeId = params?.employeeId;
 
   // Get return URL from search params or default to employees page
-  const returnUrl = searchParams.get('returnUrl') || '/dashboard/employees';
+  const returnUrl = searchParams.get("returnUrl") || "/dashboard/employees";
 
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [projectFilter, setProjectFilter] = useState("all");
   const [page, setPage] = useState(1);
   const pageSize = 6;
+
+  // Handle employee deletion
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      const response = await apiClient.delete(
+        `/api/employeeManagement/${employeeId}`
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to delete employee");
+      }
+
+      addToast({
+        title: "Success",
+        description: "Employee deleted successfully",
+        type: "success",
+      });
+
+      // Navigate back to employees list
+      router.push(returnUrl);
+    } catch (error) {
+      console.error("Error deleting employee:", error);
+      addToast({
+        title: "Error",
+        description: error.message || "Failed to delete employee",
+        type: "error",
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
 
   // Fetch employee data from API
   const fetchEmployeeData = async () => {
@@ -39,10 +75,14 @@ const EmployeeDetail = () => {
     try {
       setLoading(true);
       // 1. Fetch employee details
-      const response = await apiClient.get(`/api/employeeManagement/${employeeId}`);
+      const response = await apiClient.get(
+        `/api/employeeManagement/${employeeId}`
+      );
 
       if (!response.data.success)
-        throw new Error(response.data.message || "Failed to fetch employee data");
+        throw new Error(
+          response.data.message || "Failed to fetch employee data"
+        );
       const emp = response.data.employee;
 
       // 2. Fetch projects assigned to this employee
@@ -50,7 +90,9 @@ const EmployeeDetail = () => {
       let completed = 0;
       let ongoing = 0;
       if (emp && emp._id) {
-        const projectsRes = await apiClient.get(`/api/projects?assignedEmployees=${emp._id}`);
+        const projectsRes = await apiClient.get(
+          `/api/projects?assignedEmployees=${emp._id}`
+        );
         if (projectsRes.data.success && Array.isArray(projectsRes.data.data)) {
           // Only include projects where assignedEmployees includes this employee
           projects = projectsRes.data.data
@@ -63,9 +105,7 @@ const EmployeeDetail = () => {
               // Determine status for stats
               const status = proj.projectStatus || "";
               if (
-                ["complete", "completed", "done"].includes(
-                  status.toLowerCase()
-                )
+                ["complete", "completed", "done"].includes(status.toLowerCase())
               )
                 completed++;
               else if (
@@ -88,11 +128,12 @@ const EmployeeDetail = () => {
                   : "N/A",
                 address:
                   proj.fullAddress ||
-                  `${proj.address?.addressLine || ""} , ${proj.address?.city || ""
-                  } , ${proj.address?.district || ""} - ${proj.address?.pincode || ""
+                  `${proj.address?.addressLine || ""} , ${
+                    proj.address?.city || ""
+                  } , ${proj.address?.district || ""} - ${
+                    proj.address?.pincode || ""
                   }`,
-                progress: `${proj.completedTasks || 0}/${proj.totalTasks || 0
-                  }`,
+                progress: `${proj.completedTasks || 0}/${proj.totalTasks || 0}`,
                 color: getServiceColor(proj.services),
                 assignedEmployees: proj.assignedEmployees || [],
               };
@@ -117,9 +158,7 @@ const EmployeeDetail = () => {
         phone: emp.mobileNo || "N/A",
         email: emp.email || "N/A",
         note: emp.notes || "No notes available",
-        avatar:
-          emp.avatar ||
-          ``,
+        avatar: emp.avatar || ``,
         attachments: emp.documents || [],
         status: emp.status,
         stats: {
@@ -255,6 +294,7 @@ const EmployeeDetail = () => {
           >
             Back
           </Button>
+
           <Button
             color="primary"
             startContent={<Edit />}
@@ -262,6 +302,14 @@ const EmployeeDetail = () => {
             disabled={!canEdit("employees")}
           >
             Edit
+          </Button>
+          <Button
+            color="primary"
+            onPress={() => setIsDeleteModalOpen(true)}
+            disabled={!canDelete("employees")}
+            isIconOnly
+          >
+            <Trash />
           </Button>
         </div>
       </div>
@@ -284,10 +332,11 @@ const EmployeeDetail = () => {
                   </h2>
                   <p className="text-default-500">{employeeData.role}</p>
                   <div
-                    className={`mt-2 px-3 py-1 rounded-full text-sm font-medium ${employeeData.status === "active"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                      }`}
+                    className={`mt-2 px-3 py-1 rounded-full text-sm font-medium ${
+                      employeeData.status === "active"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
                   >
                     {employeeData.status === "active" ? "Active" : "Inactive"}
                   </div>
@@ -310,7 +359,7 @@ const EmployeeDetail = () => {
                       <p className="text-default-500">Department</p>
                       <p className="font-medium">
                         {typeof employeeData.department === "object" &&
-                          employeeData.department !== null
+                        employeeData.department !== null
                           ? employeeData.department.name
                           : employeeData.department || "N/A"}
                       </p>
@@ -363,11 +412,11 @@ const EmployeeDetail = () => {
                               style={{ minWidth: 0, maxWidth: 220 }}
                             >
                               {attachment.mimetype &&
-                                attachment.mimetype.startsWith("image") ? (
+                              attachment.mimetype.startsWith("image") ? (
                                 <a
                                   href={
                                     attachment.url &&
-                                      attachment.url.startsWith("http")
+                                    attachment.url.startsWith("http")
                                       ? attachment.url
                                       : `/${attachment.url}`
                                   }
@@ -379,7 +428,7 @@ const EmployeeDetail = () => {
                                   <img
                                     src={
                                       attachment.url &&
-                                        attachment.url.startsWith("http")
+                                      attachment.url.startsWith("http")
                                         ? attachment.url
                                         : `/${attachment.url}`
                                     }
@@ -400,7 +449,7 @@ const EmployeeDetail = () => {
                                 <a
                                   href={
                                     attachment.url &&
-                                      attachment.url.startsWith("http")
+                                    attachment.url.startsWith("http")
                                       ? attachment.url
                                       : `/${attachment.url}`
                                   }
@@ -539,6 +588,25 @@ const EmployeeDetail = () => {
           originalData: employeeData.originalData,
         }}
         onSuccess={() => handleModalClose(true)}
+      />
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onDelete={handleDelete}
+        submitting={isDeleting}
+        description={
+          <div className="text-center">
+            <h3 className="text-xl font-semibold text-brand-red">
+              Delete Employee?
+            </h3>
+            <p className="text-gray-600 mt-2">
+              Are you sure you want to delete {employeeData.name}?
+              <br />
+              This action cannot be undone.
+            </p>
+          </div>
+        }
       />
     </div>
   );

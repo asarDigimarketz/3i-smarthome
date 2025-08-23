@@ -100,8 +100,8 @@ function App() {
       // Multiple statuses selected
       if (statuses.length === 0) {
         // No statuses selected, show default statuses
-        setStatusFilter("Hot,Cold,Warm,Scrap");
-        setSelectedStatuses(new Set(["Hot", "Cold", "Warm", "Scrap"]));
+        setStatusFilter("Hot,Cold,Warm");
+        setSelectedStatuses(new Set(["Hot", "Cold", "Warm"]));
       } else if (statuses.length === 1 && statuses[0] === "Confirmed") {
         // Only "Confirmed" selected
         setStatusFilter("Confirmed");
@@ -150,7 +150,7 @@ function App() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div className="w-full md:w-80">
               <Input
-                placeholder="Search by customer, email, phone, address..."
+                placeholder="Search by name, email, phone, address..."
                 startContent={<Search className="text-gray-400" />}
                 radius="sm"
                 variant="bordered"

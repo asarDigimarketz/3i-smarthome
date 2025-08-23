@@ -61,7 +61,8 @@ exports.getGeneralDetails = async (req, res) => {
     let logoUrl = null;
     if (generalData.logo) {
       const baseUrl =
-        process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
+        process.env.BACKEND_URL ||
+        `http://localhost:${process.env.PORT || 5000}`;
       logoUrl = `${baseUrl}${generalData.logo}`;
     }
 
@@ -139,7 +140,8 @@ exports.updateGeneralDetails = [
       let responseLogoUrl = null;
       if (updatedGeneral.logo) {
         const baseUrl =
-          process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
+          process.env.BACKEND_URL ||
+          `http://localhost:${process.env.PORT || 5000}`;
         responseLogoUrl = `${baseUrl}${updatedGeneral.logo}`;
       }
 

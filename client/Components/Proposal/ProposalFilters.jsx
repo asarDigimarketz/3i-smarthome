@@ -63,18 +63,19 @@ const ProposalFilters = ({ onServiceChange }) => {
             <div
               key={index}
               onClick={() => handleFilterChange(filter.label)}
-              className={`relative flex-1 flex items-center justify-center py-3 px-4 cursor-pointer transition-all duration-200 rounded-full group ${isActive ? `shadow-sm` : "hover:bg-white/50"
-                }`}
+              className={`relative flex-1 flex items-center justify-center py-3 px-4 cursor-pointer transition-all duration-200 rounded-full group ${
+                isActive ? `shadow-sm` : "hover:bg-white/50"
+              }`}
               style={
                 isActive && filter.backgroundColor
                   ? { backgroundColor: filter.backgroundColor }
                   : {}
               }
-              title={filter.label}
             >
               <Icon
-                className={`w-5 h-5 transition-all duration-200 ${isActive ? filter.iconColor : "text-gray-400"
-                  }`}
+                className={`w-5 h-5 transition-all duration-200 ${
+                  isActive ? filter.iconColor : "text-gray-400"
+                }`}
                 style={isActive && filter.style ? filter.style : {}}
               />
 

@@ -2,7 +2,13 @@ import { Modal, ModalContent, ModalBody, ModalFooter } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { X } from "lucide-react";
 
-export function DeleteConfirmModal({ isOpen, onClose, onDelete, submitting }) {
+export function DeleteConfirmModal({
+  isOpen,
+  onClose,
+  onDelete,
+  submitting,
+  description,
+}) {
   return (
     <Modal
       isOpen={isOpen}
@@ -23,12 +29,18 @@ export function DeleteConfirmModal({ isOpen, onClose, onDelete, submitting }) {
         </div>
 
         <ModalBody className="text-center">
-          <h3 className="text-xl font-semibold text-brand-red">
-            Are You Sure want to Delete?
-          </h3>
-          <p className="text-gray-600 mt-2">
-            Once delete it will be permanently delete from the database!
-          </p>
+          {description ? (
+            description
+          ) : (
+            <>
+              <h3 className="text-xl font-semibold text-brand-red">
+                Are You Sure want to Delete?
+              </h3>
+              <p className="text-gray-600 mt-2">
+                Once delete it will be permanently delete from the database!
+              </p>
+            </>
+          )}
         </ModalBody>
 
         <ModalFooter className="flex justify-center gap-4 pb-6">
