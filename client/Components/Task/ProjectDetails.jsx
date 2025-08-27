@@ -2,7 +2,14 @@
 import { useEffect, useState } from "react";
 import { Card } from "@heroui/card";
 import { Divider } from "@heroui/divider";
-import { Calendar, ChevronDown, Edit, File, Download, ChevronUp } from "lucide-react";
+import {
+  Calendar,
+  ChevronDown,
+  Edit,
+  File,
+  Download,
+  ChevronUp,
+} from "lucide-react";
 import apiClient from "../../lib/axios";
 import { addToast } from "@heroui/toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -10,7 +17,6 @@ import { Select, SelectItem } from "@heroui/select";
 import { Button } from "@heroui/button";
 import Link from "next/link";
 import { usePermissions } from "../../lib/utils";
-
 const ProjectDetails = ({ serviceFilter = "All" }) => {
   const { canView, canEdit } = usePermissions();
   const router = useRouter();
@@ -142,22 +148,23 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
               key={proj._id}
               value={proj._id}
               radius="md"
-              textValue={`${proj.customerName} - ${proj.services}${proj.projectAmount
-                ? ` (${new Intl.NumberFormat("en-IN", {
-                  style: "currency",
-                  currency: "INR",
-                  maximumFractionDigits: 0,
-                }).format(proj.projectAmount)})`
-                : ""
-                }`}
+              textValue={`${proj.customerName} - ${proj.services}${
+                proj.projectAmount
+                  ? ` (${new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                      maximumFractionDigits: 0,
+                    }).format(proj.projectAmount)})`
+                  : ""
+              }`}
             >
               {proj.customerName} - {proj.services}
               {proj.projectAmount
                 ? ` (${new Intl.NumberFormat("en-IN", {
-                  style: "currency",
-                  currency: "INR",
-                  maximumFractionDigits: 0,
-                }).format(proj.projectAmount)})`
+                    style: "currency",
+                    currency: "INR",
+                    maximumFractionDigits: 0,
+                  }).format(proj.projectAmount)})`
                 : ""}
             </SelectItem>
           ))
@@ -232,7 +239,9 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
             <div className="flex flex-col gap-1 sm:gap-3">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-base sm:text-lg">Project Details</h3>
+                <h3 className="font-semibold text-base sm:text-lg">
+                  Project Details
+                </h3>
               </div>
             </div>
             <button
@@ -284,7 +293,10 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
                   label="Description"
                   value={project.projectDescription || "Not specified"}
                 />
-                <DetailItem label="Size" value={project.size || "Not specified"} />
+                <DetailItem
+                  label="Size"
+                  value={project.size || "Not specified"}
+                />
                 <DetailItem
                   label="Phone Number"
                   value={project.contactNumber || "Not specified"}
@@ -348,8 +360,8 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
                       <span>
                         {project.projectDate
                           ? new Date(project.projectDate).toLocaleDateString(
-                            "en-GB"
-                          )
+                              "en-GB"
+                            )
                           : "Not specified"}
                       </span>
                     </div>
@@ -363,9 +375,17 @@ const ProjectDetails = ({ serviceFilter = "All" }) => {
         <div className="p-2 sm:p-4 flex justify-end ">
           <Link
             href={`/dashboard/projects/add-project?projectId=${project._id}`}
-            disabled={!canEdit("projects")}
+            disabled={
+              !canEdit("projects") || project.projectStatus === "completed"
+            }
           >
-            <Button className="bg-[#EAEAEA] rounded-lg p-2" size="xs" disabled={!canEdit("projects")}>
+            <Button
+              className="bg-[#EAEAEA] rounded-lg p-2"
+              size="xs"
+              disabled={
+                !canEdit("projects") || project.projectStatus === "completed"
+              }
+            >
               <Edit className="text-[#6E6E6E] w-4 h-4 " />
             </Button>
           </Link>
@@ -379,7 +399,7 @@ const DetailItem = ({ label, value }) => (
   <div className="break-words">
     <span className="text-sm text-gray-500 block mb-1">{label}</span>
     <div className="text-sm font-medium break-words overflow-hidden">
-      {typeof value === 'string' ? (
+      {typeof value === "string" ? (
         <span className="break-all" title={value}>
           {value}
         </span>

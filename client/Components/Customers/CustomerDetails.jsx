@@ -22,7 +22,7 @@ const CustomerDetail = () => {
   const [projectTotalPages, setProjectTotalPages] = useState(1);
 
   // Get return URL from search params or default to customers page
-  const returnUrl = searchParams.get('returnUrl') || '/dashboard/customers';
+  const returnUrl = searchParams.get("returnUrl") || "/dashboard/customers";
 
   // Fetch customer data
   const fetchCustomer = async () => {
@@ -118,15 +118,24 @@ const CustomerDetail = () => {
                   </div>
                   <div className="flex items-start gap-2">
                     <MapPin className="text-primary mt-1" width={18} />
-                    <span>{`${customer.address?.addressLine || ""} , ${customer.address?.city || ""
-                      } , ${customer.address?.district || ""} - ${customer.address?.pincode || ""
-                      }`}</span>
+                    <span>{`${customer.address?.addressLine || ""} , ${
+                      customer.address?.city || ""
+                    } , ${customer.address?.district || ""} , ${
+                      customer.address?.state || ""
+                    } , ${customer.address?.country || ""} - ${
+                      customer.address?.pincode || ""
+                    }`}</span>
                   </div>
                 </div>
               </div>
 
               <Link href={`/dashboard/customers/${id}/edit`}>
-                <Button isIconOnly variant="light" className="self-start" disabled={!canEdit("customers")}>
+                <Button
+                  isIconOnly
+                  variant="light"
+                  className="self-start"
+                  disabled={!canEdit("customers")}
+                >
                   <Edit2 width={18} />
                 </Button>
               </Link>
@@ -189,12 +198,15 @@ const CustomerDetail = () => {
                     customer={customer.customerName}
                     status={project.projectStatus}
                     service={service}
-                    amount={`₹${project.projectAmount?.toLocaleString("en-IN") || "0"
-                      }`}
+                    amount={`₹${
+                      project.projectAmount?.toLocaleString("en-IN") || "0"
+                    }`}
                     date={new Date(project.projectDate).toLocaleDateString()}
-                    address={`${project.address?.addressLine || ""} , ${project.address?.city || ""
-                      } , ${project.address?.district || ""} - ${project.address?.pincode || ""
-                      }`}
+                    address={`${project.address?.addressLine || ""} , ${
+                      project.address?.city || ""
+                    } , ${project.address?.district || ""} - ${
+                      project.address?.pincode || ""
+                    }`}
                     progress={progress}
                     assignedEmployees={project.assignedEmployees || []}
                     color={getServiceColor(service)}

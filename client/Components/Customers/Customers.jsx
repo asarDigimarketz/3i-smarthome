@@ -466,8 +466,8 @@ const Customers = () => {
                       {customer.fullAddress ||
                         (customer.address
                           ? `${customer.address.city || ""}, ${
-                              customer.address.state || ""
-                            }`
+                              customer.address.district || ""
+                            },${customer.address.state || ""}`
                           : "N/A")}
                     </TableCell>
                     <TableCell>

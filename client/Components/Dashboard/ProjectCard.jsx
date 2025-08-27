@@ -33,22 +33,9 @@ const ProjectCard = ({
   // Generate avatars from assigned employees or use default
   const generateAvatars = (employees) => {
     if (employees && employees.length > 0) {
-      return employees
-        .slice(0, 2)
-        .map(
-          (emp, index) =>
-            `${emp.avatar ||
-            `https://img.heroui.chat/image/avatar?w=40&h=40&u=user${index + 1
-            }`
-            }`
-        );
+      return employees.slice(0, 2).map((emp, index) => `${emp.avatar || ``}`);
     }
-    return [
-      "",
-      "",
-      "",
-      "",
-    ];
+    return ["", "", "", ""];
   };
 
   const avatars = generateAvatars(assignedEmployees);
@@ -68,7 +55,7 @@ const ProjectCard = ({
 
   const statusOptions = [
     { label: "New", value: "new" },
-    { label: "In Progress", value: "in-progress" },
+    { label: "InProgress", value: "in-progress" },
     { label: "Completed", value: "completed" },
     { label: "Done", value: "done" },
     { label: "Cancelled", value: "cancelled" },
@@ -78,12 +65,26 @@ const ProjectCard = ({
   const [loading, setLoading] = useState(false);
 
   const handleStatusChange = async (newStatus) => {
+    // Convert current status to lowercase for comparison
+    const currentStatusLower = currentStatus.toLowerCase();
+
+    // Only prevent changes if current status is completed
+    if (currentStatusLower === "completed") {
+      addToast({
+        title: "Status Update Restricted",
+        description: "Completed projects cannot be edited",
+        status: "warning",
+        color: "warning",
+      });
+      return;
+    }
+
     if (newStatus === currentStatus) return;
     setLoading(true);
     try {
       const res = await apiClient.patch(`/api/projects/${id}/field`, {
         field: "projectStatus",
-        value: newStatus
+        value: newStatus,
       });
       if (res.data.success) {
         setCurrentStatus(newStatus);
@@ -123,7 +124,6 @@ const ProjectCard = ({
             >
               <div className="flex justify-between items-start gap-4">
                 <div>
-
                   <Dropdown radius="sm" placement="bottom-start">
                     <DropdownTrigger>
                       <Button
@@ -140,8 +140,8 @@ const ProjectCard = ({
                         {loading
                           ? "Updating..."
                           : statusOptions.find(
-                            (opt) => opt.value === currentStatus
-                          )?.label || currentStatus}
+                              (opt) => opt.value === currentStatus
+                            )?.label || currentStatus}
                       </Button>
                     </DropdownTrigger>
                     <DropdownMenu
@@ -186,7 +186,9 @@ const ProjectCard = ({
                 <div className="flex flex-col gap-2 w-1/2">
                   <div className="mt-6">
                     <div className="text-sm text-white/80">Service</div>
-                    <div className="font-medium line-clamp-2 overflow-hidden text-ellipsis">{service}</div>
+                    <div className="font-medium line-clamp-2 overflow-hidden text-ellipsis">
+                      {service}
+                    </div>
                   </div>
                   <div>
                     <div className="text-sm text-white/80">Amount</div>
@@ -208,11 +210,13 @@ const ProjectCard = ({
                   progress === 100
                     ? "success"
                     : progress > 50
-                      ? "warning"
-                      : "primary"
+                    ? "warning"
+                    : "primary"
                 }
                 className="h-2"
-                aria-label={`Project progress: ${getProgressPercent(progress)}%`}
+                aria-label={`Project progress: ${getProgressPercent(
+                  progress
+                )}%`}
               />
             </div>
 

@@ -322,7 +322,7 @@ const Dashboard = () => {
         const transformedProjects = projects.map((project) => ({
           id: project._id,
           customer: project.customerName || "Unknown Customer",
-          status: getStatusDisplayName(project.projectStatus),
+          status: project.projectStatus,
           service: project.services || "Unknown Service",
           amount: new Intl.NumberFormat("en-IN", {
             style: "currency",
@@ -387,16 +387,6 @@ const Dashboard = () => {
   }, [dateRange, selectedPreset]);
 
   // Helper functions
-  const getStatusDisplayName = (status) => {
-    const statusMap = {
-      new: "New",
-      "in-progress": "InProgress",
-      completed: "Completed",
-      done: "Done",
-      cancelled: "Cancelled",
-    };
-    return statusMap[status] || "InProgress";
-  };
 
   const getServiceColor = (service) => {
     switch (service) {

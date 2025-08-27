@@ -40,7 +40,7 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
         // Fetch both tasks and project details
         const [tasksResponse, projectResponse] = await Promise.all([
           apiClient.get(`/api/tasks/project/${projectId}`),
-          apiClient.get(`/api/projects/${projectId}`)
+          apiClient.get(`/api/projects/${projectId}`),
         ]);
 
         if (tasksResponse.data.success) {
@@ -79,22 +79,24 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
   };
 
   // Enhanced filtering logic - filter tasks by service (only if project matches filter)
-  const filteredTasks = shouldShowTasks() ? tasks.filter((task) => {
-    if (serviceFilter === "All") return true;
+  const filteredTasks = shouldShowTasks()
+    ? tasks.filter((task) => {
+        if (serviceFilter === "All") return true;
 
-    // Check if task has project service information
-    if (task.projectService) {
-      return task.projectService === serviceFilter;
-    }
+        // Check if task has project service information
+        if (task.projectService) {
+          return task.projectService === serviceFilter;
+        }
 
-    // Check if task has nested project object with service
-    if (task.project && task.project.services) {
-      return task.project.services === serviceFilter;
-    }
+        // Check if task has nested project object with service
+        if (task.project && task.project.services) {
+          return task.project.services === serviceFilter;
+        }
 
-    // If no service information is available, don't filter out
-    return true;
-  }) : [];
+        // If no service information is available, don't filter out
+        return true;
+      })
+    : [];
 
   if (loading) {
     return (
@@ -164,7 +166,18 @@ const TaskList = ({ userPermissions, refreshKey, serviceFilter = "All" }) => {
             key={task._id}
             task={task}
             userPermissions={userPermissions}
-            onEditTask={() => setEditingTaskId(task._id)}
+            onEditTask={() => {
+              if (project && project.projectStatus === "completed") {
+                addToast({
+                  title: "Cannot Edit Task",
+                  description: "Cannot edit tasks for completed projects",
+                  color: "danger",
+                });
+                return;
+              } else {
+                setEditingTaskId(task._id);
+              }
+            }}
             isAdmin={isAdmin}
             user={user}
           />
@@ -201,7 +214,7 @@ const TaskItem = ({ task, userPermissions, onEditTask, isAdmin, user }) => {
       const userId = user.id || user._id || user.userId;
       const userEmail = user.email;
 
-      const isAssigned = assignedTo.some(emp => {
+      const isAssigned = assignedTo.some((emp) => {
         // Compare by ID first, then by email as fallback
         return emp._id === userId || emp.email === userEmail;
       });
@@ -211,7 +224,6 @@ const TaskItem = ({ task, userPermissions, onEditTask, isAdmin, user }) => {
 
     return false;
   };
-
 
   const getStatusIcon = () => {
     switch (status) {
@@ -302,10 +314,10 @@ const TaskItem = ({ task, userPermissions, onEditTask, isAdmin, user }) => {
               <span className="font-[700] text-[#616161] flex  sm:flex-row flex-wrap gap-2 ">
                 {Array.isArray(assignedTo) && assignedTo.length > 0
                   ? assignedTo.map((emp) => (
-                    <span key={emp._id} className="flex items-center gap-1">
-                      {emp.firstName} {emp.lastName}
-                    </span>
-                  ))
+                      <span key={emp._id} className="flex items-center gap-1">
+                        {emp.firstName} {emp.lastName}
+                      </span>
+                    ))
                   : "Unassigned"}
               </span>
             </div>
@@ -340,12 +352,19 @@ const TaskItem = ({ task, userPermissions, onEditTask, isAdmin, user }) => {
                 className="w-12 h-12 bg-[#222] border border-[#BDBDBD] rounded-full overflow-hidden flex items-center justify-center"
               >
                 {attachment.mimetype &&
-                  attachment.mimetype.startsWith("image") ? (
-                  <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="w-full h-full object-cover">  <img
-                    src={attachment.url}
-                    alt={`Attachment ${index + 1}`}
+                attachment.mimetype.startsWith("image") ? (
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-full h-full object-cover"
-                  />
+                  >
+                    {" "}
+                    <img
+                      src={attachment.url}
+                      alt={`Attachment ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
                   </a>
                 ) : (
                   <File className="text-gray-400" size={24} />
@@ -366,12 +385,19 @@ const TaskItem = ({ task, userPermissions, onEditTask, isAdmin, user }) => {
                 className="w-12 h-12 bg-[#222] border border-[#BDBDBD] rounded-full overflow-hidden flex items-center justify-center"
               >
                 {attachment.mimetype &&
-                  attachment.mimetype.startsWith("image") ? (
-                  <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="w-full h-full object-cover">  <img
-                    src={attachment.url}
-                    alt={`Attachment ${index + 1}`}
+                attachment.mimetype.startsWith("image") ? (
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-full h-full object-cover"
-                  />
+                  >
+                    {" "}
+                    <img
+                      src={attachment.url}
+                      alt={`Attachment ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
                   </a>
                 ) : (
                   <File className="text-gray-400" size={24} />

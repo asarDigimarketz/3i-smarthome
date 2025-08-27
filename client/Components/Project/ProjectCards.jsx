@@ -41,13 +41,16 @@ export function ProjectCards({
 
     // Create the task page URL with project ID and return state
     const taskParams = new URLSearchParams();
-    taskParams.set('projectId', projectId);
+    taskParams.set("projectId", projectId);
 
     // Store the return URL with current state
     if (currentParams.toString()) {
-      taskParams.set('returnTo', `/dashboard/projects?${currentParams.toString()}`);
+      taskParams.set(
+        "returnTo",
+        `/dashboard/projects?${currentParams.toString()}`
+      );
     } else {
-      taskParams.set('returnTo', '/dashboard/projects');
+      taskParams.set("returnTo", "/dashboard/projects");
     }
 
     router.push(`/dashboard/task?${taskParams.toString()}`);
@@ -84,12 +87,10 @@ export function ProjectCards({
         // Set end time to end of day (23:59:59.999) for same day filtering
         endDate.setHours(23, 59, 59, 999);
 
-
-
         params.push(`startDate=${encodeURIComponent(startDate.toISOString())}`);
         params.push(`endDate=${encodeURIComponent(endDate.toISOString())}`);
       } catch (dateError) {
-        console.error('Error converting project date range:', dateError);
+        console.error("Error converting project date range:", dateError);
         // Continue without date filtering if date conversion fails
       }
     }
@@ -113,7 +114,8 @@ export function ProjectCards({
             proposalId: project.proposalId || "",
             location:
               project.fullAddress ||
-              `${project.address?.addressLine}, ${project.address?.city} ${project.address?.district || ""
+              `${project.address?.addressLine}, ${project.address?.city} ${
+                project.address?.district || ""
               } - ${project.address?.pincode || ""}`,
             service: project.services,
             amount: new Intl.NumberFormat("en-IN", {
@@ -141,8 +143,6 @@ export function ProjectCards({
         // Handle pagination - Simple approach to show correct total pages
         if (setTotalPages && response.data.pagination) {
           const paginationData = response.data.pagination;
-
-
 
           // Check if API returned valid pagination data
           if (paginationData.total && paginationData.total > 0) {
@@ -179,11 +179,12 @@ export function ProjectCards({
     const statusMap = {
       new: "New",
       "in-progress": "InProgress",
+      inprogress: "InProgress",
       completed: "Completed",
       done: "Done",
       cancelled: "Cancelled",
     };
-    return statusMap[status] || "InProgress";
+    return statusMap[status.toLowerCase()] || "InProgress";
   };
 
   // Helper function to get service color
@@ -205,22 +206,9 @@ export function ProjectCards({
   // Helper function to generate avatars
   const generateAvatars = (employees) => {
     if (employees && employees.length > 0) {
-      return employees
-        .slice(0, 2)
-        .map(
-          (emp, index) =>
-            `${emp.avatar ||
-            `https://img.heroui.chat/image/avatar?w=40&h=40&u=user${index + 1
-            }`
-            }`
-        );
+      return employees.slice(0, 2).map((emp, index) => `${emp.avatar || ``}`);
     }
-    return [
-      "",
-      "",
-      "",
-      "",
-    ];
+    return ["", "", "", ""];
   };
 
   // Static fallback data
@@ -299,18 +287,32 @@ export function ProjectCards({
 
   const statusOptions = [
     { label: "New", value: "new" },
-    { label: "In Progress", value: "in-progress" },
+    { label: "InProgress", value: "in-progress" },
     { label: "Completed", value: "completed" },
     { label: "Done", value: "done" },
     { label: "Cancelled", value: "cancelled" },
   ];
 
   const handleStatusChange = async (projectId, newStatus) => {
+    const currentStatus =
+      projectStatuses[projectId] ||
+      projects.find((p) => p.id === projectId)?.status.toLowerCase();
+
+    if (currentStatus === "completed") {
+      addToast({
+        title: "Cannot Update",
+        description: "Completed projects cannot be edited",
+        status: "warning",
+        color: "warning",
+      });
+      return;
+    }
+
     setStatusLoading((prev) => ({ ...prev, [projectId]: true }));
     try {
       const res = await apiClient.patch(`/api/projects/${projectId}/field`, {
         field: "projectStatus",
-        value: newStatus
+        value: newStatus,
       });
       if (res.data.success) {
         setProjectStatuses((prev) => ({ ...prev, [projectId]: newStatus }));
@@ -360,7 +362,10 @@ export function ProjectCards({
           No Projects Found
         </h3>
         <p className="text-gray-500 max-w-md">
-          {searchValue || serviceFilter !== "All" || statusFilter !== "all" || dateRange
+          {searchValue ||
+          serviceFilter !== "All" ||
+          statusFilter !== "all" ||
+          dateRange
             ? "No projects match your current filters. Try adjusting your search criteria."
             : "You haven't created any projects yet. Click 'Add New' to create your first project."}
         </p>
@@ -387,23 +392,25 @@ export function ProjectCards({
                       <DropdownTrigger>
                         <Button
                           className={`px-3 py-1 rounded-sm border border-white/10 text-white text-sm font-medium bg-opacity-80 bg-white/20 hover:bg-white/20`}
-                          disabled={statusLoading[project.id] || !hasEditPermission}
+                          disabled={
+                            statusLoading[project.id] || !hasEditPermission
+                          }
                           type="button"
                           variant="faded"
                           size="sm"
                           endContent={<ChevronDown className="w-4 h-4" />}
-                          onClick={(e) => {
+                          onPress={(e) => {
                             if (e.stopPropagation) e.stopPropagation();
                           }}
                         >
                           {statusLoading[project.id]
                             ? "Updating..."
                             : statusOptions.find(
-                              (opt) =>
-                                opt.value ===
-                                (projectStatuses[project.id] ||
-                                  project.status.toLowerCase())
-                            )?.label || project.status}
+                                (opt) =>
+                                  opt.value ===
+                                  (projectStatuses[project.id] ||
+                                    project.status.toLowerCase())
+                              )?.label || project.status}
                         </Button>
                       </DropdownTrigger>
                       <DropdownMenu
@@ -420,9 +427,14 @@ export function ProjectCards({
                             }}
                             endContent={
                               (projectStatuses[project.id] ||
-                                project.status.toLowerCase()) === opt.value ? (
-                                <Check className="w-4 h-4" />
-                              ) : null
+                                project.status
+                                  .toLowerCase()
+                                  .replace("inprogress", "in-progress")) ===
+                              opt.value ? (
+                                <Check className="w-4 h-4 " />
+                              ) : (
+                                <span className="w-4 h-4" />
+                              )
                             }
                           >
                             {opt.label}

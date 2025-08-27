@@ -7,7 +7,15 @@ import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Skeleton } from "@heroui/skeleton";
 import { addToast } from "@heroui/toast";
-import { ArrowLeft, Edit, File, Mail, Phone, Trash } from "lucide-react";
+import {
+  ArrowLeft,
+  Edit,
+  File,
+  Mail,
+  MapPin,
+  Phone,
+  Trash,
+} from "lucide-react";
 import ProjectCard from "../Dashboard/ProjectCard.jsx";
 import { useState, useEffect } from "react";
 import { EmployeeModal } from "./EmployeeModal";
@@ -376,14 +384,32 @@ const EmployeeDetail = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col md:flex-row gap-4 pt-2">
-                    <div className="flex items-center gap-2 w-[50%]">
+                  <div className="flex flex-col gap-4 pt-2">
+                    <div className="flex items-center gap-2">
                       <Phone className="text-primary" width={20} />
                       <span>{employeeData.phone}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Mail className="text-primary" width={20} />
                       <span>{employeeData.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="text-primary" width={20} />
+                      <span className="flex-1">
+                        {employeeData.originalData?.address?.addressLine
+                          ? employeeData.originalData.address.addressLine
+                          : "N/A"}
+                        {employeeData.originalData?.address?.city &&
+                          `, ${employeeData.originalData.address.city}`}
+                        {employeeData.originalData?.address?.district &&
+                          `, ${employeeData.originalData.address.district}`}
+                        {employeeData.originalData?.address?.state &&
+                          `, ${employeeData.originalData.address.state}`}
+                        {employeeData.originalData?.address?.country &&
+                          `, ${employeeData.originalData.address.country}`}
+                        {employeeData.originalData?.address?.pincode &&
+                          ` - ${employeeData.originalData.address.pincode}`}
+                      </span>
                     </div>
                   </div>
                 </div>

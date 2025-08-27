@@ -21,9 +21,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { canCreate, canEdit, canView } = usePermissions();
-  
+
   // Get return URL from search params or default to proposal page
-  const returnUrl = searchParams.get('returnUrl') || '/dashboard/proposal';
+  const returnUrl = searchParams.get("returnUrl") || "/dashboard/proposal";
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]); // For new uploads (multiple)
   const [removedAttachments, setRemovedAttachments] = useState([]); // For removing existing attachments (edit mode)
@@ -74,7 +74,9 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
 
     setIsSearching(true);
     try {
-      const response = await apiClient.get(`/api/customers?search=${encodeURIComponent(search)}`);
+      const response = await apiClient.get(
+        `/api/customers?search=${encodeURIComponent(search)}`
+      );
 
       let customers = response.data.data?.customers || [];
 
@@ -258,21 +260,27 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     let value = e.target.value;
 
     // Only allow numbers and X
-    value = value.replace(/[^\dX]/g, '');
+    value = value.replace(/[^\dX]/g, "");
 
     // Ensure only one X exists
     const xCount = (value.match(/X/g) || []).length;
     if (xCount > 1) {
       // Keep only the first X
-      const firstXIndex = value.indexOf('X');
-      value = value.substring(0, firstXIndex + 1) + value.substring(firstXIndex + 1).replace(/X/g, '');
+      const firstXIndex = value.indexOf("X");
+      value =
+        value.substring(0, firstXIndex + 1) +
+        value.substring(firstXIndex + 1).replace(/X/g, "");
     }
 
     // Ensure X is not at the beginning or end
-    if (value.startsWith('X')) {
+    if (value.startsWith("X")) {
       value = value.substring(1);
     }
-    if (value.endsWith('X') && value.length > 1 && value.charAt(value.length - 2) === 'X') {
+    if (
+      value.endsWith("X") &&
+      value.length > 1 &&
+      value.charAt(value.length - 2) === "X"
+    ) {
       value = value.substring(0, value.length - 1);
     }
 
@@ -281,13 +289,17 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
 
   // Handle size keydown for space bar
   const handleSizeKeyDown = (e) => {
-    if (e.key === ' ') {
+    if (e.key === " ") {
       e.preventDefault();
       const currentValue = formData.size;
 
       // Only add X if there's no X already and there are digits
-      if (!currentValue.includes('X') && currentValue.length > 0 && /^\d+$/.test(currentValue)) {
-        handleInputChange("size", currentValue + 'X');
+      if (
+        !currentValue.includes("X") &&
+        currentValue.length > 0 &&
+        /^\d+$/.test(currentValue)
+      ) {
+        handleInputChange("size", currentValue + "X");
       }
     }
   };
@@ -303,20 +315,26 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     } else if (formData.customerName.trim().length > 100) {
       newErrors.customerName = "Customer name must not exceed 100 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.customerName.trim())) {
-      newErrors.customerName = "Customer name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors.customerName =
+        "Customer name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     // Contact Number validation
     if (!formData.contactNumber.trim()) {
       newErrors.contactNumber = "Contact number is required";
     } else if (!/^\d{10}$/.test(formData.contactNumber.trim())) {
-      newErrors.contactNumber = "Please enter a valid 10-digit Indian mobile number";
+      newErrors.contactNumber =
+        "Please enter a valid 10-digit Indian mobile number";
     }
 
     // Email validation
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email.trim())) {
+    } else if (
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+        formData.email.trim()
+      )
+    ) {
       newErrors.email = "Please enter a valid email address";
     } else if (formData.email.trim().length > 254) {
       newErrors.email = "Email address is too long";
@@ -338,7 +356,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     } else if (formData.city.trim().length > 50) {
       newErrors.city = "City name must not exceed 50 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.city.trim())) {
-      newErrors.city = "City name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors.city =
+        "City name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     if (!formData.district.trim()) {
@@ -348,7 +367,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     } else if (formData.district.trim().length > 50) {
       newErrors.district = "District name must not exceed 50 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.district.trim())) {
-      newErrors.district = "District name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors.district =
+        "District name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     if (!formData.state.trim()) {
@@ -358,7 +378,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     } else if (formData.state.trim().length > 50) {
       newErrors.state = "State name must not exceed 50 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.state.trim())) {
-      newErrors.state = "State name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors.state =
+        "State name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     if (!formData.country.trim()) {
@@ -368,7 +389,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     } else if (formData.country.trim().length > 50) {
       newErrors.country = "Country name must not exceed 50 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.country.trim())) {
-      newErrors.country = "Country name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors.country =
+        "Country name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     if (!formData.pincode.trim()) {
@@ -386,9 +408,11 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
     if (!formData.projectDescription.trim()) {
       newErrors.projectDescription = "Project description is required";
     } else if (formData.projectDescription.trim().length < 10) {
-      newErrors.projectDescription = "Project description must be at least 10 characters";
+      newErrors.projectDescription =
+        "Project description must be at least 10 characters";
     } else if (formData.projectDescription.trim().length > 1000) {
-      newErrors.projectDescription = "Project description must not exceed 1000 characters";
+      newErrors.projectDescription =
+        "Project description must not exceed 1000 characters";
     }
 
     // Size validation
@@ -400,7 +424,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
 
     // Project Amount validation
     if (!formData.projectAmount || formData.projectAmount <= 0) {
-      newErrors.projectAmount = "Project amount is required and must be positive";
+      newErrors.projectAmount =
+        "Project amount is required and must be positive";
     } else if (formData.projectAmount < 1000) {
       newErrors.projectAmount = "Project amount must be at least ₹1,000";
     } else if (formData.projectAmount > 100000000) {
@@ -570,11 +595,15 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
       // Make API call
       let response;
       if (isEdit) {
-        response = await apiClient.put(`/api/proposals/${proposalId}`, submitData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        response = await apiClient.put(
+          `/api/proposals/${proposalId}`,
+          submitData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
       } else {
         response = await apiClient.post(`/api/proposals`, submitData, {
           headers: {
@@ -972,9 +1001,11 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                     }}
                     selectedKeys={
                       formData.projectAmount
-                        ? [`₹${parseInt(formData.projectAmount).toLocaleString(
-                          "en-IN"
-                        )}`]
+                        ? [
+                            `₹${parseInt(formData.projectAmount).toLocaleString(
+                              "en-IN"
+                            )}`,
+                          ]
                         : []
                     }
                     onSelectionChange={(keys) => {
@@ -989,8 +1020,8 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                     renderValue={() =>
                       formData.projectAmount
                         ? `₹${parseInt(formData.projectAmount).toLocaleString(
-                          "en-IN"
-                        )}`
+                            "en-IN"
+                          )}`
                         : ""
                     }
                   >
@@ -1039,7 +1070,6 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                       Add
                     </Button>
                   </div>
-
                 </div>
                 <div>
                   <label className="block text-gray-700 mb-2">Size *</label>
@@ -1060,17 +1090,14 @@ export function AddProposalPage({ isEdit = false, proposalId = null }) {
                       required
                       endContent={
                         <span className="text-xs text-[#999999] border-[#00000080] border-l-medium px-3">
-                          Size
+                          sqt
                         </span>
                       }
                     />
                   </div>
                 </div>
               </div>
-
             </div>
-
-
 
             <div>
               <label className="block text-gray-700 mb-2">Comment</label>

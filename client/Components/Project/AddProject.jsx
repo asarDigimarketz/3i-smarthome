@@ -108,7 +108,8 @@ export function AddProjectPage() {
   useEffect(() => {
     if (projectId) {
       setIsLoading(true);
-      apiClient.get(`/api/projects/${projectId}`)
+      apiClient
+        .get(`/api/projects/${projectId}`)
         .then((res) => {
           if (res.data.success && res.data.data) {
             const p = res.data.data;
@@ -190,21 +191,27 @@ export function AddProjectPage() {
     let value = e.target.value;
 
     // Only allow numbers and X
-    value = value.replace(/[^\dX]/g, '');
+    value = value.replace(/[^\dX]/g, "");
 
     // Ensure only one X exists
     const xCount = (value.match(/X/g) || []).length;
     if (xCount > 1) {
       // Keep only the first X
-      const firstXIndex = value.indexOf('X');
-      value = value.substring(0, firstXIndex + 1) + value.substring(firstXIndex + 1).replace(/X/g, '');
+      const firstXIndex = value.indexOf("X");
+      value =
+        value.substring(0, firstXIndex + 1) +
+        value.substring(firstXIndex + 1).replace(/X/g, "");
     }
 
     // Ensure X is not at the beginning or end
-    if (value.startsWith('X')) {
+    if (value.startsWith("X")) {
       value = value.substring(1);
     }
-    if (value.endsWith('X') && value.length > 1 && value.charAt(value.length - 2) === 'X') {
+    if (
+      value.endsWith("X") &&
+      value.length > 1 &&
+      value.charAt(value.length - 2) === "X"
+    ) {
       value = value.substring(0, value.length - 1);
     }
 
@@ -213,13 +220,17 @@ export function AddProjectPage() {
 
   // Handle size keydown for space bar
   const handleSizeKeyDown = (e) => {
-    if (e.key === ' ') {
+    if (e.key === " ") {
       e.preventDefault();
       const currentValue = formData.size;
 
       // Only add X if there's no X already and there are digits
-      if (!currentValue.includes('X') && currentValue.length > 0 && /^\d+$/.test(currentValue)) {
-        handleInputChange("size", currentValue + 'X');
+      if (
+        !currentValue.includes("X") &&
+        currentValue.length > 0 &&
+        /^\d+$/.test(currentValue)
+      ) {
+        handleInputChange("size", currentValue + "X");
       }
     }
   };
@@ -290,7 +301,8 @@ export function AddProjectPage() {
     } else if (formData.customerName.trim().length > 100) {
       newErrors.customerName = "Customer name must not exceed 100 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.customerName.trim())) {
-      newErrors.customerName = "Customer name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors.customerName =
+        "Customer name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     // Contact Number validation
@@ -303,7 +315,11 @@ export function AddProjectPage() {
     // Email validation
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email.trim())) {
+    } else if (
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+        formData.email.trim()
+      )
+    ) {
       newErrors.email = "Please enter a valid email address";
     } else if (formData.email.trim().length > 254) {
       newErrors.email = "Email address is too long";
@@ -313,9 +329,11 @@ export function AddProjectPage() {
     if (!formData.address.addressLine.trim()) {
       newErrors["address.addressLine"] = "Address line is required";
     } else if (formData.address.addressLine.trim().length < 5) {
-      newErrors["address.addressLine"] = "Address line must be at least 5 characters";
+      newErrors["address.addressLine"] =
+        "Address line must be at least 5 characters";
     } else if (formData.address.addressLine.trim().length > 200) {
-      newErrors["address.addressLine"] = "Address line must not exceed 200 characters";
+      newErrors["address.addressLine"] =
+        "Address line must not exceed 200 characters";
     }
 
     if (!formData.address.city.trim()) {
@@ -325,17 +343,21 @@ export function AddProjectPage() {
     } else if (formData.address.city.trim().length > 50) {
       newErrors["address.city"] = "City name must not exceed 50 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.address.city.trim())) {
-      newErrors["address.city"] = "City name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors["address.city"] =
+        "City name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     if (!formData.address.district.trim()) {
       newErrors["address.district"] = "District is required";
     } else if (formData.address.district.trim().length < 2) {
-      newErrors["address.district"] = "District name must be at least 2 characters";
+      newErrors["address.district"] =
+        "District name must be at least 2 characters";
     } else if (formData.address.district.trim().length > 50) {
-      newErrors["address.district"] = "District name must not exceed 50 characters";
+      newErrors["address.district"] =
+        "District name must not exceed 50 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.address.district.trim())) {
-      newErrors["address.district"] = "District name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors["address.district"] =
+        "District name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     if (!formData.address.state.trim()) {
@@ -345,23 +367,28 @@ export function AddProjectPage() {
     } else if (formData.address.state.trim().length > 50) {
       newErrors["address.state"] = "State name must not exceed 50 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.address.state.trim())) {
-      newErrors["address.state"] = "State name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors["address.state"] =
+        "State name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     if (!formData.address.country.trim()) {
       newErrors["address.country"] = "Country is required";
     } else if (formData.address.country.trim().length < 2) {
-      newErrors["address.country"] = "Country name must be at least 2 characters";
+      newErrors["address.country"] =
+        "Country name must be at least 2 characters";
     } else if (formData.address.country.trim().length > 50) {
-      newErrors["address.country"] = "Country name must not exceed 50 characters";
+      newErrors["address.country"] =
+        "Country name must not exceed 50 characters";
     } else if (!/^[a-zA-Z\s.'-]+$/.test(formData.address.country.trim())) {
-      newErrors["address.country"] = "Country name can only contain letters, spaces, dots, hyphens, and apostrophes";
+      newErrors["address.country"] =
+        "Country name can only contain letters, spaces, dots, hyphens, and apostrophes";
     }
 
     if (!formData.address.pincode.trim()) {
       newErrors["address.pincode"] = "Pincode is required";
     } else if (!/^[1-9][0-9]{5}$/.test(formData.address.pincode.trim())) {
-      newErrors["address.pincode"] = "Please enter a valid 6-digit Indian pincode";
+      newErrors["address.pincode"] =
+        "Please enter a valid 6-digit Indian pincode";
     }
 
     // Services validation
@@ -373,9 +400,11 @@ export function AddProjectPage() {
     if (!formData.projectDescription.trim()) {
       newErrors.projectDescription = "Project description is required";
     } else if (formData.projectDescription.trim().length < 10) {
-      newErrors.projectDescription = "Project description must be at least 10 characters";
+      newErrors.projectDescription =
+        "Project description must be at least 10 characters";
     } else if (formData.projectDescription.trim().length > 1000) {
-      newErrors.projectDescription = "Project description must not exceed 1000 characters";
+      newErrors.projectDescription =
+        "Project description must not exceed 1000 characters";
     }
 
     // Size validation
@@ -387,7 +416,8 @@ export function AddProjectPage() {
 
     // Project Amount validation
     if (!formData.projectAmount || formData.projectAmount <= 0) {
-      newErrors.projectAmount = "Project amount is required and must be positive";
+      newErrors.projectAmount =
+        "Project amount is required and must be positive";
     } else if (formData.projectAmount < 1000) {
       newErrors.projectAmount = "Project amount must be at least ₹1,000";
     } else if (formData.projectAmount > 100000000) {
@@ -406,9 +436,11 @@ export function AddProjectPage() {
       oneYearFromNow.setFullYear(today.getFullYear() + 1);
 
       if (selectedDate < oneYearAgo) {
-        newErrors.projectDate = "Project date cannot be more than 1 year in the past";
+        newErrors.projectDate =
+          "Project date cannot be more than 1 year in the past";
       } else if (selectedDate > oneYearFromNow) {
-        newErrors.projectDate = "Project date cannot be more than 1 year in the future";
+        newErrors.projectDate =
+          "Project date cannot be more than 1 year in the future";
       }
     }
 
@@ -469,11 +501,15 @@ export function AddProjectPage() {
 
       let response;
       if (projectId) {
-        response = await apiClient.put(`/api/projects/${projectId}`, submitData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        response = await apiClient.put(
+          `/api/projects/${projectId}`,
+          submitData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
       } else {
         response = await apiClient.post(`/api/projects`, submitData, {
           headers: {
@@ -492,10 +528,8 @@ export function AddProjectPage() {
         });
         if (projectId) {
           router.back();
-
         } else {
           router.push("/dashboard/projects");
-
         }
       } else {
         throw new Error(response.data.message || "Failed to save project");
@@ -810,7 +844,7 @@ export function AddProjectPage() {
                   errorMessage={errors.size}
                   endContent={
                     <span className="text-xs text-[#999999] border-[#00000080] border-l-medium px-3">
-                      Size
+                      sqt
                     </span>
                   }
                 />
